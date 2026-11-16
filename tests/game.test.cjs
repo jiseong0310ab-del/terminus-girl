@@ -19,3 +19,5 @@ test('fresh profile has no false migration notice; malformed backup gets a reada
 test('checkpoint retains fractional experience from wisdom upgrades',()=>{let b=boot();let g=b.G.start();g.levels.wisdom=1;g.xp=7.45;b.S.snapshot(g);b=boot(Object.fromEntries(b.values));b.G.continue();assert.equal(b.G.g.xp,7.45)});
 
 test('checkpoint retains fractional health without granting extra healing',()=>{let b=boot();let g=b.G.start();g.p.hp=71.25;b.S.snapshot(g);b=boot(Object.fromEntries(b.values));b.G.continue();assert.equal(b.G.g.p.hp,71.25)});
+
+test('final boss fires with the locked warning direction even if the player moves',()=>{const{G}=boot();const g=G.initialize('quick',2,null);const e=G.enemy('boss',0,0);e.action='windup';e.clock=.01;e.aimX=1;e.aimY=0;g.p.x=0;g.p.y=100;G.update(.04);assert(g.hostile.length>0);assert(g.hostile.every(b=>Math.abs(Math.atan2(b.vy,b.vx))>Math.PI/4))});
