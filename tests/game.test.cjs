@@ -15,3 +15,5 @@ test('retreat pays half once and practice cannot bypass an existing chapter',()=
 test('invalid checkpoint cannot create foreign stage/ID or unknown relics',()=>{const{S}=boot();const data=S.fresh();data.checkpoint={id:'<script>',phase:'camp',stage:0};assert.throws(()=>S.normal(data));data.checkpoint={id:'run-valid',phase:'camp',stage:7};assert.throws(()=>S.normal(data))});
 
 test('fresh profile has no false migration notice; malformed backup gets a readable error',()=>{const{S}=boot();assert.equal(S.status,'ready');for(const x of ['null','[]','{\"schema\":1}'])assert.throws(()=>S.preview(x),/백업/)});
+
+test('checkpoint retains fractional experience from wisdom upgrades',()=>{let b=boot();let g=b.G.start();g.levels.wisdom=1;g.xp=7.45;b.S.snapshot(g);b=boot(Object.fromEntries(b.values));b.G.continue();assert.equal(b.G.g.xp,7.45)});
