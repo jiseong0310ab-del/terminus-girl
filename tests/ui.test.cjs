@@ -2,3 +2,47 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 function bootUI(){const els=new Map();let document;const ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});function el(id){const classes=new Set(),e={id,style:{},dataset:{},attrs:{},children:[],hidden:false,value:'',checked:false,textContent:'',classList:{toggle(n,v){if(v)classes.add(n);else classes.delete(n)},add(n){classes.add(n)},remove(n){classes.delete(n)}},append(...nodes){this.children.push(...nodes)},appendChild(n){this.children.push(n)},replaceChildren(...nodes){this.children=nodes},setAttribute(k,v){this.attrs[k]=v},addEventListener(){},focus(){document.activeElement=this},getContext:()=>ctx,getBoundingClientRect:()=>({left:20,top:600,width:136,height:136}),hasPointerCapture:()=>false,remove(){}};els.set(id,e);return e}for(const m of fs.readFileSync(path.join(ROOT,'index.html'),'utf8').matchAll(/id="([^"]+)"/g))el(m[1]);document={activeElement:null,body:el('body'),hidden:false,getElementById:id=>els.get(id),createElement:tag=>el(Math.random()+tag),createTextNode:s=>({textContent:s}),addEventListener(){}};const values=new Map(),c={console,Math,Date,Set,Map,JSON,document,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},Image:class{constructor(){this.complete=false;this.naturalWidth=0}},navigator:{},innerWidth:390,innerHeight:844,devicePixelRatio:1,requestAnimationFrame:()=>1,setInterval:()=>1,setTimeout:()=>1,addEventListener(){},performance:{now:()=>0}};c.window=c;c.TG={};vm.createContext(c);for(const file of ['data','store','audio','game','render','input','ui'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c,{filename:file+'.js'});return{c,TG:c.TG,$:id=>els.get(id)}}
 test('real UI module initializes and routes every gameplay screen without missing bindings',()=>{const{TG,$}=bootUI();assert.equal(TG.ui.screen,'menu');$('enterHub').onclick();assert.equal(TG.ui.screen,'hub');$('chapterStart').onclick();assert.equal(TG.ui.screen,'playing');assert.equal($('hud').style.display,'block');$('pauseBtn').onclick();assert.equal(TG.ui.screen,'paused');$('pauseSettings').onclick();assert.equal(TG.ui.screen,'settings');$('settingsBack').onclick();assert.equal(TG.ui.screen,'paused');$('resumeBtn').onclick();TG.engine.g.xp=99;TG.engine.checkLevel();assert.equal(TG.ui.screen,'cards');assert($('cardList').children.length>0);while(TG.engine.g.status==='cards')$('cardList').children[0].onclick();TG.engine.stageClear();assert.equal(TG.ui.screen,'camp');$('eventChoices').children[0].onclick();assert.equal($('nextStage').disabled,false);$('campHub').onclick();assert.equal(TG.ui.screen,'hub');$('continueRun').onclick();assert.equal(TG.ui.screen,'camp');$('nextStage').onclick();assert.equal(TG.engine.g.stage,1);while(TG.engine.g.status==='cards')$('cardList').children[0].onclick();TG.engine.finish(false,'retreat');assert.equal(TG.ui.screen,'ended');assert($('endTitle').textContent);$('backBtn').onclick();$('openArchive').onclick();assert.equal($('memoryList').children.length,6);$('archiveBack').onclick();$('hubSettings').onclick();$('bgmVolume').value=0;$('bgmVolume').oninput();assert.equal(TG.store.data.settings.bgm,0);TG.ui.show('menu');$('menuAbout').onclick();assert.equal(TG.ui.screen,'about')});
 module.exports={bootUI};
+
+test('boss HUD shows current health and readable attack cues, then hides when over',()=>{
+ const {TG,$}=bootUI();$('quickStart').onclick();
+ assert.equal($('bossHud').hidden,true);
+ const boss=TG.engine.enemy('boss',120,0);boss.hp=boss.maxHp/2;boss.action='windup';
+ TG.engine.g.p.hp=20;TG.ui.refreshHud();
+ assert.equal($('bossHud').hidden,false);
+ assert.equal($('bossName').textContent,TG.STAGES[0].boss);
+ assert.equal($('bossTrack').attrs['aria-valuenow'],'50');
+ assert.equal($('bossHpFill').style.width,'50%');
+ assert.match($('bossStatus').textContent,/공격 예고/);
+ boss.action='recover';TG.ui.refreshHud();
+ assert.match($('bossStatus').textContent,/반격/);
+ TG.engine.g.enemies=[];TG.ui.refreshHud();
+ assert.equal($('bossHud').hidden,true);
+ TG.engine.pause();assert.equal($('bossHud').hidden,true);
+});
+
+test('level-up cards preview the synergy unlocked by choosing them',()=>{
+ const {TG,$}=bootUI();$('quickStart').onclick();
+ const g=TG.engine.g;g.levels.clock=2;TG.engine.rebuild();
+ g.offered=['shield','magnet','blade'];g.offerToken=42;g.status='cards';TG.ui.show('cards');
+ const options=$('cardList').children;
+ assert.equal(options.length,3);
+ const shield=options[0],description=shield.children[1].children.map(e=>e.textContent).join(' ');
+ assert.match(shield.className,/synergyReady/);
+ assert.match(description,/선택 즉시 발동/);
+ assert.match(description,/푸른 귀환/);
+ assert.doesNotMatch(options[1].className,/synergyReady/);
+ assert.equal($('bossHud').hidden,true);
+ shield.onclick();
+ assert.equal(TG.engine.g.synergies.safeDash,true);
+ assert.equal(TG.ui.screen,'playing');
+});
+
+test('visual feedback has mobile-safe boss layout and readable card hints',()=>{
+ const css=fs.readFileSync(path.join(ROOT,'style.css'),'utf8');
+ const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+ assert.match(css,/\.bossHud\.warning/);
+ assert.match(css,/@media \(orientation:landscape\) and \(max-height:500px\)/);
+ assert.match(css,/#levelScreen \.carddesc\{font-size:13px/);
+ assert.match(html,/id="bossTrack"[^>]*role="progressbar"/);
+ assert.match(html,/class="cardLegend"/);
+});
