@@ -17,3 +17,5 @@ test('invalid checkpoint cannot create foreign stage/ID or unknown relics',()=>{
 test('fresh profile has no false migration notice; malformed backup gets a readable error',()=>{const{S}=boot();assert.equal(S.status,'ready');for(const x of ['null','[]','{\"schema\":1}'])assert.throws(()=>S.preview(x),/백업/)});
 
 test('checkpoint retains fractional experience from wisdom upgrades',()=>{let b=boot();let g=b.G.start();g.levels.wisdom=1;g.xp=7.45;b.S.snapshot(g);b=boot(Object.fromEntries(b.values));b.G.continue();assert.equal(b.G.g.xp,7.45)});
+
+test('checkpoint retains fractional health without granting extra healing',()=>{let b=boot();let g=b.G.start();g.p.hp=71.25;b.S.snapshot(g);b=boot(Object.fromEntries(b.values));b.G.continue();assert.equal(b.G.g.p.hp,71.25)});
