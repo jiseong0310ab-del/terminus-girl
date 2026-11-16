@@ -1,6 +1,6 @@
 'use strict';
 (()=>{
-const $=id=>document.getElementById(id),G=TG.engine,S=TG.store,U=TG.ui={screen:'menu',returnTo:'menu'};let hudClock=0,last=0,lastDraw=0,modalAction=null,lastFocus=null,registration=null,updating=false;
+const $=id=>document.getElementById(id),G=TG.engine,S=TG.store,U=TG.ui={screen:'menu',returnTo:'menu'};let hudClock=0,last=0,lastDraw=0,modalAction=null,lastFocus=null,registration=null,updating=false,dismissedWorker=null,lastUpdateCheck=0;
 const screenIds={menu:'menuScreen',hub:'hubScreen',cards:'levelScreen',paused:'pauseScreen',camp:'campScreen',ended:'endScreen',archive:'archiveScreen',settings:'settingsScreen',about:'aboutScreen'};
 const fmt=t=>`${Math.floor(Math.max(0,t)/60)}:${String(Math.floor(Math.max(0,t))%60).padStart(2,'0')}`;
 function text(id,value){$(id).textContent=value}function button(label,onClick,cls='btn alt'){const b=document.createElement('button');b.className=cls;b.textContent=label;b.onclick=onClick;return b}
@@ -34,7 +34,7 @@ function renderCards(){
    ['cardhint',cardHint(preview)]
   ]){if(!value)continue;const e=document.createElement('span');e.className=cls;e.textContent=value;content.appendChild(e)}
   b.append(icon,content);b.setAttribute('aria-label',[c.name,c.desc,cardHint(preview)].filter(Boolean).join(' · '));
-  b.onclick=()=>G.choose(id,token);list.appendChild(b);
+  b.onclick=()=>{TG.audio.unlock();G.choose(id,token)};list.appendChild(b);
  }
 }
 function synergyPreview(id){
@@ -52,7 +52,7 @@ function cardHint(preview){
  return preview.map(s=>`${s.unlocks?'선택 즉시 발동':s.active?'이미 발동 중':'선택 후 연계'} · ${s.name}: ${s.progress}`).join(' / ');
 }
 function renderBuild(){const g=G.g;text('buildSummary',TG.CARDS.filter(c=>g.levels[c.id]).map(c=>`${c.name} ${g.levels[c.id]}`).join(' · ')||'아직 복원한 카드가 없습니다. 빛나는 경험치를 모아 보세요.');text('buildSynergies',TG.SYNERGIES.filter(s=>g.synergies[s.id]).map(s=>s.name+' · '+s.desc).join(' / ')||'함께 어울리는 기억을 모으면 시너지가 발동합니다.');const list=clear('relicList');for(const id of g.relics){const r=TG.RELICS.find(r=>r.id===id),e=document.createElement('span');e.className='chip';e.textContent=`${r.icon} ${r.name}`;e.title=r.desc;list.appendChild(e)}}
-function renderCamp(){const g=G.g,s=TG.STAGES[g.stage],ev=TG.EVENTS[g.event];text('campTitle',s.name+' 복원');text('campStory',s.clear);text('eventTitle',ev.title);text('eventText',ev.text);const list=clear('eventChoices');if(g.eventDone){text('eventReward','선택한 기억이 저장되었습니다. 다음 역으로 갈 준비가 됐습니다.')}else{for(let i=0;i<ev.choices.length;i++){const c=ev.choices[i],b=button(c.label+' · '+c.desc,()=>{const reward=G.eventChoice(i);if(typeof reward==='string')text('eventReward','획득 · '+reward)});b.disabled=!!c.damage&&g.p.hp<=c.damage;list.appendChild(b)}text('eventReward','선택은 한 번만 적용됩니다.')}text('nextStage',g.eventDone?TG.STAGES[g.stage+1].name+'으로 · 체력 20 회복':'사건을 선택해 주세요');$('nextStage').disabled=!g.eventDone;}
+function renderCamp(){const g=G.g,s=TG.STAGES[g.stage],ev=TG.EVENTS[g.event];text('campTitle',s.name+' 복원');text('campStory',s.clear);text('eventTitle',ev.title);text('eventText',ev.text);const list=clear('eventChoices');if(g.eventDone){text('eventReward','선택한 기억이 저장되었습니다. 다음 역으로 갈 준비가 됐습니다.')}else{for(let i=0;i<ev.choices.length;i++){const c=ev.choices[i],b=button(c.label+' · '+c.desc,()=>{TG.audio.unlock();const reward=G.eventChoice(i);if(typeof reward==='string')text('eventReward','획득 · '+reward)});b.disabled=!!c.damage&&g.p.hp<=c.damage;list.appendChild(b)}text('eventReward','선택은 한 번만 적용됩니다.')}text('nextStage',g.eventDone?TG.STAGES[g.stage+1].name+'으로 · 체력 20 회복':'사건을 선택해 주세요');$('nextStage').disabled=!g.eventDone;}
 function renderResult(){const g=G.g;text('endOrnament',g.won?'✦ ◈ ✦':'◷');text('endOverline',g.practice?'전투 연습 종료':g.won?'CHAPTER 01 · 복원 완료':'열차로 귀환');text('endTitle',g.won?(g.practice?'관리자의 기록 복원':'두 개의 불빛'):g.reason==='timeout'?'정차 시간이 끝났다':g.reason==='retreat'?'기억을 안고 귀환':'다음 기회를 기다리며');text('endStory',g.won?(g.practice?'전투 연습을 마쳤습니다. 열차에서 첫 번째 장을 시작해 리제와 마레의 기억을 되찾아 보세요.':TG.STAGES[2].clear):g.reason==='timeout'?'역이 다시 안개 속으로 잠겼다. 다음에는 기억을 더 빠르게 모으고, 관리자가 나타나면 먼저 쓰러뜨려 보자.':'랜턴은 아직 꺼지지 않았다. 열차에서 숨을 고르고, 다른 기억의 조합으로 다시 출발하자.');text('resultTime',fmt(g.totalTime));text('resultKills',g.kills);text('resultShards',g.reward);text('resultNote',g.practice?'전투 연습은 조각 보상을 지급하지 않습니다.':g.won?'모은 조각과 복원 보너스 25개를 지급했습니다. 기억 보관소에서 결말 기록을 읽어 보세요.':`${TG.STAGES[g.stage].name}에서 귀환 · 모은 조각의 절반을 보관했습니다. 영구 성장과 복원한 기록은 남습니다.`);}
 function renderArchive(){text('memoryCount',`${S.data.memories.length} / ${TG.MEMORIES.length}개의 기록 복원`);const list=clear('memoryList');for(const m of TG.MEMORIES){const unlocked=S.data.memories.includes(m.id),e=document.createElement('article');e.className='memoryItem'+(unlocked?'':' locked');const title=document.createElement('h3'),body=document.createElement('p');title.textContent=unlocked?m.title:'아직 돌아오지 않은 기억';body.textContent=unlocked?m.text:'열차와 역을 탐험하면 기록이 조금씩 되돌아옵니다.';e.append(title,body);list.appendChild(e)}}
 function renderSettings(){const s=S.data.settings;$('bgmVolume').value=Math.round(s.bgm*100);$('sfxVolume').value=Math.round(s.sfx*100);text('bgmValue',`${Math.round(s.bgm*100)}%`);text('sfxValue',`${Math.round(s.sfx*100)}%`);$('reduceFX').checked=s.reduceFX;$('quality').value=s.quality;text('settingsStatus',status());}
@@ -79,9 +79,25 @@ function hud(){const g=G.g;if(!g||U.screen!=='playing')return;const p=g.p;const 
  TG.audio.scene(g.bossSpawned?'boss':TG.STAGES[g.stage].id);
 }
 U.refreshHud=hud;
-function updateNotice(){if(!registration?.waiting)return;$('updateBanner').style.display='block';const canUpdate=['menu','hub','settings','about','archive','ended'].includes(U.screen);text('updateText',canUpdate?'새로운 열차 기록이 준비됐습니다.':'새 버전이 준비됐습니다. 탐험 후 열차에서 업데이트하세요.');$('applyUpdate').hidden=!canUpdate;}
-$('applyUpdate').onclick=()=>{if(!registration?.waiting)return;updating=true;registration.waiting.postMessage({type:'SKIP_WAITING'})};$('dismissUpdate').onclick=()=>{$('updateBanner').style.display='none'};
-async function offline(){if(!('serviceWorker'in navigator)||!window.isSecureContext)return;try{registration=await navigator.serviceWorker.register('sw.js',{updateViaCache:'none'});updateNotice();registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'){if(navigator.serviceWorker.controller)updateNotice();else{text('updateText','오프라인 준비가 완료되었습니다. 홈 화면에 추가해도 좋아요.');$('updateBanner').style.display='block'}}})});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(updating)location.reload()});}catch{notify('오프라인 준비를 마치지 못했습니다. 인터넷 연결 상태에서 다시 열어 주세요.')}}
-TG.view.init($('field'));TG.input.init();addEventListener('resize',TG.view.resize);TG.audio.scene('hub');text('buildVersion',TG.VERSION+' · 첫 번째 장 공개 테스트');U.show('menu');
+function updateNotice(){
+ if(!registration?.waiting||registration.waiting===dismissedWorker)return;
+ $('updateBanner').style.display='block';const canUpdate=['menu','hub','settings','about','archive','ended'].includes(U.screen);text('updateText',canUpdate?'새로운 열차 기록이 준비됐습니다.':'새 버전이 준비됐습니다. 탐험 후 열차에서 업데이트하세요.');$('applyUpdate').hidden=!canUpdate;}
+$('applyUpdate').onclick=()=>{
+ if(!registration?.waiting||!['menu','hub','settings','about','archive','ended'].includes(U.screen))return;
+ updating=true;registration.waiting.postMessage({type:'SKIP_WAITING'});
+};
+$('dismissUpdate').onclick=()=>{
+ dismissedWorker=registration?.waiting||null;
+ $('updateBanner').style.display='none';
+};
+function checkUpdates(){
+ if(!registration||document.hidden||Date.now()-lastUpdateCheck<60000)return;
+ lastUpdateCheck=Date.now();
+ registration.update?.().catch(()=>{});
+}
+addEventListener('pageshow',checkUpdates);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)checkUpdates()});
+async function offline(){if(!('serviceWorker'in navigator)||!window.isSecureContext)return;try{registration=await navigator.serviceWorker.register('sw.js',{updateViaCache:'none'});lastUpdateCheck=Date.now();updateNotice();registration.addEventListener('updatefound',()=>{const worker=registration.installing;worker?.addEventListener('statechange',()=>{if(worker.state==='installed'){if(navigator.serviceWorker.controller)updateNotice();else{text('updateText','오프라인 준비가 완료되었습니다. 홈 화면에 추가해도 좋아요.');$('updateBanner').style.display='block'}}})});navigator.serviceWorker.addEventListener('controllerchange',()=>{if(updating)location.reload()});}catch{notify('오프라인 준비를 마치지 못했습니다. 인터넷 연결 상태에서 다시 열어 주세요.')}}
+TG.view.init($('field'));TG.input.init();addEventListener('resize',TG.view.resize);window.visualViewport?.addEventListener?.('resize',TG.view.resize);TG.audio.scene('hub');text('buildVersion',TG.VERSION+' · 첫 번째 장 공개 테스트');U.show('menu');
 function loop(now){const delta=last?Math.min(.04,(now-last)/1000):0;last=now;if(G.g?.status==='playing'){TG.input.poll();G.update(delta);hudClock+=delta;if(hudClock>.08){hud();hudClock=0}}if(G.g?.status==='playing'||now-lastDraw>100){TG.view.draw(now);lastDraw=now}requestAnimationFrame(loop)}requestAnimationFrame(loop);offline();
 })();

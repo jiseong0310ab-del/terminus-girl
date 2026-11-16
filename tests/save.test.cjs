@@ -113,3 +113,19 @@ test('stale chapter start blocked, while repeated same-tab saves succeed',()=>{
  assert.equal(b.S.status,'conflict');
  assert.equal(a.S.decode(a.values.get(KEY)).wallet,18);
 });
+
+test('pagehide-style repeated saves do not churn backups or require additional writes',()=>{
+ const b=boot();b.S.data.wallet=37;
+ assert.equal(b.S.save(),true);
+ const primary=b.values.get(KEY);
+ assert.equal(b.values.has(BACKUP),false);
+ b.storage.fail=true; // A redundant save should not need write access.
+ assert.equal(b.S.save(),true);
+ assert.equal(b.S.status,'ready');
+ assert.equal(b.values.get(KEY),primary);
+ assert.equal(b.values.has(BACKUP),false);
+ b.S.data.wallet=38;
+ assert.equal(b.S.save(),false);
+ assert.equal(b.S.status,'memory');
+ assert.equal(b.values.get(KEY),primary);
+});

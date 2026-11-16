@@ -1,5 +1,5 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');const {ROOT}=require('./helpers.cjs');
-function bootUI(){const els=new Map();let document;const ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});function el(id){const classes=new Set(),e={id,style:{},dataset:{},attrs:{},children:[],hidden:false,value:'',checked:false,textContent:'',classList:{toggle(n,v){if(v)classes.add(n);else classes.delete(n)},add(n){classes.add(n)},remove(n){classes.delete(n)}},append(...nodes){this.children.push(...nodes)},appendChild(n){this.children.push(n)},replaceChildren(...nodes){this.children=nodes},setAttribute(k,v){this.attrs[k]=v},addEventListener(){},focus(){document.activeElement=this},getContext:()=>ctx,getBoundingClientRect:()=>({left:20,top:600,width:136,height:136}),hasPointerCapture:()=>false,remove(){}};els.set(id,e);return e}for(const m of fs.readFileSync(path.join(ROOT,'index.html'),'utf8').matchAll(/id="([^"]+)"/g))el(m[1]);document={activeElement:null,body:el('body'),hidden:false,getElementById:id=>els.get(id),createElement:tag=>el(Math.random()+tag),createTextNode:s=>({textContent:s}),addEventListener(){}};const values=new Map(),c={console,Math,Date,Set,Map,JSON,document,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},Image:class{constructor(){this.complete=false;this.naturalWidth=0}},navigator:{},innerWidth:390,innerHeight:844,devicePixelRatio:1,requestAnimationFrame:()=>1,setInterval:()=>1,setTimeout:()=>1,addEventListener(){},performance:{now:()=>0}};c.window=c;c.TG={};vm.createContext(c);for(const file of ['data','store','audio','game','render','input','ui'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c,{filename:file+'.js'});return{c,TG:c.TG,$:id=>els.get(id)}}
+function bootUI(options={}){const els=new Map();const windowEvents={},documentEvents={};const on=(map,type,fn)=>(map[type]??=[]).push(fn);let document;const ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});function el(id){const classes=new Set(),e={id,style:{},dataset:{},attrs:{},children:[],hidden:false,value:'',checked:false,textContent:'',classList:{toggle(n,v){if(v)classes.add(n);else classes.delete(n)},add(n){classes.add(n)},remove(n){classes.delete(n)}},append(...nodes){this.children.push(...nodes)},appendChild(n){this.children.push(n)},replaceChildren(...nodes){this.children=nodes},setAttribute(k,v){this.attrs[k]=v},addEventListener(){},focus(){document.activeElement=this},getContext:()=>ctx,getBoundingClientRect:()=>({left:20,top:600,width:136,height:136}),hasPointerCapture:()=>false,remove(){}};els.set(id,e);return e}for(const m of fs.readFileSync(path.join(ROOT,'index.html'),'utf8').matchAll(/id="([^"]+)"/g))el(m[1]);document={activeElement:null,body:el('body'),hidden:false,getElementById:id=>els.get(id),createElement:tag=>el(Math.random()+tag),createTextNode:s=>({textContent:s}),addEventListener:(t,f)=>on(documentEvents,t,f)};const values=new Map(),c={console,Math,Date,Set,Map,JSON,document,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},Image:class{constructor(){this.complete=false;this.naturalWidth=0}},navigator:options.navigator||{},isSecureContext:!!options.navigator?.serviceWorker,Date:options.Date||Date,innerWidth:390,innerHeight:844,devicePixelRatio:1,requestAnimationFrame:()=>1,setInterval:()=>1,setTimeout:()=>1,addEventListener:(t,f)=>on(windowEvents,t,f),performance:{now:()=>0}};c.window=c;c.TG={};vm.createContext(c);for(const file of ['data','store','audio','game','render','input','ui'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c,{filename:file+'.js'});return{c,TG:c.TG,$:id=>els.get(id),fireWindow:type=>(windowEvents[type]||[]).forEach(fn=>fn({})),fireDocument:type=>(documentEvents[type]||[]).forEach(fn=>fn({}))}}
 test('real UI module initializes and routes every gameplay screen without missing bindings',()=>{const{TG,$}=bootUI();assert.equal(TG.ui.screen,'menu');$('enterHub').onclick();assert.equal(TG.ui.screen,'hub');$('chapterStart').onclick();assert.equal(TG.ui.screen,'playing');assert.equal($('hud').style.display,'block');$('pauseBtn').onclick();assert.equal(TG.ui.screen,'paused');$('pauseSettings').onclick();assert.equal(TG.ui.screen,'settings');$('settingsBack').onclick();assert.equal(TG.ui.screen,'paused');$('resumeBtn').onclick();TG.engine.g.xp=99;TG.engine.checkLevel();assert.equal(TG.ui.screen,'cards');assert($('cardList').children.length>0);while(TG.engine.g.status==='cards')$('cardList').children[0].onclick();TG.engine.stageClear();assert.equal(TG.ui.screen,'camp');$('eventChoices').children[0].onclick();assert.equal($('nextStage').disabled,false);$('campHub').onclick();assert.equal(TG.ui.screen,'hub');$('continueRun').onclick();assert.equal(TG.ui.screen,'camp');$('nextStage').onclick();assert.equal(TG.engine.g.stage,1);while(TG.engine.g.status==='cards')$('cardList').children[0].onclick();TG.engine.finish(false,'retreat');assert.equal(TG.ui.screen,'ended');assert($('endTitle').textContent);$('backBtn').onclick();$('openArchive').onclick();assert.equal($('memoryList').children.length,6);$('archiveBack').onclick();$('hubSettings').onclick();$('bgmVolume').value=0;$('bgmVolume').oninput();assert.equal(TG.store.data.settings.bgm,0);TG.ui.show('menu');$('menuAbout').onclick();assert.equal(TG.ui.screen,'about')});
 module.exports={bootUI};
 
@@ -45,4 +45,61 @@ test('visual feedback has mobile-safe boss layout and readable card hints',()=>{
  assert.match(css,/#levelScreen \.carddesc\{font-size:13px/);
  assert.match(html,/id="bossTrack"[^>]*role="progressbar"/);
  assert.match(html,/class="cardLegend"/);
+});
+
+test('a card selection after audio suspension explicitly unlocks audio before combat resumes',()=>{
+ const {TG,$}=bootUI();let unlocks=0;
+ TG.audio.unlock=()=>{unlocks++};
+ $('quickStart').onclick();
+ const g=TG.engine.g;
+ g.xp=g.xpNeed;TG.engine.checkLevel();
+ assert.equal(TG.ui.screen,'cards');
+ const before=unlocks;
+ $('cardList').children[0].onclick();
+ assert.equal(unlocks,before+1);
+ assert.equal(TG.ui.screen,'playing');
+});
+
+test('a station event choice after returning from background unlocks audio',()=>{
+ const {TG,$}=bootUI();let unlocks=0;
+ TG.audio.unlock=()=>{unlocks++};
+ $('enterHub').onclick();$('chapterStart').onclick();
+ TG.engine.stageClear();
+ assert.equal(TG.ui.screen,'camp');
+ const before=unlocks;
+ $('eventChoices').children[0].onclick();
+ assert.equal(unlocks,before+1);
+ assert.equal(TG.engine.g.eventDone,true);
+});
+
+test('a dismissed waiting update stays dismissed and never activates while fighting',async()=>{
+ let posted=0,updates=0;
+ const waiting={postMessage(){posted++}};
+ const registration={waiting,update:async()=>{updates++},addEventListener(){}};
+ const sw={controller:{},register:async()=>registration,addEventListener(){}};
+ const h=bootUI({navigator:{serviceWorker:sw}});
+ await new Promise(resolve=>setImmediate(resolve));
+ assert.equal(h.$('updateBanner').style.display,'block');
+ h.$('dismissUpdate').onclick();
+ assert.equal(h.$('updateBanner').style.display,'none');
+ h.$('enterHub').onclick();
+ assert.equal(h.$('updateBanner').style.display,'none');
+ h.$('quickStart').onclick();
+ h.$('applyUpdate').onclick();
+ assert.equal(posted,0,'an active run cannot be replaced by an update');
+});
+
+test('returning to the foreground checks for updates no more than once per minute',async()=>{
+ let now=1000000,updates=0;
+ class Clock extends Date{static now(){return now}}
+ const registration={waiting:null,update:async()=>{updates++},addEventListener(){}};
+ const sw={controller:{},register:async()=>registration,addEventListener(){}};
+ const h=bootUI({navigator:{serviceWorker:sw},Date:Clock});
+ await new Promise(resolve=>setImmediate(resolve));
+ now+=61000;h.fireWindow('pageshow');
+ assert.equal(updates,1);
+ h.fireWindow('pageshow');
+ assert.equal(updates,1);
+ now+=61000;h.fireDocument('visibilitychange');
+ assert.equal(updates,2);
 });

@@ -2,7 +2,19 @@
 (()=>{
 const V=TG.view={width:390,height:844};let canvas,ctx;const images={};const TAU=Math.PI*2;const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
-V.resize=function(){if(!ctx)return;V.width=innerWidth;V.height=innerHeight;const ratio=TG.store.data.settings.quality==='low'?1:Math.min(2,devicePixelRatio||1);canvas.width=Math.round(V.width*ratio);canvas.height=Math.round(V.height*ratio);ctx.setTransform(ratio,0,0,ratio,0,0)};
+V.resize=function(){
+ if(!ctx)return;
+ V.width=canvas.clientWidth>0?canvas.clientWidth:innerWidth;
+ V.height=canvas.clientHeight>0?canvas.clientHeight:innerHeight;
+ // Mobile web views can resize frequently as browser chrome moves.
+ // Avoid reallocating an unchanged canvas and cap its backing-buffer memory.
+ const quality=TG.store.data.settings.quality==='low'?1:2;
+ const ratio=Math.min(quality,devicePixelRatio||1,Math.sqrt(2100000/Math.max(1,V.width*V.height)));
+ const width=Math.max(1,Math.round(V.width*ratio)),height=Math.max(1,Math.round(V.height*ratio));
+ if(canvas.width===width&&canvas.height===height)return;
+ canvas.width=width;canvas.height=height;
+ ctx.setTransform(ratio,0,0,ratio,0,0);
+};
 const ready=im=>im?.complete&&im.naturalWidth>0;
 function circle(x,y,r,fill,stroke){ctx.beginPath();ctx.arc(x,y,Math.max(0,r),0,TAU);if(fill){ctx.fillStyle=fill;ctx.fill()}if(stroke){ctx.strokeStyle=stroke;ctx.stroke()}}
 function background(g,t,cx,cy){const W=V.width,H=V.height;ctx.fillStyle='#101727';ctx.fillRect(0,0,W,H);const size=560,ox=((-cx+W/2)%size+size)%size,oy=((-cy+H/2)%size+size)%size;if(ready(images.floor))for(let x=ox-size;x<W;x+=size)for(let y=oy-size;y<H;y+=size)ctx.drawImage(images.floor,x,y,size,size);ctx.fillStyle=['#0b102349','#142f4349','#291e334f'][g?.stage||0];ctx.fillRect(0,0,W,H);

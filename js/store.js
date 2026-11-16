@@ -33,6 +33,7 @@ S.save=function(){
  try{
   const prev=localStorage.getItem(KEY);
   if(prev!==seenRaw){markConflict();return false;}
+  if(prev===encoded){S.data=data;S.status='ready';return true;} // No write or backup churn for an unchanged checkpoint.
   if(prev){try{decode(prev);localStorage.setItem(BACKUP,prev)}catch{}}
   localStorage.setItem(KEY,encoded);
   seenRaw=encoded;S.data=data;S.status='ready';return true;
