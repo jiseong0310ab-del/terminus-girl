@@ -66,3 +66,50 @@ test('an unreadable store at startup cannot be overwritten if access later retur
   assert.equal(c.TG.store.save(),false);
   assert.equal(values.get(KEY),original);
 });
+
+test('a stale tab cannot overwrite a newer save or spend its shards',()=>{
+ const first=boot(),stale=boot({},first.values);
+ first.S.data.wallet=132;assert.equal(first.S.save(),true);
+ stale.S.data.wallet=444;assert.equal(stale.S.save(),false);
+ assert.equal(stale.S.status,'conflict');
+ assert.equal(stale.S.buy('heart'),false);
+ assert.equal(stale.S.settle({id:'run-other',shards:300,kills:0},true),0);
+ assert.equal(stale.S.data.stats.runs,0);
+ assert.equal(first.S.decode(first.values.get(KEY)).wallet,132);
+ assert.equal(first.S.decode(first.values.get(KEY)).stats.runs,0);
+});
+test('storage events lock the older tab immediately while preserving its export',()=>{
+ const first=boot(),second=boot({},first.values);
+ second.S.data.wallet=75;let signals=0;
+ second.S.onConflict=()=>{signals++};
+ first.S.data.wallet=12;first.S.save();
+ second.fireStorage({key:BACKUP,newValue:'unused'});
+ assert.notEqual(second.S.status,'conflict');
+ second.fireStorage({key:KEY,newValue:first.values.get(KEY)});
+ assert.equal(second.S.status,'conflict');
+ second.fireStorage({key:KEY,newValue:'other'});
+ assert.equal(signals,1);
+ assert.equal(second.S.save(),false);
+ assert.equal(second.S.preview(second.S.export()).wallet,75);
+ assert.equal(first.S.decode(first.values.get(KEY)).wallet,12);
+});
+test('explicit backup import can replace a conflicted snapshot after confirmation',()=>{
+ const a=boot(),b=boot({},a.values);
+ a.S.data.wallet=91;a.S.save();
+ assert.equal(b.S.save(),false);
+ const backup=a.S.export();
+ assert.equal(b.S.import(backup).wallet,91);
+ assert.equal(b.S.status,'ready');
+ b.S.data.wallet+=3;assert.equal(b.S.save(),true);
+ assert.equal(a.S.save(),false);
+ assert.equal(a.S.status,'conflict');
+ assert.equal(a.S.decode(a.values.get(KEY)).wallet,94);
+});
+test('stale chapter start blocked, while repeated same-tab saves succeed',()=>{
+ const a=boot(),b=boot({},a.values);
+ a.S.data.wallet=17;assert.equal(a.S.save(),true);
+ a.S.data.wallet=18;assert.equal(a.S.save(),true);
+ assert.throws(()=>b.G.start('chapter'),/기록 저장/);
+ assert.equal(b.S.status,'conflict');
+ assert.equal(a.S.decode(a.values.get(KEY)).wallet,18);
+});

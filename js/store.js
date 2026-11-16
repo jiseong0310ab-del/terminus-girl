@@ -13,15 +13,42 @@ function checksum(s){let n=2166136261;for(let i=0;i<s.length;i++){n^=s.charCodeA
 function encode(data){const body=JSON.stringify(data);return JSON.stringify({schema:1,checksum:checksum(body),data});}
 function decode(text){if(typeof text!=='string'||text.length>256000)throw Error('백업 파일이 너무 크거나 읽을 수 없습니다.');let env;try{env=JSON.parse(text)}catch{throw Error('백업 JSON을 읽을 수 없습니다.')}if(!env||typeof env!=='object'||Array.isArray(env))throw Error('백업 형식이 올바르지 않습니다.');if(env.schema!==1)throw Error('지원하지 않는 저장 버전입니다.');if(!env.data||typeof env.data!=='object'||Array.isArray(env.data))throw Error('백업 내용이 올바르지 않습니다.');if(checksum(JSON.stringify(env.data))!==env.checksum)throw Error('저장 데이터가 손상되었습니다.');return normal(env.data);}
 S.data=fresh();
-let existing=false,writeLocked=false;
-try{for(const key of [KEY,BACKUP]){const raw=localStorage.getItem(key);if(raw===null)continue;existing=true;try{S.data=decode(raw);S.status=key===BACKUP?'recovered':'ready';break}catch{S.status='corrupt'}}if(!existing){let old,legacy=localStorage.getItem('terminusRecords');try{old=JSON.parse(legacy||'{}')}catch{old={}}for(const k of Object.keys(S.data.stats))S.data.stats[k]=integer(old?.[k]);S.status=legacy?'migrated':'ready';}writeLocked=S.status==='corrupt';}catch{S.status='memory';writeLocked=true;}
-S.save=function(){const data=normal(S.data),encoded=encode(data);S.data=data;if(writeLocked)return false;try{const prev=localStorage.getItem(KEY);if(prev){try{decode(prev);localStorage.setItem(BACKUP,prev)}catch{}}localStorage.setItem(KEY,encoded);S.status='ready';return true}catch{S.status='memory';return false}};
+let existing=false,writeLocked=false,seenRaw=null;
+function markConflict(){
+ if(S.status==='conflict')return;
+ writeLocked=true;S.status='conflict';S.onConflict?.();
+}
+S.canWrite=function(){
+ if(writeLocked)return false;
+ try{if(localStorage.getItem(KEY)!==seenRaw){markConflict();return false;}return true;}
+ catch{S.status='memory';return false;}
+};
+if(typeof addEventListener==='function')addEventListener('storage',event=>{
+ if(event.key===KEY&&event.newValue!==seenRaw)markConflict();
+});
+try{for(const key of [KEY,BACKUP]){const raw=localStorage.getItem(key);if(key===KEY)seenRaw=raw;if(raw===null)continue;existing=true;try{S.data=decode(raw);S.status=key===BACKUP?'recovered':'ready';break}catch{S.status='corrupt'}}if(!existing){let old,legacy=localStorage.getItem('terminusRecords');try{old=JSON.parse(legacy||'{}')}catch{old={}}for(const k of Object.keys(S.data.stats))S.data.stats[k]=integer(old?.[k]);S.status=legacy?'migrated':'ready';}writeLocked=S.status==='corrupt';}catch{S.status='memory';writeLocked=true;}
+S.save=function(){
+ if(!S.canWrite())return false;
+ const data=normal(S.data),encoded=encode(data);
+ try{
+  const prev=localStorage.getItem(KEY);
+  if(prev!==seenRaw){markConflict();return false;}
+  if(prev){try{decode(prev);localStorage.setItem(BACKUP,prev)}catch{}}
+  localStorage.setItem(KEY,encoded);
+  seenRaw=encoded;S.data=data;S.status='ready';return true;
+ }catch{S.status='memory';return false}
+};
 S.export=()=>encode(normal(S.data));S.preview=text=>decode(text);
-S.import=function(text){const next=decode(text);S.data=next;writeLocked=false;S.save();return next;};
-S.buy=function(id){const def=TG.UPGRADES.find(u=>u.id===id);if(!def)return false;const lv=S.data.upgrades[id],cost=def.base*(lv+1);if(lv>=def.cap||S.data.wallet<cost)return false;S.data.wallet-=cost;S.data.upgrades[id]++;S.save();return true;};
-S.remember=function(id){if(!TG.MEMORIES.some(m=>m.id===id)||S.data.memories.includes(id))return false;S.data.memories.push(id);S.save();return true;};
-S.settle=function(run,won){if(S.data.settled.includes(run.id))return 0;const amount=Math.max(0,Math.floor(run.shards*(won?1:.5)))+(won?25:0);S.data.wallet=Math.min(1e7,S.data.wallet+amount);S.data.stats.runs++;S.data.stats.wins+=won?1:0;S.data.stats.bestKills=Math.max(S.data.stats.bestKills,run.kills);S.data.stats.totalShards+=amount;S.data.settled.push(run.id);S.data.checkpoint=null;S.save();return amount;};
-S.snapshot=function(g,phase='stage'){if(g.mode!=='chapter')return;S.data.checkpoint={id:g.id,phase,stage:g.stage,mode:g.mode,duration:g.duration,hp:g.p.hp,levels:clone(g.levels),relics:[...g.relics],xp:g.xp,level:g.level,shards:g.shards,kills:g.kills,totalTime:g.totalTime,erase:g.erase,event:g.event,eventDone:g.eventDone,bonusCards:(g.bonusCards||0)+(g.status==='cards'?1:0)};S.save();};
+S.import=function(text){
+ const next=decode(text);S.data=next;
+ try{seenRaw=localStorage.getItem(KEY);writeLocked=false;}
+ catch{S.status='memory';return next;}
+ S.save();return next;
+};
+S.buy=function(id){const def=TG.UPGRADES.find(u=>u.id===id);if(!def||!S.canWrite())return false;const lv=S.data.upgrades[id],cost=def.base*(lv+1);if(lv>=def.cap||S.data.wallet<cost)return false;S.data.wallet-=cost;S.data.upgrades[id]++;S.save();return true;};
+S.remember=function(id){if(!TG.MEMORIES.some(m=>m.id===id)||S.data.memories.includes(id)||!S.canWrite())return false;S.data.memories.push(id);S.save();return true;};
+S.settle=function(run,won){if(!S.canWrite()||S.data.settled.includes(run.id))return 0;const amount=Math.max(0,Math.floor(run.shards*(won?1:.5)))+(won?25:0);S.data.wallet=Math.min(1e7,S.data.wallet+amount);S.data.stats.runs++;S.data.stats.wins+=won?1:0;S.data.stats.bestKills=Math.max(S.data.stats.bestKills,run.kills);S.data.stats.totalShards+=amount;S.data.settled.push(run.id);S.data.checkpoint=null;S.save();return amount;};
+S.snapshot=function(g,phase='stage'){if(g.mode!=='chapter'||!S.canWrite())return false;S.data.checkpoint={id:g.id,phase,stage:g.stage,mode:g.mode,duration:g.duration,hp:g.p.hp,levels:clone(g.levels),relics:[...g.relics],xp:g.xp,level:g.level,shards:g.shards,kills:g.kills,totalTime:g.totalTime,erase:g.erase,event:g.event,eventDone:g.eventDone,bonusCards:(g.bonusCards||0)+(g.status==='cards'?1:0)};return S.save();};
 S.clearPractice=function(){if(S.data.checkpoint?.mode!=='chapter')S.data.checkpoint=null;};
 S.fresh=fresh;S.normal=normal;S.decode=decode;S.encode=encode;
 })();
