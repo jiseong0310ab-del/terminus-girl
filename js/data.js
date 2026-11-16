@@ -1,10 +1,10 @@
 'use strict';
 window.TG=window.TG||{};
-TG.VERSION='0.9.2-rc1';
+TG.VERSION='0.9.3-rc1';
 TG.CARDS=[
 {id:'blade',icon:'✧',name:'시간 절단',desc:'칼날 피해 +25% · 공격 간격 -6%',cap:6},
 {id:'pierce',icon:'↟',name:'관통하는 기억',desc:'칼날 관통 +1',cap:3},
-{id:'echo',icon:'◈',name:'잔향의 분열',desc:'한 번에 발사하는 칼날 +1',cap:4},
+{id:'echo',icon:'◈',name:'잔향의 분열',desc:'부가 칼날 +1 · 부가 칼날 피해 70%',cap:4},
 {id:'shield',icon:'◇',name:'푸른 수호',desc:'보호막 +1 · 18초마다 재충전',cap:3},
 {id:'speed',icon:'ϟ',name:'기관 가속',desc:'이동 속도 +10% · 체력 8 회복',cap:4},
 {id:'magnet',icon:'✦',name:'기억의 인력',desc:'획득 범위 +30% · 최대 체력 +10',cap:4},
@@ -41,11 +41,11 @@ TG.STAGES=[
 {id:'terminus',name:'종착 승강장',sub:'끝을 지우는 마지막 차장',boss:'종착의 기록관',bossKind:2,duration:300,color:'#d5b889',enemies:['conductor','lost'],intro:'마지막 선로에서 리제는 자기 이름이 적힌 소거 명령서를 발견했다. 기억을 버려야만 달리던 열차. 오늘은 다른 길을 선택한다.',clear:'리제는 소거 명령서 대신 빈 승차권을 내밀었다. “돌아갈 곳이 없는 기억도, 여기 타면 돼.” 꺼질 듯하던 랜턴 옆에 작은 불빛 하나가 켜졌다.'}
 ];
 TG.EVENTS=[
-{id:'bench',title:'눈 위의 긴 의자',text:'아직 온기가 남은 자리와 작은 조각 주머니가 있다.',choices:[{label:'잠시 쉬어 간다',desc:'체력 35 회복',heal:35},{label:'남겨진 조각을 챙긴다',desc:'귀환 보상 +16',shards:16}]},
+{id:'bench',title:'눈 위의 긴 의자',text:'아직 온기가 남은 자리와 작은 조각 주머니가 있다.',choices:[{label:'잠시 쉬어 간다',desc:'체력 35 회복',heal:35},{label:'남겨진 조각을 챙긴다',desc:'탐험 기억 조각 +16',shards:16}]},
 {id:'radio',title:'끊어진 안내 방송',text:'마레의 목소리가 잡음 사이로 들린다. “어느 쪽을 기억할래?”',choices:[{label:'돌아가는 길',desc:'소거율 15 감소',erase:-15},{label:'아직 오지 않은 시간',desc:'다음 역에서 카드 1장 추가 선택',card:1}]},
-{id:'luggage',title:'주인 없는 여행 가방',text:'열차 문 옆에 낡은 가방이 놓여 있다.',choices:[{label:'조심스럽게 열어 본다',desc:'무작위 미보유 유물 1개',relic:true},{label:'주인을 기다리며 남겨 둔다',desc:'체력 20 회복 · 귀환 보상 +8',heal:20,shards:8}]},
+{id:'luggage',title:'주인 없는 여행 가방',text:'열차 문 옆에 낡은 가방이 놓여 있다.',choices:[{label:'조심스럽게 열어 본다',desc:'무작위 미보유 유물 1개',relic:true},{label:'주인을 기다리며 남겨 둔다',desc:'체력 20 회복 · 탐험 기억 조각 +8',heal:20,shards:8}]},
 {id:'mirror',title:'이름을 묻는 거울',text:'거울은 얼굴 대신 지워진 이름을 비춘다.',choices:[{label:'내 이름을 말한다',desc:'체력 15 소모 · 카드 1장 추가 선택',damage:15,card:1},{label:'마레의 이름을 부른다',desc:'소거율 12 감소 · 체력 10 회복',erase:-12,heal:10}]},
-{id:'signal',title:'마지막 신호등',text:'멈춘 신호등 아래 낡은 표가 빛난다.',choices:[{label:'푸른 불을 기다린다',desc:'체력 25 회복 · 소거율 8 감소',heal:25,erase:-8},{label:'신호의 기억을 되찾는다',desc:'귀환 보상 +20',shards:20}]},
+{id:'signal',title:'마지막 신호등',text:'멈춘 신호등 아래 낡은 표가 빛난다.',choices:[{label:'푸른 불을 기다린다',desc:'체력 25 회복 · 소거율 8 감소',heal:25,erase:-8},{label:'신호의 기억을 되찾는다',desc:'탐험 기억 조각 +20',shards:20}]},
 {id:'letter',title:'보내지 못한 편지',text:'“이 기차가 멈추면, 함께 내려 줄래?” 발신인은 지워져 있다.',choices:[{label:'편지를 품에 넣는다',desc:'무작위 미보유 유물 1개',relic:true},{label:'편지를 소리 내어 읽는다',desc:'체력 30 회복 · 다음 역 소거율 10 감소',heal:30,erase:-10}]}
 ];
 TG.MEMORIES=[

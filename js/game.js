@@ -16,7 +16,27 @@ G.continue=function(){const c=TG.store.data.checkpoint;if(!c||!TG.store.canWrite
 G.pause=function(){if(G.g?.status!=='playing')return;G.g.status='paused';G.input.x=G.input.y=0;G.onChange('paused');};
 G.resume=function(){if(G.g?.status!=='paused'||(G.g.mode==='chapter'&&!TG.store.canWrite()))return;G.g.status='playing';G.onChange('playing');};
 G.dash=function(){const g=G.g;if(!g||g.status!=='playing'||g.dash.cooldown>0)return false;const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m}d.x=d.lastX;d.y=d.lastY;d.active=.18;d.invulnerable=true;d.cooldown=d.maxCooldown;g.rings.push({x:g.p.x,y:g.p.y,r:25,life:.3,max:.3,color:'#ead8ae'});G.onSound('dash');return true;};
-G.options=function(){const g=G.g;const list=TG.CARDS.filter(c=>(g.levels[c.id]||0)<c.cap);for(let i=list.length-1;i>0;i--){let j=Math.floor(Math.random()*(i+1));[list[i],list[j]]=[list[j],list[i]]}return list.slice(0,3).map(c=>c.id)};
+// Every early offer has a usable offensive choice; a nearly completed
+// synergy is not hidden behind pure randomness. The other slots stay random.
+G.options=function(){
+ const g=G.g,eligible=TG.CARDS.filter(c=>(g.levels[c.id]||0)<c.cap),chosen=[];
+ const offensive=new Set(['blade','echo','orbit','lantern']);
+ function pick(pool){
+  const remaining=pool.filter(c=>!chosen.includes(c.id));
+  if(remaining.length)chosen.push(remaining[Math.floor(Math.random()*remaining.length)].id);
+ }
+ const finishers=eligible.filter(c=>TG.SYNERGIES.some(s=>
+  !g.synergies[s.id]&&Object.prototype.hasOwnProperty.call(s.needs,c.id)&&
+  Object.entries(s.needs).every(([id,n])=>(g.levels[id]||0)+(id===c.id?1:0)>=n)
+ ));
+ pick(finishers);
+ if(g.level<=4&&!chosen.some(id=>offensive.has(id)))pick(eligible.filter(c=>offensive.has(c.id)));
+ const rest=eligible.filter(c=>!chosen.includes(c.id));
+ for(let i=rest.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}
+ chosen.push(...rest.slice(0,Math.max(0,3-chosen.length)).map(c=>c.id));
+ for(let i=chosen.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[chosen[i],chosen[j]]=[chosen[j],chosen[i]];}
+ return chosen;
+};
 G.checkLevel=function(){const g=G.g;if(!g||g.status!=='playing')return false;if(g.bonusCards>0){g.bonusCards--;}else if(g.xp>=g.xpNeed){g.xp-=g.xpNeed;g.level++;g.xpNeed=12+(g.level-1)*7;}else return false;g.offered=G.options();if(!g.offered.length)g.offered=['rest'];g.offerToken=++seq;g.status='cards';G.input.x=G.input.y=0;G.onChange('cards');G.onSound('card');return true;};
 G.choose=function(id,token){const g=G.g;if(!g||g.status!=='cards'||token!==g.offerToken||!g.offered.includes(id)||(g.mode==='chapter'&&!TG.store.canWrite()))return false;const p=g.p;if(id==='rest'){p.hp=Math.min(p.maxHp,p.hp+25)}else{const c=TG.CARDS.find(c=>c.id===id);if(!c||(g.levels[id]||0)>=c.cap)return false;g.levels[id]=(g.levels[id]||0)+1;const before=p.maxHp;G.rebuild();if(p.maxHp>before)p.hp=Math.min(p.maxHp,p.hp+p.maxHp-before);if(id==='speed')p.hp=Math.min(p.maxHp,p.hp+8);if(id==='shield'){p.shield=Math.min(3,p.shield+1);g.lastShield=g.time;}}
  g.offered=[];g.status='playing';G.onChange('playing');G.checkLevel();return true;};
@@ -36,7 +56,7 @@ function enemyTick(dt){const g=G.g,p=g.p;for(const e of [...g.enemies]){if(g.sta
  const slow=e.slow>0?1-(p.slow||.35):1;e.x+=vx*speed*slow*dt;e.y+=vy*speed*slow*dt;if(len(p.x-e.x,p.y-e.y)<e.r+14)G.damage(e.type==='boss'?18:e.action==='charge'?14:9);if(g.status!=='playing')return;
  if(p.orbit>0&&e.orbitHit<=0)for(let k=0;k<p.orbit;k++){const a=g.time*2.4+k*TAU/p.orbit;if(len(e.x-p.x-Math.cos(a)*65,e.y-p.y-Math.sin(a)*65)<e.r+14){G.hitEnemy(e,14*(g.synergies.frostOrbit&&e.slow>0?1.3:1));if(g.synergies.frostOrbit)e.slow=1.5;e.orbitHit=.4;break}}
  }}
-function fire(){const g=G.g,p=g.p;let e=null,best=650;for(const v of g.enemies){const d=len(v.x-p.x,v.y-p.y);if(d<best){best=d;e=v}}if(!e)return;const angle=Math.atan2(e.y-p.y,e.x-p.x);for(let i=0;i<p.projectiles&&g.bullets.length<100;i++){const a=angle+(i-(p.projectiles-1)/2)*.15;g.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*500,vy:Math.sin(a)*500,life:1.4,damage:p.attack*(g.synergies.echoBlade&&i===Math.floor(p.projectiles/2)?1.3:1)*(Math.random()<p.crit?1.7:1),pierce:p.pierce,hit:new Set()})}G.onSound('shot');}
+function fire(){const g=G.g,p=g.p;let e=null,best=650;for(const v of g.enemies){const d=len(v.x-p.x,v.y-p.y);if(d<best){best=d;e=v}}if(!e)return;const angle=Math.atan2(e.y-p.y,e.x-p.x);for(let i=0;i<p.projectiles&&g.bullets.length<100;i++){const a=angle+(i-(p.projectiles-1)/2)*.15;g.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*500,vy:Math.sin(a)*500,life:1.4,damage:p.attack*(i===Math.floor(p.projectiles/2)?1:.7)*(g.synergies.echoBlade&&i===Math.floor(p.projectiles/2)?1.3:1)*(Math.random()<p.crit?1.7:1),pierce:p.pierce,hit:new Set()})}G.onSound('shot');}
 function hazardTick(dt){const g=G.g;g.hazardClock+=dt;if(g.time>35){g.erase=clamp(g.erase+dt*(.12+g.stage*.035),0,100)}if(g.erase>=15&&g.hazardClock>Math.max(5,12-g.erase*.06)){g.hazardClock=0;const a=rand(0,TAU),d=rand(40,155);if(g.hazards.length<2)g.hazards.push({x:g.p.x+Math.cos(a)*d,y:g.p.y+Math.sin(a)*d,r:58,age:0,warning:2,life:5})}for(const h of g.hazards){h.age+=dt;if(h.age>=h.warning&&len(g.p.x-h.x,g.p.y-h.y)<h.r+12)G.damage(10)}g.hazards=g.hazards.filter(h=>h.age<h.life);}
 G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt=clamp(delta,0,.04),p=g.p;g.time+=dt;g.totalTime+=dt;g.flash=Math.max(0,g.flash-dt);g.shake=Math.max(0,g.shake-25*dt);if(g.toast)g.toast.life-=dt;
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;p.x=clamp(p.x+(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt,-5000,5000);p.y=clamp(p.y+(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt,-5000,5000);
