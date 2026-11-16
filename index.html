@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#080f1b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>종착역의 소녀 — 거울 유리역</title>
+<style>
+:root{font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;color:#eaf5ff;background:#080d17;-webkit-tap-highlight-color:transparent}
+*{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;height:100dvh;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}button{font:inherit;cursor:pointer;touch-action:manipulation}button:focus-visible{outline:2px solid #94e7f6;outline-offset:3px}
+#app{height:100%;height:100dvh;position:relative;overflow:hidden;background:radial-gradient(ellipse at 50% 30%,#1c3a50,#07101e 70%)}
+#field{width:100%;height:100%;display:block;touch-action:none}
+#hud{position:absolute;z-index:2;top:0;left:0;right:0;padding:calc(env(safe-area-inset-top, 0px) + 13px) 15px 0;pointer-events:none;display:none;text-shadow:0 1px 9px #020812}
+.hrow{display:flex;justify-content:space-between;align-items:center;gap:8px}.eyebrow{font-size:10px;color:#94b9d0;letter-spacing:2px;font-weight:800}.hudtitle{font-size:13px;font-weight:750;letter-spacing:.5px}.clock{font-weight:800;font-size:23px;font-variant-numeric:tabular-nums}.mini{font-size:11px;color:#a4c5d7}.bar{height:7px;border-radius:99px;background:#142d3a;border:1px solid #35536b;overflow:hidden;margin-top:7px}.bar>div{height:100%;background:linear-gradient(90deg,#d84b71,#ff9eaa);transition:width .13s}.exp{height:4px;background:#233d4e;margin:9px -15px 0}.exp>div{height:100%;background:linear-gradient(90deg,#56a2db,#a8f6fb)}
+#pauseBtn{position:absolute;z-index:3;right:15px;top:calc(env(safe-area-inset-top, 0px) + 96px);height:41px;width:41px;border-radius:14px;border:1px solid #426879;background:#0c1d2bba;color:#ebf9ff;display:none;font-size:19px;backdrop-filter:blur(8px)}
+#controls{position:absolute;inset:0;z-index:1;display:none;pointer-events:none}.joystick{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 37px);left:27px;width:136px;height:136px;border:2px solid #81d6e735;border-radius:50%;background:radial-gradient(circle,#479eae18,#07172453 65%);box-shadow:inset 0 0 40px #89d8ec0c;pointer-events:auto;touch-action:none}.stick{position:absolute;left:43px;top:43px;width:48px;height:48px;border-radius:50%;border:1px solid #b1faff80;background:radial-gradient(circle at 40% 30%,#90f4fdc9,#1b698890);box-shadow:0 0 18px #66dce643;transform:translate3d(0,0,0)}.controlLabel{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 22px);left:57px;font-size:9px;letter-spacing:2px;color:#89aeb9}.auto{position:absolute;bottom:calc(env(safe-area-inset-bottom,0px) + 59px);right:24px;color:#b2dbe2;font-size:11px;text-align:center;line-height:1.7;opacity:.8}.auto .sword{font-size:26px;display:block;filter:drop-shadow(0 0 7px #6acfe7)}
+#flash{position:absolute;inset:0;pointer-events:none;z-index:4;opacity:0;background:#d34d7b}
+#toast{position:absolute;z-index:5;left:50%;top:27%;transform:translate(-50%,-20px);width:max-content;max-width:86%;text-align:center;background:#09172ce8;border:1px solid #5eb0ca6b;border-radius:11px;padding:12px 16px;color:#e9f9ff;box-shadow:0 8px 40px #0009;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;font-size:13px;line-height:1.5}
+#toast.active{opacity:1;transform:translate(-50%,0)}
+.screen{position:absolute;inset:0;z-index:7;display:none;overflow-y:auto;touch-action:pan-y;background:linear-gradient(180deg,#07101ff2,#0d1624f4);padding:calc(env(safe-area-inset-top,0px) + 20px) 21px calc(env(safe-area-inset-bottom,0px) + 25px);align-items:center;justify-content:center}
+.screen.on{display:flex}.panel{max-width:500px;width:100%;margin:auto;text-align:center}.ornament{color:#9ed6dc;font-size:27px;letter-spacing:4px;text-shadow:0 0 25px #6af0ff8a}.overline{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#73b8c9;margin:15px 0 11px;font-weight:800}.heroTitle{font-family:Georgia,"Times New Roman",serif;font-weight:700;font-size:clamp(31px,9vw,48px);margin:10px 0;color:#f0f1ed;letter-spacing:2px;text-shadow:0 0 32px #62bbdc77}.subtitle{font-size:12px;color:#afd0d9;letter-spacing:1px;line-height:1.7}.rule{height:1px;background:linear-gradient(90deg,transparent,#508093,transparent);margin:23px auto;width:90%}.narrative{color:#b6c9d3;font-size:13px;line-height:1.9;max-width:360px;margin:0 auto 20px}.quote{color:#d5e7e8;font-family:Georgia,serif;font-size:15px;line-height:1.8;margin:15px auto 25px;font-style:italic}
+.btn{display:block;width:100%;border-radius:12px;border:1px solid #77bdca7a;background:linear-gradient(125deg,#23637c,#152f49);color:#eaffff;padding:15px 15px;font-size:14px;font-weight:750;letter-spacing:.5px;box-shadow:0 4px 17px #0006;margin:10px 0}.btn.alt{background:#162234aa;color:#a7d0db;border-color:#50697b78}.btn:active{transform:scale(.98)}.note{color:#7898ac;font-size:11px;line-height:1.65;margin-top:13px}.archive{border:1px solid #486a7a69;border-radius:13px;background:#14263784;margin-top:25px;padding:13px;text-align:left;font-size:12px;color:#aac6d4;line-height:1.7}.archive strong{color:#ebf8f7}
+#levelScreen{background:#050c17e9;backdrop-filter:blur(7px)}#levelScreen .panel{max-width:440px}.cards{display:grid;grid-template-columns:1fr;gap:10px;text-align:left;margin-top:16px}.upgrade{width:100%;padding:13px 16px;text-align:left;display:flex;align-items:center;gap:13px;background:linear-gradient(130deg,#193750e8,#0d2034eb);border:1px solid #527c96;border-radius:13px;color:#e9f8ff;min-height:74px;box-shadow:0 5px 12px #0003}.upgrade:active{border-color:#d2f6fa;background:#21546e}.cardIcon{width:47px;height:47px;flex-shrink:0;border-radius:11px;background:#19435b;border:1px solid #4b8197;display:grid;place-items:center;font-size:25px}.cardtitle{display:block;font-size:14px;font-weight:800;margin-bottom:5px}.carddesc{display:block;font-size:11px;color:#b0cedd;line-height:1.5}.cardlevel{font-size:10px;color:#edcb83;display:block;margin-top:4px}
+.stats{margin:20px auto;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.stat{padding:12px 6px;border:1px solid #3c6579;border-radius:10px;background:#14233796}.stat b{display:block;color:#ebf9ff;font-size:21px}.stat span{font-size:10px;color:#8eacbf}#endTitle{font-family:Georgia,serif;font-size:33px;margin:10px 0}#endStory{font-size:13px;line-height:1.8;color:#c3dae0;margin:15px 0 20px}#pauseScreen{background:#061321ed}
+@media(min-width:750px){.joystick{left:calc(50% - 285px)}.controlLabel{left:calc(50% - 254px)}.auto{right:calc(50% - 290px)}#hud{max-width:750px;left:50%;transform:translateX(-50%)}}
+@media(max-height:710px){.screen{justify-content:flex-start}.panel{margin:auto}.rule{margin:12px auto}.quote{margin:9px auto 13px}.archive{margin-top:12px}.heroTitle{font-size:31px}.overline{margin:7px 0}}
+</style>
+</head>
+<body>
+<div id="app">
+ <canvas id="field" aria-label="게임 전투 화면"></canvas>
+ <div id="hud">
+  <div class="hrow"><div><div class="eyebrow">PHASE 01 · 삭제된 역</div><div class="hudtitle">거울 유리역 <span style="color:#7db8c6">— 리제</span></div></div><div style="text-align:right"><div class="clock" id="timer">01:30</div><div class="mini" id="killed">격파 0 · 기억 0</div></div></div>
+  <div style="max-width:190px;margin-top:12px"><div class="hrow mini"><b style="color:#ffc8d4" id="healthLabel">HP 100 / 100</b><span id="levelLabel">LV 1</span></div><div class="bar"><div id="hpFill" style="width:100%"></div></div></div>
+  <div class="exp"><div id="xpFill" style="width:0%"></div></div>
+ </div>
+ <button id="pauseBtn" aria-label="일시정지">Ⅱ</button>
+ <div id="controls"><div id="joystick" class="joystick"><div class="stick" id="stick"></div></div><div class="controlLabel">MOVE</div><div class="auto"><span class="sword">⚔</span>공격 자동</div></div>
+ <div id="flash"></div><div id="toast" role="status"></div>
+ <section class="screen on" id="menuScreen"><div class="panel">
+  <div class="ornament">✦ ─ ◷ ─ ✦</div><div class="overline">TERMINUS GIRL / PROTOTYPE 0.1</div>
+  <h1 class="heroTitle">종착역의 소녀</h1><div class="subtitle">삭제된 시간을 거슬러 올라가는 열차</div>
+  <div class="rule"></div><div class="quote">“사라진 역에는 아직 돌아오지 못한 기억이 있다.”</div>
+  <div class="narrative">차장 리제는 <b>거울 유리역</b>에 진입했다.<br>기억의 망령을 피해 살아남고, 시간의 조각을 모아 잠들어 있는 진실을 깨워라.</div>
+  <button class="btn" id="quickStart">▶ 빠른 테스트 · 90초</button><button class="btn alt" id="fullStart">5분 생존전 시작</button>
+  <div class="note">왼쪽 가상 조이스틱으로 이동 · 공격 자동<br>레벨업할 때 카드 3장 중 하나 선택<br>PC에서는 WASD / 방향키로 이동</div>
+  <div class="archive">◈ <strong>열차 기록보관소</strong><div id="archiveText">기록된 탐험이 없습니다.</div></div>
+ </div></section>
+ <section class="screen" id="levelScreen"><div class="panel"><div class="ornament">✦ ◇ ✦</div><div class="overline">기억의 선택</div><h2 style="font-size:25px;margin:0">잊힌 힘을 되찾다</h2><div class="subtitle" style="margin-top:10px">카드 한 장을 선택해 이번 탐험에 적용</div><div class="cards" id="cardList"></div><div class="note">카드를 선택하면 전투가 다시 시작됩니다.</div></div></section>
+ <section class="screen" id="pauseScreen"><div class="panel"><div class="ornament">◷</div><div class="overline">시간 정지</div><h2>열차가 잠시 멈췄다</h2><p class="narrative">리제가 숨을 고른다. 역의 그림자는 움직이지 않는다.</p><button class="btn" id="resumeBtn">계속 전투</button><button class="btn alt" id="quitBtn">열차로 돌아가기</button></div></section>
+ <section class="screen" id="endScreen"><div class="panel"><div class="ornament" id="endOrnament">✦</div><div class="overline" id="endOverline">탐험 기록</div><h2 id="endTitle">탐험 종료</h2><p id="endStory"></p><div class="stats"><div class="stat"><b id="resultTime">0:00</b><span>생존 시간</span></div><div class="stat"><b id="resultKills">0</b><span>격파한 망령</span></div><div class="stat"><b id="resultShards">0</b><span>기억의 조각</span></div></div><button class="btn" id="retryBtn">다시 탐험</button><button class="btn alt" id="backBtn">열차 거점으로</button><div class="note">탐험 기록은 이 브라우저에 저장됩니다.</div></div></section>
+</div>
+<script>
+(()=>{'use strict';
+const $=id=>document.getElementById(id);const canvas=$('field'),ctx=canvas.getContext('2d',{alpha:false});
+const screens=['menuScreen','levelScreen','pauseScreen','endScreen'];
+const TWO=Math.PI*2;const rnd=(a,b)=>a+Math.random()*(b-a);const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));const dist=(x,y)=>Math.hypot(x,y);
+const CARD_DEFS=[
+ {id:'blade',icon:'🗡️',name:'시간 절단',desc:'시간 칼날 공격력 +35%, 공격 간격 -8%'},
+ {id:'pierce',icon:'✧',name:'관통하는 기억',desc:'탄환이 적을 하나 더 관통합니다.'},
+ {id:'echo',icon:'◈',name:'잔향의 분열',desc:'자동 공격 시 발사하는 탄환 +1'},
+ {id:'shield',icon:'🛡',name:'푸른 수호',desc:'피해 1회를 막는 보호막 획득 · 18초마다 충전'},
+ {id:'speed',icon:'⚡',name:'기관 가속',desc:'이동 속도 +17%, 체력 8 회복'},
+ {id:'magnet',icon:'✦',name:'기억의 인력',desc:'기억 조각 획득 범위 +55%, 최대 체력 +10'},
+ {id:'orbit',icon:'◷',name:'시계의 파편',desc:'주위를 회전하는 파편으로 근접 적에게 피해'},
+ {id:'frost',icon:'❄',name:'정지된 초침',desc:'탄환 적중 시 적을 잠시 느리게 만듭니다.'}
+];
+let W=0,H=0,DPR=1,game=null,last=0,raf=0,pointerId=null;const keys={};const stick={x:0,y:0};
+function resize(){W=window.innerWidth;H=window.innerHeight;DPR=Math.min(2,window.devicePixelRatio||1);canvas.width=Math.round(W*DPR);canvas.height=Math.round(H*DPR);ctx.setTransform(DPR,0,0,DPR,0,0);}
+addEventListener('resize',resize);resize();
+function screen(id){screens.forEach(s=>$(s).classList.toggle('on',s===id));}
+function archives(){let rec={};try{rec=JSON.parse(localStorage.getItem('terminusRecords')||'{}')}catch(e){}return rec;}
+function updateArchive(){const r=archives();$('archiveText').innerHTML=r.runs?`누적 탐험 <strong>${r.runs}회</strong> · 최고 격파 <strong>${r.bestKills||0}</strong> · 탈출 성공 <strong>${r.wins||0}회</strong>`:'기록된 탐험이 없습니다.';}
+updateArchive();
+function saveRecord(won){let r=archives();r.runs=(r.runs||0)+1;r.bestKills=Math.max(r.bestKills||0,game.kills);r.wins=(r.wins||0)+(won?1:0);r.totalShards=(r.totalShards||0)+game.shards;try{localStorage.setItem('terminusRecords',JSON.stringify(r))}catch(e){}updateArchive();}
+function newGame(duration){game={running:true,mode:duration,duration,time:0,level:1,xp:0,xpNeed:12,kills:0,shards:0,lastFire:0,lastHit:-9,lastShield:-9,spawn:0,enemySeq:0,bossSpawned:false,bossDefeated:false,levelQueued:false,toastTimeout:0,loreIndex:0,shake:0,flash:0,levelups:0,p:{x:0,y:0,hp:100,maxHp:100,speed:225,attack:16,interval:.5,projectiles:1,pierce:0,slow:0,shield:0,orbit:0,magnet:95},enemies:[],bullets:[],drops:[],particles:[],rings:[],levels:{},timeCode:0};
+ $('hud').style.display='block';$('pauseBtn').style.display='block';$('controls').style.display='block';screen(null);$('toast').classList.remove('active');$('timer').textContent=fmt(duration);refreshHud();showToast('거울 유리역 · 삭제된 기록 01',2.5);}
+function showToast(s,t=2.3){$('toast').textContent=s;$('toast').classList.add('active');if(game)game.toastTimeout=t;}
+function hideToast(){if(!$('toast').classList.contains('active'))return;$('toast').classList.remove('active');}
+function fmt(t){t=Math.max(0,Math.ceil(t));return `${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;}
+function refreshHud(){if(!game)return;let p=game.p;$('healthLabel').textContent=`HP ${Math.ceil(p.hp)} / ${p.maxHp}${p.shield?' · 보호막':''}`;$('hpFill').style.width=`${100*p.hp/p.maxHp}%`;$('xpFill').style.width=`${100*game.xp/game.xpNeed}%`;$('levelLabel').textContent=`LV ${game.level}`;$('timer').textContent=fmt(game.duration-game.time);$('killed').textContent=`격파 ${game.kills} · 기억 ${game.shards}`;}
+function enemy(type,x,y){const boss=type==='boss',sprint=type==='sprint';const hp=boss?370:sprint?24:37;return{id:++game.enemySeq,type,x,y,hp,maxHp:hp,r:boss?31:sprint?12:16,speed:boss?43:sprint?115:64,phase:rnd(0,TWO),hit:0,slow:0,orbitHit:0};}
+function spawnEnemy(){const p=game.p;let angle=rnd(0,TWO),d=Math.max(W,H)*.65+rnd(80,160),type=Math.random()<Math.min(.38,.13+game.time/game.duration*.15)?'sprint':'normal';game.enemies.push(enemy(type,p.x+Math.cos(angle)*d,p.y+Math.sin(angle)*d));}
+function spawnBoss(){let p=game.p;game.enemies.push(enemy('boss',p.x,p.y-390));game.bossSpawned=true;showToast('⚠ 역의 관리자 · 거울 감시자가 나타났다',3);game.rings.push({x:p.x,y:p.y,life:1,max:1,color:'#f4a6dd',r:100});}
+function particle(x,y,color,count=6){for(let i=0;i<count&&game.particles.length<180;i++)game.particles.push({x,y,vx:rnd(-110,110),vy:rnd(-100,100),life:rnd(.25,.65),max:.65,size:rnd(1.4,4),color});}
+function killEnemy(e){let g=game;let i=g.enemies.indexOf(e);if(i>=0)g.enemies.splice(i,1);g.kills++;if(e.type==='boss'){g.bossDefeated=true;g.shards+=14;showToast('관리자의 코어 파괴 · 지워진 승강장이 모습을 드러낸다',3);particle(e.x,e.y,'#edb4ed',35);}else{particle(e.x,e.y,e.type==='sprint'?'#ed9c9e':'#6fcbec',8)}
+ let n=e.type==='boss'?14:1;for(let j=0;j<n;j++){let a=rnd(0,TWO);g.drops.push({x:e.x+Math.cos(a)*rnd(0,40),y:e.y+Math.sin(a)*rnd(0,40),r:5,value:e.type==='boss'?3:Math.random()<.2?2:1,phase:rnd(0,TWO)});} }
+function fire(){let g=game,p=g.p;if(g.enemies.length===0)return;let nearest=null,best=Infinity;for(let e of g.enemies){const d=dist(e.x-p.x,e.y-p.y);if(d<best){best=d;nearest=e}}if(!nearest||best>700)return;let base=Math.atan2(nearest.y-p.y,nearest.x-p.x);const num=p.projectiles;for(let j=0;j<num;j++){const angle=base+(j-(num-1)/2)*.19;g.bullets.push({x:p.x+Math.cos(angle)*20,y:p.y+Math.sin(angle)*20,vx:Math.cos(angle)*520,vy:Math.sin(angle)*520,damage:p.attack,life:1.25,pierce:p.pierce,hit:new Set()})}particle(p.x+Math.cos(base)*19,p.y+Math.sin(base)*19,'#a6effa',3);}
+function cardOptions(){let options=[...CARD_DEFS];for(let i=options.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[options[i],options[j]]=[options[j],options[i]];}return options.slice(0,3);}
+function showCards(){game.running=false;game.levelQueued=true;const list=$('cardList');list.innerHTML='';for(const c of cardOptions()){const b=document.createElement('button');b.className='upgrade';b.innerHTML=`<span class="cardIcon">${c.icon}</span><span><span class="cardtitle">${c.name}</span><span class="carddesc">${c.desc}</span><span class="cardlevel">현재 강화 ${game.levels[c.id]||0}단계</span></span>`;b.addEventListener('click',()=>chooseCard(c.id));list.appendChild(b)}screen('levelScreen');}
+function chooseCard(id){if(!game||!game.levelQueued)return;let p=game.p;game.levels[id]=(game.levels[id]||0)+1;
+ switch(id){case'blade':p.attack=Math.round(p.attack*1.35);p.interval=Math.max(.16,p.interval*.92);break;case'pierce':p.pierce++;break;case'echo':p.projectiles=Math.min(6,p.projectiles+1);break;case'shield':p.shield=Math.min(3,p.shield+1);game.lastShield=game.time;break;case'speed':p.speed*=1.17;p.hp=Math.min(p.maxHp,p.hp+8);break;case'magnet':p.magnet*=1.55;p.maxHp+=10;p.hp+=10;break;case'orbit':p.orbit++;break;case'frost':p.slow=Math.min(.8,p.slow+.35);break;}
+ game.levelQueued=false;game.running=true;screen(null);refreshHud();showToast(`기억 복원 · ${CARD_DEFS.find(c=>c.id===id).name}`,1.6);}
+function damagePlayer(amount){const g=game,p=g.p;if(g.time-g.lastHit<.78)return;g.lastHit=g.time;g.shake=9;if(p.shield){p.shield--;particle(p.x,p.y,'#70e5ed',15);showToast('보호막이 공격을 막았습니다',1);}else{p.hp=Math.max(0,p.hp-amount);g.flash=.25;particle(p.x,p.y,'#eb5f8e',9);if(p.hp<=0){endGame(false);return}}refreshHud();}
+function endGame(won){if(!game||game.ended)return;let g=game;g.ended=true;g.running=false;saveRecord(won);$('hud').style.display='none';$('controls').style.display='none';$('pauseBtn').style.display='none';$('endOrnament').textContent=won?'✦ ◈ ✦':'◷';$('endOverline').textContent=won?'삭제된 역 복원':'탐험 중단';$('endTitle').textContent=won?'첫 번째 기록 복원':'열차로 귀환';$('endStory').textContent=won?'거울 유리역의 시간이 다시 흐르기 시작했다. 리제는 정차 기록에서 오래된 동료의 이름을 발견한다. “마레”… 다음 역에서 이 기억의 주인을 만나게 될까?':'망령에게 밀려난 리제는 열차에서 다시 눈을 뜬다. 실패한 탐험의 기억만은 사라지지 않았다. 다음 시도에서 다른 능력의 조합을 선택해 보자.';$('resultTime').textContent=fmt(Math.floor(g.time));$('resultKills').textContent=g.kills;$('resultShards').textContent=g.shards;screen('endScreen');}
+function pause(){if(!game||game.ended||!game.running)return;game.running=false;screen('pauseScreen');}
+function resume(){if(!game||game.ended)return;game.running=true;screen(null);last=performance.now();}
+function menu(){if(game)game.running=false;game=null;stick.x=stick.y=0;updateStick();$('hud').style.display='none';$('pauseBtn').style.display='none';$('controls').style.display='none';screen('menuScreen');updateArchive();}
+function update(dt){let g=game;if(!g||!g.running)return;dt=Math.min(.04,dt);const p=g.p;g.time+=dt;g.lastFire+=dt;g.spawn+=dt;g.flash=Math.max(0,g.flash-dt);g.shake=Math.max(0,g.shake-dt*24);g.toastTimeout-=dt;if(g.toastTimeout<=0)hideToast();
+ let vx=stick.x,vy=stick.y;if(keys.arrowleft||keys.a)vx-=1;if(keys.arrowright||keys.d)vx+=1;if(keys.arrowup||keys.w)vy-=1;if(keys.arrowdown||keys.s)vy+=1;let mag=dist(vx,vy);if(mag>1){vx/=mag;vy/=mag}p.x+=vx*p.speed*dt;p.y+=vy*p.speed*dt;
+ if(g.time>=g.duration*.72&&!g.bossSpawned)spawnBoss();if(g.time>=g.duration){if(g.bossDefeated)endGame(true);else{showToast('역의 관리자를 쓰러뜨려야 탈출할 수 있다',1.4);g.duration+=8}}
+ let spawnEvery=Math.max(.22,1.25-g.time/g.duration*.84);while(g.spawn>=spawnEvery){g.spawn-=spawnEvery;if(g.enemies.length<95)spawnEnemy();}
+ if(g.time-g.lastShield>=18&&(g.levels.shield||0)>0&&p.shield<Math.min(3,g.levels.shield)){p.shield++;g.lastShield=g.time;}
+ if(g.lastFire>=p.interval){g.lastFire-=p.interval;fire();}
+ for(let i=g.bullets.length-1;i>=0;i--){const b=g.bullets[i];b.life-=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;if(b.life<=0){g.bullets.splice(i,1);continue}let del=false;for(let e of g.enemies){if(b.hit.has(e.id))continue;if(dist(e.x-b.x,e.y-b.y)<e.r+6){b.hit.add(e.id);e.hp-=b.damage;e.hit=.12;if(p.slow>0)e.slow=1.3;particle(e.x,e.y,'#89e9fc',4);if(e.hp<=0)killEnemy(e);if(b.pierce--<=0){del=true;break}}}if(del)g.bullets.splice(i,1)}
+ for(let e of [...g.enemies]){e.hit=Math.max(0,e.hit-dt);e.slow=Math.max(0,e.slow-dt);e.orbitHit=Math.max(0,e.orbitHit-dt);let dx=p.x-e.x,dy=p.y-e.y,d=dist(dx,dy)||1;let slowdown=e.slow>0?.52:1;e.x+=dx/d*e.speed*slowdown*dt;e.y+=dy/d*e.speed*slowdown*dt;if(d<p.orbit*0+e.r+17)damagePlayer(e.type==='boss'?24:e.type==='sprint'?12:9);if(p.orbit>0&&e.orbitHit<=0){for(let k=0;k<Math.min(p.orbit,5);k++){let a=g.time*2.4+k*TWO/Math.min(p.orbit,5);let ox=p.x+Math.cos(a)*65,oy=p.y+Math.sin(a)*65;if(dist(e.x-ox,e.y-oy)<e.r+17){e.hp-=14;e.orbitHit=.4;particle(e.x,e.y,'#e2d4fb',5);if(e.hp<=0)killEnemy(e);break}}}}
+ for(let i=g.drops.length-1;i>=0;i--){let d=g.drops[i];d.phase+=dt*4;let dx=p.x-d.x,dy=p.y-d.y,dd=dist(dx,dy)||1;if(dd<p.magnet){let v=Math.max(160,540*(1-dd/p.magnet));d.x+=dx/dd*v*dt;d.y+=dy/dd*v*dt;}if(dd<18){g.xp+=d.value;g.shards+=d.value;g.drops.splice(i,1);if(g.xp>=g.xpNeed&&!g.levelQueued){g.xp-=g.xpNeed;g.level++;g.xpNeed=Math.round(12+g.level*7.5);g.levelups++;showCards();break}}}
+ for(let i=g.particles.length-1;i>=0;i--){let v=g.particles[i];v.life-=dt;v.x+=v.vx*dt;v.y+=v.vy*dt;v.vx*=.95;v.vy*=.95;if(v.life<=0)g.particles.splice(i,1)}
+ for(let i=g.rings.length-1;i>=0;i--){g.rings[i].life-=dt;if(g.rings[i].life<=0)g.rings.splice(i,1)}
+ const stories=[{at:12,text:'누군가 남긴 안내 방송: “종착역은 존재하지 않습니다.”'},{at:32,text:'리제의 기억에 낯선 이름이 스친다. “마레…”'},{at:59,text:'거울 속 승강장은 현실보다 1분 늦게 움직인다.'}];if(g.loreIndex<stories.length&&g.time>=stories[g.loreIndex].at){showToast(stories[g.loreIndex].text,3);g.loreIndex++;}
+ refreshHud();}
+function drawBackground(t,cx,cy){ctx.fillStyle='#0a1524';ctx.fillRect(0,0,W,H);const tile=94;let ax=(-cx%tile+tile)%tile,ay=(-cy%tile+tile)%tile;ctx.lineWidth=1;for(let x=ax-tile;x<W+tile;x+=tile)for(let y=ay-tile;y<H+tile;y+=tile){const n=Math.sin((x+cx)*.011)*Math.cos((y+cy)*.017);ctx.fillStyle=n>.2?'#101f2f':'#0c1928';ctx.fillRect(x+1,y+1,tile-3,tile-3);ctx.strokeStyle='#36526629';ctx.strokeRect(x+2,y+2,tile-4,tile-4);}
+ const railSpacing=540;for(let worldX=Math.floor((cx-W/2)/railSpacing)*railSpacing;worldX<cx+W;worldX+=railSpacing){let x=worldX-cx+W/2;ctx.fillStyle='#253b4a';ctx.fillRect(x-48,0,6,H);ctx.fillRect(x+45,0,6,H);ctx.fillStyle='#3c6674';ctx.fillRect(x-44,0,2,H);ctx.fillRect(x+46,0,2,H);for(let worldY=Math.floor((cy-H/2)/70)*70;worldY<cy+H;worldY+=70){let y=worldY-cy+H/2;ctx.fillStyle='#2e4250';ctx.fillRect(x-56,y,113,7);}}
+ for(let i=0;i<20;i++){let sx=((i*293.37-cx*.18)%(W+180)+(W+180))%(W+180)-90;let sy=((i*137.11-cy*.13)%(H+180)+(H+180))%(H+180)-90;ctx.fillStyle=`rgba(97,178,204,${.1+.1*Math.sin(t+i)})`;ctx.beginPath();ctx.arc(sx,sy,1.5+1*Math.sin(i*3),0,TWO);ctx.fill()}
+ const glow=ctx.createRadialGradient(W/2,H/2,40,W/2,H/2,Math.max(W,H)*.76);glow.addColorStop(0,'#16384a14');glow.addColorStop(.56,'#15283d04');glow.addColorStop(1,'#02040bc4');ctx.fillStyle=glow;ctx.fillRect(0,0,W,H);}
+function drawEntity(e,cx,cy,t){let x=e.x-cx+W/2,y=e.y-cy+H/2;if(x<-80||x>W+80||y<-80||y>H+80)return;ctx.save();ctx.translate(x,y);ctx.shadowBlur=12;ctx.shadowColor=e.type==='boss'?'#df80ca':e.type==='sprint'?'#f08e9f':'#51bbd1';
+ if(e.type==='boss'){ctx.fillStyle='#3e1b46';ctx.beginPath();ctx.moveTo(0,-32);ctx.lineTo(27,-13);ctx.lineTo(31,19);ctx.lineTo(0,38);ctx.lineTo(-31,19);ctx.lineTo(-27,-13);ctx.closePath();ctx.fill();ctx.strokeStyle='#dd8acb';ctx.lineWidth=2;ctx.stroke();ctx.beginPath();ctx.arc(0,0,16+Math.sin(t*3)*2,0,TWO);ctx.stroke();ctx.fillStyle='#e6b4ec';ctx.fillRect(-6,-3,12,5);ctx.shadowBlur=0;ctx.fillStyle='#2a1a34';ctx.fillRect(-33,-49,66,6);ctx.fillStyle='#efa6e8';ctx.fillRect(-32,-48,64*clamp(e.hp/e.maxHp,0,1),4);
+ }else if(e.type==='sprint'){ctx.rotate(Math.sin(t*8+e.phase)*.2);ctx.fillStyle=e.hit>0?'#ffffff':'#b65877';ctx.beginPath();ctx.moveTo(0,-15);ctx.lineTo(14,11);ctx.lineTo(-14,11);ctx.closePath();ctx.fill();ctx.fillStyle='#0d1324';ctx.fillRect(-5,-2,3,4);ctx.fillRect(3,-2,3,4);
+ }else{ctx.rotate(Math.sin(t*2+e.phase)*.15);ctx.fillStyle=e.hit>0?'#ffffff':'#4b8a9c';ctx.beginPath();ctx.ellipse(0,0,14,18,0,0,TWO);ctx.fill();ctx.fillStyle='#091927';ctx.beginPath();ctx.arc(-5,-3,3,0,TWO);ctx.arc(5,-3,3,0,TWO);ctx.fill();ctx.strokeStyle='#8ad7e5';ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(-11,11);ctx.lineTo(-19,20);ctx.moveTo(11,11);ctx.lineTo(19,20);ctx.stroke()}
+ ctx.restore();}
+function drawPlayer(p,t){const x=W/2,y=H/2;ctx.save();ctx.translate(x,y);ctx.fillStyle='#06152277';ctx.beginPath();ctx.ellipse(0,21,20,8,0,0,TWO);ctx.fill();ctx.shadowBlur=22;ctx.shadowColor='#63def4';ctx.fillStyle='#236f81';ctx.beginPath();ctx.moveTo(-14,-4);ctx.lineTo(0,-22);ctx.lineTo(14,-4);ctx.lineTo(10,21);ctx.lineTo(-10,21);ctx.closePath();ctx.fill();ctx.strokeStyle='#a3eff4';ctx.lineWidth=2;ctx.stroke();ctx.shadowBlur=0;ctx.fillStyle='#dfeded';ctx.beginPath();ctx.arc(0,-12,10,0,TWO);ctx.fill();ctx.fillStyle='#a6e1e7';ctx.fillRect(-10,-22,20,5);ctx.fillStyle='#1c3c55';ctx.fillRect(-11,-17,22,6);ctx.fillStyle='#153952';ctx.fillRect(-6,-12,3,2);ctx.fillRect(3,-12,3,2);ctx.strokeStyle='#7cd3e5';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-12,1);ctx.lineTo(-21,14);ctx.stroke();if(p.shield){ctx.strokeStyle='#89f5fe';ctx.lineWidth=2;ctx.globalAlpha=.6+.2*Math.sin(t*4);ctx.beginPath();ctx.arc(0,0,29+Math.sin(t*3)*1.5,0,TWO);ctx.stroke()}
+ for(let i=0;i<Math.min(p.orbit,5);i++){const a=t*2.4+i*TWO/Math.min(p.orbit,5);ctx.translate(Math.cos(a)*65,Math.sin(a)*65);ctx.fillStyle='#b3e5f8';ctx.rotate(a);ctx.fillRect(-4,-13,8,26);ctx.rotate(-a);ctx.translate(-Math.cos(a)*65,-Math.sin(a)*65);}ctx.restore();}
+function draw(){let g=game,t=g?g.time:performance.now()/1000;let cx=g?g.p.x:Math.sin(t*.1)*50,cy=g?g.p.y:Math.cos(t*.1)*50;ctx.save();if(g&&g.shake)ctx.translate(rnd(-g.shake,g.shake),rnd(-g.shake,g.shake));drawBackground(t,cx,cy);
+ if(g){for(const d of g.drops){let x=d.x-cx+W/2,y=d.y-cy+H/2;ctx.save();ctx.translate(x,y);ctx.rotate(t*2+d.phase);ctx.shadowColor='#85ebed';ctx.shadowBlur=12;ctx.fillStyle=d.value>1?'#ffdb91':'#72d7e3';ctx.beginPath();ctx.moveTo(0,-7);ctx.lineTo(5,0);ctx.lineTo(0,7);ctx.lineTo(-5,0);ctx.closePath();ctx.fill();ctx.restore()}
+ for(const e of g.enemies)drawEntity(e,cx,cy,t);
+ for(const b of g.bullets){const x=b.x-cx+W/2,y=b.y-cy+H/2;ctx.save();ctx.shadowBlur=15;ctx.shadowColor='#b7f6fa';ctx.strokeStyle='#88d8f5';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x-b.vx*.027,y-b.vy*.027);ctx.stroke();ctx.restore()}
+ for(const v of g.particles){ctx.globalAlpha=clamp(v.life/v.max,0,1);ctx.fillStyle=v.color;ctx.fillRect(v.x-cx+W/2,v.y-cy+H/2,v.size,v.size)}ctx.globalAlpha=1;
+ for(const r of g.rings){ctx.strokeStyle=r.color;ctx.lineWidth=2;ctx.globalAlpha=r.life/r.max;ctx.beginPath();ctx.arc(r.x-cx+W/2,r.y-cy+H/2,r.r*(2-r.life/r.max),0,TWO);ctx.stroke()}ctx.globalAlpha=1;drawPlayer(g.p,t);
+ if(g.flash){ctx.fillStyle=`rgba(234,57,109,${g.flash*.4})`;ctx.fillRect(0,0,W,H)}
+ }else{ctx.save();ctx.translate(W/2,H*.52);ctx.fillStyle='#84dced18';ctx.beginPath();ctx.arc(0,0,120+Math.sin(t)*7,0,TWO);ctx.fill();ctx.strokeStyle='#76bad127';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,116,0,TWO);ctx.stroke();for(let i=0;i<12;i++){const a=i*TWO/12;ctx.fillStyle='#6da9bc55';ctx.fillRect(Math.cos(a)*109-1,Math.sin(a)*109-3,2,6)}ctx.restore()}
+ ctx.restore();}
+function loop(now){let dt=last?Math.min(.06,(now-last)/1000):0;last=now;if(game&&game.running)update(dt);draw();raf=requestAnimationFrame(loop)}raf=requestAnimationFrame(loop);
+function updateStick(){const el=$('stick');el.style.transform=`translate3d(${stick.x*37}px,${stick.y*37}px,0)`;}
+function joystickPos(e){const rect=$('joystick').getBoundingClientRect();let dx=e.clientX-(rect.left+rect.width/2),dy=e.clientY-(rect.top+rect.height/2),d=dist(dx,dy),m=Math.min(d/48,1);stick.x=d>0?dx/d*m:0;stick.y=d>0?dy/d*m:0;updateStick();}
+$('joystick').addEventListener('pointerdown',e=>{if(!game?.running)return;pointerId=e.pointerId;$('joystick').setPointerCapture(pointerId);joystickPos(e);e.preventDefault()});$('joystick').addEventListener('pointermove',e=>{if(e.pointerId===pointerId){joystickPos(e);e.preventDefault()}});function clearStick(e){if(e.pointerId===pointerId){pointerId=null;stick.x=stick.y=0;updateStick()}}$('joystick').addEventListener('pointerup',clearStick);$('joystick').addEventListener('pointercancel',clearStick);
+addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key))e.preventDefault();keys[e.key.toLowerCase()]=true;if(e.key==='Escape'&&game?.running)pause();});addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+$('quickStart').onclick=()=>newGame(90);$('fullStart').onclick=()=>newGame(300);$('pauseBtn').onclick=pause;$('resumeBtn').onclick=resume;$('quitBtn').onclick=menu;$('retryBtn').onclick=()=>newGame(game?.mode||90);$('backBtn').onclick=menu;
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&game?.running)pause()});window.addEventListener('blur',()=>{if(game?.running)pause()});
+})();
+</script>
+</body>
+</html>
