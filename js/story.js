@@ -35,6 +35,7 @@ TG.STORY={nodes:{
 }};
 const A=TG.story={};
 const isBattle=node=>TG.STORY.nodes[node]?.kind==='battle';
+const activeRun=()=>!!TG.engine?.g&&TG.engine.g.status!=='ended';
 const newEncounter=()=> 'story-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
 A.state=()=>TG.store.data.story;
 function transact(change){
@@ -52,19 +53,32 @@ A.advance=function(expectedNode,expectedLine){
   if(!state.started||node?.kind!=='dialogue'||expectedNode!==state.node||expectedLine!==state.line)return false;
   if(state.line+1<node.lines.length){state.line++;return;}
   if(!state.seen.includes(state.node))state.seen.push(state.node);
-  if(state.node==='meeting'){state.companions=['mare'];state.loadout.hp=Math.min(500,state.loadout.hp+40);}
+  if(state.node==='meeting'){state.companions=['mare'];state.loadout.hp=Math.min(500,state.loadout.hp+40);state.commandDeck=TG.commandDeck.preset('protect',state.companions);}
   state.node=node.next;state.line=0;
   state.encounterId=isBattle(state.node)?newEncounter():null;
+  if(state.encounterId)state.commandSeed=TG.commandDeck.seedFor(state.encounterId);
   state.completed=state.node==='rest';
  });
 };
 A.prepareBattle=function(){
  const S=TG.store,state=A.state();
  if(!state.started||!isBattle(state.node)||!S.canWrite()||!/^story-[\w-]{1,80}$/.test(state.encounterId||''))return null;
- return {id:state.encounterId,battleId:state.node,loadout:clone(state.loadout),companions:[...state.companions]};
+ return {id:state.encounterId,battleId:state.node,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed};
+};
+A.setCommandDeck=function(ids){
+ if(activeRun())return false;
+ return transact(state=>{
+  if(!['battle','rest'].includes(TG.STORY.nodes[state.node]?.kind)||!TG.commandDeck.validate(ids,state.companions))return false;
+  state.commandDeck=[...ids];
+ });
+};
+A.prepareTraining=function(){
+ const S=TG.store,state=A.state();
+ if(!state.companions.includes('mare')||activeRun()||!S.canWrite())return null;
+ return {id:'training-'+state.node+'-'+state.commandSeed.toString(36),battleId:'escort',duration:90,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed};
 };
 A.completeBattle=function(run){
- if(!run||run.mode!=='story'||run.won!==true||!Number.isFinite(run.p?.hp)||run.p.hp<=0)return false;
+ if(!run||run.mode!=='story'||run.storyTraining===true||run.won!==true||!Number.isFinite(run.p?.hp)||run.p.hp<=0)return false;
  return transact(state=>{
   const battle=TG.STORY.battles[state.node];
   if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id)return false;

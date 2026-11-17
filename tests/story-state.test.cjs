@@ -5,7 +5,7 @@ function asSchema1(encoded){const env=JSON.parse(encoded);env.schema=1;return JS
 function boot(seed={},shared){
  const values=shared||new Map(Object.entries(seed)),storage={fail:false,getItem:k=>values.get(k)||null,setItem(k,v){if(this.fail)throw Error('quota');values.set(k,String(v));}};
  const c={console,Date,Math,Set,Map,JSON,Number,String,Object,Array,Boolean,Error,localStorage:storage,addEventListener(){}};c.window=c;c.TG={};vm.createContext(c);
- for(const name of ['data','story','store','game'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',name+'.js'),'utf8'),c,{filename:name+'.js'});
+ for(const name of ['data','commands','story','store','game'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',name+'.js'),'utf8'),c,{filename:name+'.js'});
  return {c,TG:c.TG,A:c.TG.story,S:c.TG.store,G:c.TG.engine,storage,values};
 }
 function finishScene(A){const id=A.state().node;while(A.state().node===id){const s=A.state();assert(A.advance(s.node,s.line));}}
@@ -70,37 +70,37 @@ test('a stale tab cannot advance a scene over another tab or replace its legacy 
  const a=boot(),b=boot({},a.values);assert(a.A.begin());assert(a.A.advance('departure',0));const actual=a.values.get(KEY);assert.equal(b.A.begin(),false);assert.equal(b.S.status,'conflict');assert.equal(b.A.state().started,false);assert.equal(b.A.advance('departure',0),false);assert.equal(a.values.get(KEY),actual);
 });
 
-test('schema 1 imports stay readable while all new exports use schema 2 and schema 3 is rejected',()=>{
+test('schema 1 imports stay readable while all new exports use schema 3 and schema 4 is rejected',()=>{
  const source=boot(),data=source.S.fresh();data.wallet=42;delete data.story;const old=asSchema1(source.S.encode(data)),b=boot();
- assert.equal(b.S.preview(old).wallet,42);b.S.import(old);assert.equal(b.S.data.wallet,42);assert.equal(JSON.parse(b.S.export()).schema,2);assert.equal(JSON.parse(b.values.get(KEY)).schema,2);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,2);
- const future=JSON.parse(b.S.export());future.schema=3;assert.throws(()=>b.S.preview(JSON.stringify(future)),/저장 버전/);
+ assert.equal(b.S.preview(old).wallet,42);b.S.import(old);assert.equal(b.S.data.wallet,42);assert.equal(JSON.parse(b.S.export()).schema,3);assert.equal(JSON.parse(b.values.get(KEY)).schema,3);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,3);
+ const future=JSON.parse(b.S.export());future.schema=4;assert.throws(()=>b.S.preview(JSON.stringify(future)),/저장 버전/);
 });
 
 test('schema migration writes an upgraded last-good backup before the story primary',()=>{
  const source=boot(),data=source.S.fresh();data.wallet=42;delete data.story;const original=asSchema1(source.S.encode(data)),b=boot({[KEY]:original,[BACKUP]:original}),writes=[],write=b.storage.setItem.bind(b.storage);
- b.storage.setItem=(key,value)=>{writes.push(key);write(key,value);};assert(b.A.begin());assert.deepEqual(writes,[BACKUP,KEY]);assert.equal(JSON.parse(b.values.get(KEY)).schema,2);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,2);assert.equal(b.S.decode(b.values.get(BACKUP)).wallet,42);assert.equal(b.S.decode(b.values.get(BACKUP)).story.started,false);assert.equal(b.S.decode(b.values.get(KEY)).story.started,true);
+ b.storage.setItem=(key,value)=>{writes.push(key);write(key,value);};assert(b.A.begin());assert.deepEqual(writes,[BACKUP,KEY]);assert.equal(JSON.parse(b.values.get(KEY)).schema,3);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,3);assert.equal(b.S.decode(b.values.get(BACKUP)).wallet,42);assert.equal(b.S.decode(b.values.get(BACKUP)).story.started,false);assert.equal(b.S.decode(b.values.get(KEY)).story.started,true);
  const legacyReader=raw=>{const env=JSON.parse(raw);if(env.schema!==1)throw Error('unsupported');return env.data;};assert.throws(()=>legacyReader(b.values.get(KEY)),/unsupported/);assert.throws(()=>legacyReader(b.values.get(BACKUP)),/unsupported/);
 });
 
 test('failed migration backup cannot change the primary or advance the story in memory',()=>{
  const source=boot(),data=source.S.fresh();delete data.story;const original=asSchema1(source.S.encode(data)),b=boot({[KEY]:original,[BACKUP]:original}),write=b.storage.setItem.bind(b.storage),writes=[];
  b.storage.setItem=(key,value)=>{writes.push(key);if(key===BACKUP)throw Error('backup quota');write(key,value);};assert.equal(b.A.begin(),false);assert.equal(b.A.state().started,false);assert.equal(b.S.status,'memory');assert.equal(b.values.get(KEY),original);assert.equal(b.values.get(BACKUP),original);assert.deepEqual(writes,[BACKUP]);
- b.storage.setItem=write;assert(b.A.begin());assert.equal(JSON.parse(b.values.get(KEY)).schema,2);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,2);
+ b.storage.setItem=write;assert(b.A.begin());assert.equal(JSON.parse(b.values.get(KEY)).schema,3);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,3);
 });
 
-test('unchanged schema 2 primary upgrades schema 1 backup once without churning snapshots',()=>{
+test('unchanged schema 3 primary upgrades schema 1 backup once without churning snapshots',()=>{
  const source=boot(),current=source.S.fresh(),previous=source.S.fresh();current.wallet=42;previous.wallet=31;const primary=source.S.encode(current),backup=asSchema1(source.S.encode(previous)),b=boot({[KEY]:primary,[BACKUP]:backup}),writes=[],write=b.storage.setItem.bind(b.storage);
- b.storage.setItem=(key,value)=>{writes.push(key);write(key,value);};assert(b.S.save());assert.deepEqual(writes,[BACKUP]);assert.equal(b.values.get(KEY),primary);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,2);assert.equal(b.S.decode(b.values.get(BACKUP)).wallet,31);
+ b.storage.setItem=(key,value)=>{writes.push(key);write(key,value);};assert(b.S.save());assert.deepEqual(writes,[BACKUP]);assert.equal(b.values.get(KEY),primary);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,3);assert.equal(b.S.decode(b.values.get(BACKUP)).wallet,31);
  const safe=b.values.get(BACKUP);b.storage.fail=true;writes.length=0;assert(b.S.save());assert.deepEqual(writes,[]);assert.equal(b.values.get(BACKUP),safe);
 });
 
-test('missing backup is secured even for an unchanged schema 2 primary',()=>{
+test('missing backup is secured even for an unchanged schema 3 primary',()=>{
  const source=boot(),primary=source.S.export(),b=boot({[KEY]:primary}),writes=[],write=b.storage.setItem.bind(b.storage);b.storage.setItem=(key,value)=>{writes.push(key);write(key,value);};assert(b.S.save());assert.deepEqual(writes,[BACKUP]);assert.equal(b.values.get(KEY),primary);assert.equal(b.values.get(BACKUP),primary);
 });
 
 test('primary failure after backup migration keeps the old primary and rolls back story progress',()=>{
  const source=boot(),data=source.S.fresh();delete data.story;const original=asSchema1(source.S.encode(data)),b=boot({[KEY]:original,[BACKUP]:original}),write=b.storage.setItem.bind(b.storage);
- b.storage.setItem=(key,value)=>{if(key===KEY)throw Error('primary quota');write(key,value);};assert.equal(b.A.begin(),false);assert.equal(b.A.state().started,false);assert.equal(b.values.get(KEY),original);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,2);assert.equal(b.S.decode(b.values.get(BACKUP)).story.started,false);
+ b.storage.setItem=(key,value)=>{if(key===KEY)throw Error('primary quota');write(key,value);};assert.equal(b.A.begin(),false);assert.equal(b.A.state().started,false);assert.equal(b.values.get(KEY),original);assert.equal(JSON.parse(b.values.get(BACKUP)).schema,3);assert.equal(b.S.decode(b.values.get(BACKUP)).story.started,false);
  b.storage.setItem=write;assert(b.A.begin());assert.equal(b.S.decode(b.values.get(KEY)).story.started,true);assert.equal(b.S.decode(b.values.get(BACKUP)).story.started,false);
 });
 

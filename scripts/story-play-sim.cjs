@@ -1,6 +1,6 @@
 'use strict';
 const fs=require('fs'),path=require('path'),vm=require('vm');const ROOT=path.resolve(__dirname,'..');
-function boot(seed){let state=seed>>>0;const math=Object.create(Math);math.random=()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return(state>>>0)/4294967296;};const values=new Map(),c={console,Math:math,Date,Set,Map,JSON,Number,String,Object,Array,Boolean,Error,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,String(v))},addEventListener(){},TG:{}};c.window=c;vm.createContext(c);for(const file of ['data','story','store','game'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c);return c.TG;}
+function boot(seed){let state=seed>>>0;const math=Object.create(Math);math.random=()=>{state^=state<<13;state^=state>>>17;state^=state<<5;return(state>>>0)/4294967296;};class Clock extends Date{static now(){return 1794873600000;}}const values=new Map(),c={console,Math:math,Date:Clock,Set,Map,JSON,Number,String,Object,Array,Boolean,Error,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,String(v))},addEventListener(){},TG:{}};c.window=c;vm.createContext(c);for(const file of ['data','commands','story','store','game'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c);return c.TG;}
 function dialogues(TG){TG.story.begin();let guard=0;while(TG.STORY.nodes[TG.story.state().node].kind==='dialogue'){const s=TG.story.state();if(!TG.story.advance(s.node,s.line))throw Error('advance blocked');if(++guard>30)throw Error('dialogue loop');}}
 const H=Math.hypot;
 function choose(g){const priority={blade:100,echo:90,orbit:85,vital:g.p.hp<g.p.maxHp*.65?110:65,shield:80,speed:g.p.hp<g.p.maxHp*.75?95:55,magnet:70,mend:60,lantern:75,frost:50,ward:45,focus:40,ember:35,wisdom:30,pierce:25,clock:20,rest:0};return [...g.offered].sort((a,b)=>(priority[b]||0)-(priority[a]||0))[0];}
@@ -37,7 +37,11 @@ function run(seed,policy){const TG=boot(seed),G=TG.engine;dialogues(TG);const re
  }
  return{seed,policy,complete:results.length===2&&results[1].won,results,wallet:TG.store.data.wallet,legacyRuns:TG.store.data.stats.runs,storyNode:TG.story.state().node};
 }
+if(require.main===module){
 const rows=[];for(const policy of ['straight','cautious','kite','novice','idle'])for(let seed=1;seed<=30;seed++)rows.push(run(seed,policy));
 fs.mkdirSync(path.join(ROOT,'output'),{recursive:true});fs.writeFileSync(path.join(ROOT,'output','story-play-sim-results.json'),JSON.stringify(rows,null,2));
 for(const policy of ['straight','cautious','kite','novice','idle']){const list=rows.filter(r=>r.policy===policy),summary={policy,complete:list.filter(r=>r.complete).length,total:list.length};for(const id of ['approach','escort']){const battles=list.flatMap(r=>r.results).filter(b=>b.id===id),avg=k=>Number((battles.reduce((sum,b)=>sum+b[k],0)/battles.length).toFixed(2));summary[id]={n:battles.length,won:battles.filter(b=>b.won).length,avgLevel:avg('level'),avgHP:avg('hp'),minHP:Math.min(...battles.map(b=>b.hp)),avgKills:avg('kills'),avgHits:avg('hits'),avgHPDamage:avg('hpDamage'),avgProtected:avg('protected'),avgDashes:avg('dashes')};}console.log(JSON.stringify(summary));}
 console.log('No profile currency or legacy run mutation:',rows.every(r=>r.wallet===0&&r.legacyRuns===0));
+
+}
+module.exports={boot,dialogues,drive,choose,run};

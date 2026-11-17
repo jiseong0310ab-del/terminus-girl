@@ -4,7 +4,7 @@ const ROOT=path.resolve(__dirname,'..');
 function boot(seed={},shared){
  const values=shared||new Map(Object.entries(seed)),storage={fail:false,getItem:key=>values.get(key)||null,setItem(key,value){if(this.fail)throw Error('quota');values.set(key,String(value));}};
  const c={console,Math:Object.create(Math),Date,Set,Map,JSON,Number,String,Object,Array,Boolean,Error,localStorage:storage,addEventListener(){},TG:{}};c.window=c;vm.createContext(c);
- for(const file of ['data','story','store','game'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c,{filename:file+'.js'});
+ for(const file of ['data','commands','story','store','game'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c,{filename:file+'.js'});
  return {TG:c.TG,G:c.TG.engine,S:c.TG.store,A:c.TG.story,storage,values,c};
 }
 const plain=value=>JSON.parse(JSON.stringify(value));

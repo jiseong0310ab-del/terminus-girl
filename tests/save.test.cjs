@@ -60,7 +60,7 @@ test('an unreadable store at startup cannot be overwritten if access later retur
   const c={console,Date,Math,Set,Map,JSON,Number,String,Object,Array,Boolean,Error,localStorage,TG:{}};
   c.window=c;
   vm.createContext(c);
-  for(const file of ['data.js','store.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','js',file),'utf8'),c);
+  for(const file of ['data.js','commands.js','store.js'])vm.runInContext(fs.readFileSync(path.join(__dirname,'..','js',file),'utf8'),c);
   assert.equal(c.TG.store.status,'memory');
   available=true;
   assert.equal(c.TG.store.save(),false);
@@ -118,7 +118,7 @@ test('pagehide-style repeated saves do not churn backups or require additional w
  const b=boot();b.S.data.wallet=37;
  assert.equal(b.S.save(),true);
  const primary=b.values.get(KEY);
- const backup=b.values.get(BACKUP);assert.equal(JSON.parse(backup).schema,2);
+ const backup=b.values.get(BACKUP);assert.equal(JSON.parse(backup).schema,3);
  b.storage.fail=true; // A redundant save should not need write access.
  assert.equal(b.S.save(),true);
  assert.equal(b.S.status,'ready');

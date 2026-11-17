@@ -4,7 +4,7 @@ const KEY='terminusSaveV1',BACKUP='terminusSaveV1Backup',S=TG.store={status:'rea
 const integer=(v,max=1e7)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 const arr=(v,allowed,max=64)=>Array.isArray(v)?[...new Set(v.filter(x=>typeof x==='string'&&(!allowed||allowed.includes(x))))].slice(-max):[];
 const clone=o=>JSON.parse(JSON.stringify(o));
-function freshStory(){return{version:1,started:false,node:'departure',line:0,companions:[],encounterId:null,loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
+function freshStory(){return{version:1,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
 function normalStory(raw){
  if(raw===undefined)return freshStory();
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.version!==1)throw Error('지원하지 않는 이야기 저장 형식입니다.');
@@ -16,8 +16,9 @@ function normalStory(raw){
  if(battle&&!/^story-[\w-]{1,80}$/.test(raw.encounterId||''))throw Error('이야기 전투 기록이 올바르지 않습니다.');
  const load=raw.loadout&&typeof raw.loadout==='object'?raw.loadout:{},levels={};
  for(const card of TG.CARDS){const level=integer(load.levels?.[card.id],card.cap);if(level>0)levels[card.id]=level;}
- const line=lengths[raw.node]?integer(raw.line,lengths[raw.node]-1):0;
- return {version:1,started:raw.started===true||index>0||line>0,node:raw.node,line,companions:index>=4?['mare']:[],encounterId:battle?raw.encounterId:null,
+ const line=lengths[raw.node]?integer(raw.line,lengths[raw.node]-1):0,companions=index>=4?['mare']:[];
+ const commandSeed=Number.isInteger(raw.commandSeed)&&raw.commandSeed>=0&&raw.commandSeed<=0xffffffff?raw.commandSeed:TG.commandDeck.seedFor(battle?raw.encounterId:raw.node);
+ return {version:1,started:raw.started===true||index>0||line>0,node:raw.node,line,companions,encounterId:battle?raw.encounterId:null,commandDeck:TG.commandDeck.normalize(raw.commandDeck,companions),commandSeed,
   loadout:{hp:Number.isFinite(load.hp)?Math.max(.01,Math.min(500,load.hp)):100,levels,level:Math.max(1,integer(load.level,80)),xp:Number.isFinite(load.xp)?Math.max(0,Math.min(1e5,load.xp)):0,kills:integer(load.kills,1e5),totalTime:Number.isFinite(load.totalTime)?Math.max(0,Math.min(1e6,load.totalTime)):0,relics:arr(load.relics,TG.RELICS.map(r=>r.id),6)},
   seen:order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id)),completed:raw.node==='rest'};
 }
@@ -44,8 +45,8 @@ function normal(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Er
  return out;
 }
 function checksum(s){let n=2166136261;for(let i=0;i<s.length;i++){n^=s.charCodeAt(i);n=Math.imul(n,16777619)}return(n>>>0).toString(16);}
-function encode(data){const body=JSON.stringify(data);return JSON.stringify({schema:2,checksum:checksum(body),data});}
-function decode(text){if(typeof text!=='string'||text.length>256000)throw Error('백업 파일이 너무 크거나 읽을 수 없습니다.');let env;try{env=JSON.parse(text)}catch{throw Error('백업 JSON을 읽을 수 없습니다.')}if(!env||typeof env!=='object'||Array.isArray(env))throw Error('백업 형식이 올바르지 않습니다.');if(env.schema!==1&&env.schema!==2)throw Error('지원하지 않는 저장 버전입니다.');if(!env.data||typeof env.data!=='object'||Array.isArray(env.data))throw Error('백업 내용이 올바르지 않습니다.');if(checksum(JSON.stringify(env.data))!==env.checksum)throw Error('저장 데이터가 손상되었습니다.');return normal(env.data);}
+function encode(data){const body=JSON.stringify(data);return JSON.stringify({schema:3,checksum:checksum(body),data});}
+function decode(text){if(typeof text!=='string'||text.length>256000)throw Error('백업 파일이 너무 크거나 읽을 수 없습니다.');let env;try{env=JSON.parse(text)}catch{throw Error('백업 JSON을 읽을 수 없습니다.')}if(!env||typeof env!=='object'||Array.isArray(env))throw Error('백업 형식이 올바르지 않습니다.');if(env.schema!==1&&env.schema!==2&&env.schema!==3)throw Error('지원하지 않는 저장 버전입니다.');if(!env.data||typeof env.data!=='object'||Array.isArray(env.data))throw Error('백업 내용이 올바르지 않습니다.');if(checksum(JSON.stringify(env.data))!==env.checksum)throw Error('저장 데이터가 손상되었습니다.');return normal(env.data);}
 function upgraded(text){try{return text===null?null:encode(decode(text));}catch{return null;}}
 S.data=fresh();
 let existing=false,writeLocked=false,seenRaw=null;
@@ -70,8 +71,8 @@ S.save=function(){
   const prev=localStorage.getItem(KEY);
   if(prev!==seenRaw){markConflict();return false;}
   const backup=localStorage.getItem(BACKUP);
-  // Both copies must reject older readers, which otherwise discard the new story namespace.
-  // Upgrade the last good snapshot before committing schema 2 to the primary key.
+  // Both copies must reject older readers, which otherwise discard command decks and seeds.
+  // Upgrade the last good snapshot before committing schema 3 to the primary key.
   const previous=prev===encoded?null:upgraded(prev);
   const safeBackup=previous||upgraded(backup)||(backup===null?encoded:null);
   if(safeBackup!==null&&backup!==safeBackup)localStorage.setItem(BACKUP,safeBackup);

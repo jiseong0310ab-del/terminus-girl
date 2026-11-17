@@ -45,3 +45,7 @@ test('Mare atlas shows only for a joined story companion and protection remains 
  const mare=draws.find(a=>a[0].src==='assets/mare-walk-v014.webp');assert(mare);assert(mare.slice(1).every(Number.isFinite));assert.equal(mare[7],80);assert.equal(mare[8],80);
  draws.length=0;G.g=null;G.start('quick');TG.view.draw(1100);assert(!draws.some(a=>a[0].src==='assets/mare-walk-v014.webp'));
 });
+
+test('command ward remains readable in low/reduced mode and a zero-time paused scene stays frozen',()=>{
+ const {TG,G,draws,arcs}=scene();const g=G.start('quick');g.commandEffects={ward:3,guardWindow:0};g.status='command';g.time=0;TG.store.data.settings.reduceFX=true;TG.store.data.settings.quality='low';TG.view.draw(1000);assert(arcs.some(a=>a[0]===0&&a[1]===-10&&a[2]===47));const first=draws.map(a=>a.slice(1));draws.length=0;TG.view.draw(5000);assert.deepEqual(draws.map(a=>a.slice(1)),first);
+});
