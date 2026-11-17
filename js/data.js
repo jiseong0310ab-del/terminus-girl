@@ -1,6 +1,6 @@
 'use strict';
 window.TG=window.TG||{};
-TG.VERSION='0.9.7-rc1';
+TG.VERSION='0.9.8-rc1';
 TG.CARDS=[
 {id:'blade',icon:'✧',name:'시간 절단',desc:'칼날 피해 +25% · 공격 간격 -6%',cap:6},
 {id:'pierce',icon:'↟',name:'관통하는 기억',desc:'칼날 관통 +1',cap:3},
@@ -20,10 +20,10 @@ TG.CARDS=[
 {id:'wisdom',icon:'✎',name:'기억의 해독',desc:'획득 경험치 +15%',cap:4}
 ];
 TG.SYNERGIES=[
-{id:'echoBlade',name:'잔향 절단',needs:{blade:2,echo:1},desc:'중앙 칼날 피해 +30%'},
+{id:'echoBlade',name:'잔향 절단',needs:{blade:2,echo:1},desc:'중앙 칼날 피해 +30% · 첫 적중 시 주변 2명에게 35% 연쇄 피해'},
 {id:'frostOrbit',name:'빙결 시계',needs:{frost:1,orbit:1},desc:'파편 둔화 · 둔화 적 피해 +30% · 일반 적을 3초마다 0.45초 빙결'},
 {id:'emberLantern',name:'불멸의 랜턴',needs:{ember:1,lantern:2},desc:'랜턴 충격파가 화상 부여 · 2초간 초당 피해 6의 잔불 생성'},
-{id:'safeDash',name:'푸른 귀환',needs:{shield:1,clock:2},desc:'대시 종료 때 가까운 적을 밀쳐냄'},
+{id:'safeDash',name:'푸른 귀환',needs:{shield:1,clock:2},desc:'대시 종료 때 가까운 적을 밀쳐내고 반경 110의 적 탄환 제거'},
 {id:'starCompass',name:'별의 나침반',needs:{magnet:2,wisdom:1},desc:'기억 획득 범위 추가 +50%'},
 {id:'warmHeart',name:'설원의 온기',needs:{vital:1,mend:2},desc:'재생량 2배 · 받는 피해 추가 10% 감소'}
 ];
