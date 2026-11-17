@@ -103,3 +103,23 @@ test('returning to the foreground checks for updates no more than once per minut
  now+=61000;h.fireDocument('visibilitychange');
  assert.equal(updates,2);
 });
+
+test('failed camp save cannot leave for the hub or claim the event is saved',()=>{
+ const {TG,c,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.engine.stageClear();
+ const camp=TG.engine.g,write=c.localStorage.setItem;
+ c.localStorage.setItem=()=>{throw Error('quota')};camp.shards+=3;$('campHub').onclick();
+ assert.equal(TG.engine.g,camp);assert.equal(TG.ui.screen,'camp');assert.match($('campSaveStatus').textContent,/저장/);
+ $('campSettings').onclick();assert.equal(TG.ui.screen,'settings');$('settingsBack').onclick();assert.equal(TG.ui.screen,'camp');
+ c.localStorage.setItem=write;$('campHub').onclick();assert.equal(TG.ui.screen,'hub');assert.equal(TG.engine.g,null);
+});
+
+test('settings cannot activate an update while a paused fight or camp is still active',async()=>{
+ let posted=0;const registration={waiting:{postMessage(){posted++}},addEventListener(){}};
+ const h=bootUI({navigator:{serviceWorker:{controller:{},register:async()=>registration,addEventListener(){}}}});
+ await new Promise(setImmediate);
+ h.$('enterHub').onclick();h.$('chapterStart').onclick();h.$('pauseBtn').onclick();h.$('pauseSettings').onclick();
+ assert.equal(h.$('applyUpdate').hidden,true);h.$('applyUpdate').onclick();assert.equal(posted,0);
+ h.$('settingsBack').onclick();h.$('resumeBtn').onclick();h.TG.engine.stageClear();h.$('campSettings').onclick();
+ assert.equal(h.$('applyUpdate').hidden,true);h.$('applyUpdate').onclick();assert.equal(posted,0);
+ h.$('settingsBack').onclick();h.$('campHub').onclick();assert.equal(h.$('applyUpdate').hidden,false);h.$('applyUpdate').onclick();assert.equal(posted,1);
+});
