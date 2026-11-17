@@ -156,10 +156,17 @@ test('visible browser blur does not open the real pause screen, while app hiding
 });
 
 test('camp reward UI supports choosing a reward and an event before departure',()=>{
- const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.engine.g.p.hp=40;TG.engine.stageClear();
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.engine.g.p.hp=40;TG.engine.stageClear();TG.engine.g.event=0;TG.ui.show('camp');
  assert.equal($('bossRewardList').children.length,3);assert.equal($('nextStage').disabled,true);
  const stale=$('bossRewardList').children[2];$('bossRewardList').children[1].onclick();assert.equal(TG.engine.g.p.hp,70);
  assert.equal($('bossRewardList').children.length,0);assert.match($('bossRewardNote').textContent,/선택한 보상/);assert.equal($('nextStage').disabled,true);
  $('eventChoices').children[0].onclick();assert.equal($('nextStage').disabled,false);const shards=TG.engine.g.shards;stale.onclick();assert.equal(TG.engine.g.shards,shards);
  $('nextStage').onclick();assert.equal(TG.engine.g.stage,1);assert.equal(TG.ui.screen,'playing');
+});
+
+test('boss and event bonus cards are both chosen before returning to combat',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.engine.stageClear();TG.engine.g.event=3;TG.ui.show('camp');
+ $('bossRewardList').children[0].onclick();$('eventChoices').children[0].onclick();assert.equal(TG.engine.g.bonusCards,2);$('nextStage').onclick();
+ assert.equal(TG.engine.g.stage,1);assert.equal(TG.ui.screen,'cards');$('cardList').children[0].onclick();assert.equal(TG.ui.screen,'cards');$('cardList').children[0].onclick();assert.equal(TG.ui.screen,'playing');
+ assert.equal(Object.values(TG.engine.g.levels).reduce((a,b)=>a+b,0),2);assert.equal(TG.engine.g.bonusCards,0);
 });
