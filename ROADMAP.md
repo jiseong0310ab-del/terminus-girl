@@ -1,6 +1,6 @@
 # 종착역의 소녀 출시 로드맵
 
-기준: 2026-11-18. 공개 구현은 v0.14.0-rc1이며, 다음 개발은 [REBUILD_PLAN.md](REBUILD_PLAN.md)의 실시간 서사·파티 덱빌딩 리빌딩안을 따른다. 현행 구현 기록은 GAME_DESIGN.md, 실행 순서는 NEXT_TASKS.md를 참고한다.
+기준: 2026-11-18. 공개 구현은 v0.14.0-rc2이며, 다음 개발은 [REBUILD_PLAN.md](REBUILD_PLAN.md)의 실시간 서사·파티 덱빌딩 리빌딩안을 따른다. 현행 구현 기록은 GAME_DESIGN.md, 실행 순서는 NEXT_TASKS.md를 참고한다.
 
 ## 현재 갖춘 기반
 
