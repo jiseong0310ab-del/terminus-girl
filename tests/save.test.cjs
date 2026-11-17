@@ -118,12 +118,12 @@ test('pagehide-style repeated saves do not churn backups or require additional w
  const b=boot();b.S.data.wallet=37;
  assert.equal(b.S.save(),true);
  const primary=b.values.get(KEY);
- assert.equal(b.values.has(BACKUP),false);
+ const backup=b.values.get(BACKUP);assert.equal(JSON.parse(backup).schema,2);
  b.storage.fail=true; // A redundant save should not need write access.
  assert.equal(b.S.save(),true);
  assert.equal(b.S.status,'ready');
  assert.equal(b.values.get(KEY),primary);
- assert.equal(b.values.has(BACKUP),false);
+ assert.equal(b.values.get(BACKUP),backup);
  b.S.data.wallet=38;
  assert.equal(b.S.save(),false);
  assert.equal(b.S.status,'memory');

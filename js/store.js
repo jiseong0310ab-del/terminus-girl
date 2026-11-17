@@ -4,7 +4,24 @@ const KEY='terminusSaveV1',BACKUP='terminusSaveV1Backup',S=TG.store={status:'rea
 const integer=(v,max=1e7)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 const arr=(v,allowed,max=64)=>Array.isArray(v)?[...new Set(v.filter(x=>typeof x==='string'&&(!allowed||allowed.includes(x))))].slice(-max):[];
 const clone=o=>JSON.parse(JSON.stringify(o));
-function fresh(){return{wallet:0,upgrades:{heart:0,lamp:0,map:0},stats:{runs:0,wins:0,bestKills:0,totalShards:0},memories:[],unlocked:0,settled:[],history:[],journalBest:{maxSynergies:0,maxRelics:0,farthestStage:0},checkpoint:null,settings:{bgm:.18,sfx:.35,reduceFX:false,quality:'auto'}};}
+function freshStory(){return{version:1,started:false,node:'departure',line:0,companions:[],encounterId:null,loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
+function normalStory(raw){
+ if(raw===undefined)return freshStory();
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.version!==1)throw Error('지원하지 않는 이야기 저장 형식입니다.');
+ const order=['departure','arrival','approach','meeting','escort','debrief','rest'],index=order.indexOf(raw.node);
+ if(index<0)throw Error('이야기 진행 위치가 올바르지 않습니다.');
+ const lengths={departure:4,arrival:2,meeting:4,debrief:4},battle=['approach','escort'].includes(raw.node);
+ // The fallback keeps store-only validation usable; the loaded script is the dialogue source of truth.
+ for(const id of Object.keys(lengths)){const lines=TG.STORY?.nodes?.[id]?.lines;if(Array.isArray(lines)&&lines.length>0)lengths[id]=lines.length;}
+ if(battle&&!/^story-[\w-]{1,80}$/.test(raw.encounterId||''))throw Error('이야기 전투 기록이 올바르지 않습니다.');
+ const load=raw.loadout&&typeof raw.loadout==='object'?raw.loadout:{},levels={};
+ for(const card of TG.CARDS){const level=integer(load.levels?.[card.id],card.cap);if(level>0)levels[card.id]=level;}
+ const line=lengths[raw.node]?integer(raw.line,lengths[raw.node]-1):0;
+ return {version:1,started:raw.started===true||index>0||line>0,node:raw.node,line,companions:index>=4?['mare']:[],encounterId:battle?raw.encounterId:null,
+  loadout:{hp:Number.isFinite(load.hp)?Math.max(.01,Math.min(500,load.hp)):100,levels,level:Math.max(1,integer(load.level,80)),xp:Number.isFinite(load.xp)?Math.max(0,Math.min(1e5,load.xp)):0,kills:integer(load.kills,1e5),totalTime:Number.isFinite(load.totalTime)?Math.max(0,Math.min(1e6,load.totalTime)):0,relics:arr(load.relics,TG.RELICS.map(r=>r.id),6)},
+  seen:order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id)),completed:raw.node==='rest'};
+}
+function fresh(){return{wallet:0,upgrades:{heart:0,lamp:0,map:0},stats:{runs:0,wins:0,bestKills:0,totalShards:0},memories:[],unlocked:0,settled:[],history:[],journalBest:{maxSynergies:0,maxRelics:0,farthestStage:0},checkpoint:null,story:freshStory(),settings:{bgm:.18,sfx:.35,reduceFX:false,quality:'auto'}};}
 const validRunId=id=>typeof id==='string'&&/^run-[\w-]{1,80}$/.test(id);
 function buildLevels(raw){const levels={};for(const card of TG.CARDS)levels[card.id]=integer(raw?.[card.id],card.cap);return levels;}
 function buildSynergies(levels){return TG.SYNERGIES.filter(s=>Object.entries(s.needs).every(([id,n])=>levels[id]>=n)).map(s=>s.id);}
@@ -14,7 +31,7 @@ function journalEntry(raw){
  return{id:raw.id,stage,clearedStages:won?3:Math.max(stage,integer(raw.clearedStages,Math.min(3,stage+1))),reason,won,kills:integer(raw.kills,1e5),totalTime:Number.isFinite(raw.totalTime)?Math.max(0,Math.min(1e6,raw.totalTime)):0,reward:integer(raw.reward),level:Math.max(1,integer(raw.level,80)),levels,relics:arr(raw.relics,TG.RELICS.map(r=>r.id),6),synergies:buildSynergies(levels),at:integer(raw.at,4102444800000)};
 }
 function progress(data){const best=data.journalBest,values={firstReturn:data.stats.runs,mirrorClear:best.farthestStage,dualSynergy:best.maxSynergies,relicCollector:best.maxRelics,hundredKills:data.stats.bestKills,chapterClear:data.stats.wins};return TG.CHALLENGES.map(goal=>({...goal,current:Math.min(goal.target,values[goal.id]||0),complete:(values[goal.id]||0)>=goal.target}));}
-function normal(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('저장 형식이 올바르지 않습니다.');let out=fresh();out.wallet=integer(raw.wallet);for(const k of Object.keys(out.upgrades))out.upgrades[k]=integer(raw.upgrades?.[k],5);for(const k of Object.keys(out.stats))out.stats[k]=integer(raw.stats?.[k]);out.memories=arr(raw.memories,TG.MEMORIES.map(m=>m.id),6);out.unlocked=integer(raw.unlocked,2);out.settled=arr(raw.settled,null,64).filter(x=>/^[\w-]{1,100}$/.test(x));for(const k of ['bgm','sfx'])if(Number.isFinite(raw.settings?.[k]))out.settings[k]=Math.max(0,Math.min(1,raw.settings[k]));out.settings.reduceFX=raw.settings?.reduceFX===true;out.settings.quality=raw.settings?.quality==='low'?'low':'auto';
+function normal(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Error('저장 형식이 올바르지 않습니다.');let out=fresh();out.story=normalStory(raw.story);out.wallet=integer(raw.wallet);for(const k of Object.keys(out.upgrades))out.upgrades[k]=integer(raw.upgrades?.[k],5);for(const k of Object.keys(out.stats))out.stats[k]=integer(raw.stats?.[k]);out.memories=arr(raw.memories,TG.MEMORIES.map(m=>m.id),6);out.unlocked=integer(raw.unlocked,2);out.settled=arr(raw.settled,null,64).filter(x=>/^[\w-]{1,100}$/.test(x));for(const k of ['bgm','sfx'])if(Number.isFinite(raw.settings?.[k]))out.settings[k]=Math.max(0,Math.min(1,raw.settings[k]));out.settings.reduceFX=raw.settings?.reduceFX===true;out.settings.quality=raw.settings?.quality==='low'?'low':'auto';
  const ids=new Set();for(const rawEntry of (Array.isArray(raw.history)?raw.history.slice(0,10):[])){const entry=journalEntry(rawEntry);if(entry&&!ids.has(entry.id)){out.history.push(entry);ids.add(entry.id);}}
  out.journalBest={maxSynergies:integer(raw.journalBest?.maxSynergies,TG.SYNERGIES.length),maxRelics:integer(raw.journalBest?.maxRelics,TG.RELICS.length),farthestStage:Math.max(integer(raw.journalBest?.farthestStage,3),out.unlocked,out.stats.wins>0?3:0)};
  for(const entry of out.history){out.journalBest.maxSynergies=Math.max(out.journalBest.maxSynergies,entry.synergies.length);out.journalBest.maxRelics=Math.max(out.journalBest.maxRelics,entry.relics.length);out.journalBest.farthestStage=Math.max(out.journalBest.farthestStage,entry.clearedStages);}
@@ -27,8 +44,9 @@ function normal(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))throw Er
  return out;
 }
 function checksum(s){let n=2166136261;for(let i=0;i<s.length;i++){n^=s.charCodeAt(i);n=Math.imul(n,16777619)}return(n>>>0).toString(16);}
-function encode(data){const body=JSON.stringify(data);return JSON.stringify({schema:1,checksum:checksum(body),data});}
-function decode(text){if(typeof text!=='string'||text.length>256000)throw Error('백업 파일이 너무 크거나 읽을 수 없습니다.');let env;try{env=JSON.parse(text)}catch{throw Error('백업 JSON을 읽을 수 없습니다.')}if(!env||typeof env!=='object'||Array.isArray(env))throw Error('백업 형식이 올바르지 않습니다.');if(env.schema!==1)throw Error('지원하지 않는 저장 버전입니다.');if(!env.data||typeof env.data!=='object'||Array.isArray(env.data))throw Error('백업 내용이 올바르지 않습니다.');if(checksum(JSON.stringify(env.data))!==env.checksum)throw Error('저장 데이터가 손상되었습니다.');return normal(env.data);}
+function encode(data){const body=JSON.stringify(data);return JSON.stringify({schema:2,checksum:checksum(body),data});}
+function decode(text){if(typeof text!=='string'||text.length>256000)throw Error('백업 파일이 너무 크거나 읽을 수 없습니다.');let env;try{env=JSON.parse(text)}catch{throw Error('백업 JSON을 읽을 수 없습니다.')}if(!env||typeof env!=='object'||Array.isArray(env))throw Error('백업 형식이 올바르지 않습니다.');if(env.schema!==1&&env.schema!==2)throw Error('지원하지 않는 저장 버전입니다.');if(!env.data||typeof env.data!=='object'||Array.isArray(env.data))throw Error('백업 내용이 올바르지 않습니다.');if(checksum(JSON.stringify(env.data))!==env.checksum)throw Error('저장 데이터가 손상되었습니다.');return normal(env.data);}
+function upgraded(text){try{return text===null?null:encode(decode(text));}catch{return null;}}
 S.data=fresh();
 let existing=false,writeLocked=false,seenRaw=null;
 function markConflict(){
@@ -51,9 +69,15 @@ S.save=function(){
  try{
   const prev=localStorage.getItem(KEY);
   if(prev!==seenRaw){markConflict();return false;}
-  if(prev===encoded){S.data=data;S.status='ready';return true;} // No write or backup churn for an unchanged checkpoint.
-  if(prev){try{decode(prev);localStorage.setItem(BACKUP,prev)}catch{}}
-  localStorage.setItem(KEY,encoded);
+  const backup=localStorage.getItem(BACKUP);
+  // Both copies must reject older readers, which otherwise discard the new story namespace.
+  // Upgrade the last good snapshot before committing schema 2 to the primary key.
+  const previous=prev===encoded?null:upgraded(prev);
+  const safeBackup=previous||upgraded(backup)||(backup===null?encoded:null);
+  if(safeBackup!==null&&backup!==safeBackup)localStorage.setItem(BACKUP,safeBackup);
+  // A changed primary from another tab must not be overwritten while securing its backup.
+  if(localStorage.getItem(KEY)!==prev){markConflict();return false;}
+  if(prev!==encoded)localStorage.setItem(KEY,encoded);
   seenRaw=encoded;S.data=data;S.status='ready';return true;
  }catch{S.status='memory';return false}
 };

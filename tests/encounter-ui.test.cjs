@@ -7,7 +7,7 @@ function surface(){
  for(const m of fs.readFileSync(path.join(root,'index.html'),'utf8').matchAll(/id="([^"]+)"/g))element(m[1]);
  document={activeElement:null,hidden:false,body:element('body'),getElementById:id=>elements.get(id),createElement:tag=>element(tag+seq++),createTextNode:text=>({textContent:text}),addEventListener(){}};
  const values=new Map(),c={console,Math,Date,Set,Map,JSON,document,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},Image:class{constructor(){this.complete=false;this.naturalWidth=0}},navigator:{},innerWidth:390,innerHeight:844,devicePixelRatio:1,requestAnimationFrame:()=>1,setInterval:()=>1,setTimeout:()=>1,addEventListener(){},performance:{now:()=>0},TG:{}};c.window=c;vm.createContext(c);
- for(const file of ['data','store','audio','game','render','input','ui'])vm.runInContext(fs.readFileSync(path.join(root,'js',file+'.js'),'utf8'),c);
+ for(const file of ['data','story','store','audio','game','render','input','ui'])vm.runInContext(fs.readFileSync(path.join(root,'js',file+'.js'),'utf8'),c);
  const reset=()=>{for(const list of Object.values(trace))list.length=0};
  return {TG:c.TG,$:id=>elements.get(id),trace,reset};
 }

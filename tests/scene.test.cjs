@@ -39,3 +39,9 @@ test('painted memory lantern loads as a real sprite and stays behind enemy threa
  const {TG,G,draws}=scene();const g=G.start();g.memoryAnchor={x:100,y:50,r:42,remaining:18,charge:.6,required:1.2,xp:8};G.enemy('ghost',90,50);TG.view.draw(1000);
  const lantern=draws.findIndex(args=>args[0].src==='assets/memory-lantern-v013.webp'),enemy=draws.findIndex(args=>args[0].src==='assets/enemies-v09.webp');assert(lantern>=0);assert(lantern<enemy);assert(draws[lantern].slice(1).every(Number.isFinite));
 });
+
+test('Mare atlas shows only for a joined story companion and protection remains visible with reduced FX',()=>{
+ const {TG,G,draws}=scene();TG.story.begin();for(let i=0;i<6;i++){const s=TG.story.state();TG.story.advance(s.node,s.line);}G.startStory();G.g.time=G.g.duration;G.update(0);G.g=null;for(let i=0;i<4;i++){const s=TG.story.state();TG.story.advance(s.node,s.line);}G.startStory();TG.store.data.settings.reduceFX=true;G.damage(10);TG.view.draw(1000);
+ const mare=draws.find(a=>a[0].src==='assets/mare-walk-v014.webp');assert(mare);assert(mare.slice(1).every(Number.isFinite));assert.equal(mare[7],80);assert.equal(mare[8],80);
+ draws.length=0;G.g=null;G.start('quick');TG.view.draw(1100);assert(!draws.some(a=>a[0].src==='assets/mare-walk-v014.webp'));
+});
