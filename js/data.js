@@ -1,6 +1,6 @@
 'use strict';
 window.TG=window.TG||{};
-TG.VERSION='0.9.8-rc1';
+TG.VERSION='0.10.0-rc1';
 TG.CARDS=[
 {id:'blade',icon:'✧',name:'시간 절단',desc:'칼날 피해 +25% · 공격 간격 -6%',cap:6},
 {id:'pierce',icon:'↟',name:'관통하는 기억',desc:'칼날 관통 +1',cap:3},
@@ -26,6 +26,11 @@ TG.SYNERGIES=[
 {id:'safeDash',name:'푸른 귀환',needs:{shield:1,clock:2},desc:'대시 종료 때 가까운 적을 밀쳐내고 반경 110의 적 탄환 제거'},
 {id:'starCompass',name:'별의 나침반',needs:{magnet:2,wisdom:1},desc:'기억 획득 범위 추가 +50%'},
 {id:'warmHeart',name:'설원의 온기',needs:{vital:1,mend:2},desc:'재생량 2배 · 받는 피해 추가 10% 감소'}
+];
+TG.BOSS_REWARDS=[
+{id:'insight',name:'이어지는 기억',icon:'✧',desc:'다음 역에서 카드 1장 추가 선택',card:1},
+{id:'shelter',name:'등불 아래의 쉼',icon:'♡',desc:'체력 30 회복 · 소거율 12 감소',heal:30,erase:-12},
+{id:'spoils',name:'관리자의 유산',icon:'◈',desc:'탐험 기억 조각 +24 · 귀환 시 정산',shards:24}
 ];
 TG.RELICS=[
 {id:'bell',name:'작은 귀환종',desc:'첫 보호막 1개를 얻는다',icon:'♧'},

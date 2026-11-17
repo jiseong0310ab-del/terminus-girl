@@ -1,1 +1,1 @@
-{"name":"terminus-girl","version":"0.9.8-rc1","private":true,"description":"Terminus Girl browser game","scripts":{"test":"node --test tests/*.test.cjs"}}
+{"name":"terminus-girl","version":"0.10.0-rc1","private":true,"description":"Terminus Girl browser game","scripts":{"test":"node --test tests/*.test.cjs"}}

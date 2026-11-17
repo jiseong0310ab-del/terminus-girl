@@ -12,6 +12,6 @@ test('event health cost and bonus survive camp reload without being charged twic
  let b=boot();b.G.start();b.G.stageClear();b.G.g.event=3;b.G.g.p.hp=40;b.S.snapshot(b.G.g,'camp');
  assert(b.G.eventChoice(0));assert.equal(b.G.g.p.hp,25);
  b=boot(Object.fromEntries(b.values));b.G.continue();assert.equal(b.G.g.p.hp,25);assert.equal(b.G.g.bonusCards,1);
- assert.equal(b.G.eventChoice(0),false);assert.equal(b.G.g.p.hp,25);b.G.nextStage();assert.equal(b.G.g.p.hp,45);assert.equal(b.G.g.status,'cards');
+ assert.equal(b.G.eventChoice(0),false);assert.equal(b.G.g.p.hp,25);b.G.chooseBossReward('spoils');b.G.nextStage();assert.equal(b.G.g.p.hp,45);assert.equal(b.G.g.status,'cards');
  b.G.choose(b.G.g.offered[0],b.G.g.offerToken);assert.equal(b.G.g.status,'playing');
 });

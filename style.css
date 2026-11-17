@@ -108,3 +108,5 @@
 
 /* Hold-to-move must not open iOS native callouts. Backup text stays selectable. */
 #joystick,#dashBtn,#pauseBtn{-webkit-touch-callout:none}
+
+.bossRewardPanel{border-color:#a58b5266;background:linear-gradient(140deg,#222334cc,#101827df)}.bossRewardPanel h3{margin:7px 0 14px}.bossReward .cardIcon{color:#e7c58f}.bossReward .carddesc{display:block;margin-top:5px}.bossReward{min-height:84px}.bossReward:focus-visible{outline:2px solid #e3c899}
