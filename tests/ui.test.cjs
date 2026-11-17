@@ -170,3 +170,19 @@ test('boss and event bonus cards are both chosen before returning to combat',()=
  assert.equal(TG.engine.g.stage,1);assert.equal(TG.ui.screen,'cards');$('cardList').children[0].onclick();assert.equal(TG.ui.screen,'cards');$('cardList').children[0].onclick();assert.equal(TG.ui.screen,'playing');
  assert.equal(Object.values(TG.engine.g.levels).reduce((a,b)=>a+b,0),2);assert.equal(TG.engine.g.bonusCards,0);
 });
+
+test('journal opens from the hub with six goals and an honest empty state',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();const wallet=TG.store.data.wallet;$('openJournal').onclick();
+ assert.equal(TG.ui.screen,'journal');assert.equal($('challengeList').children.length,6);assert.equal($('challengeCount').textContent,'0 / 6');assert.match($('historyList').children[0].textContent,/아직/);assert.equal(TG.store.data.wallet,wallet);
+ $('journalBack').onclick();assert.equal(TG.ui.screen,'hub');
+});
+test('settlement shows new goals and journal retains the exact card, relic and synergy build',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();const g=TG.engine.g;g.levels={blade:2,echo:1,shield:1,clock:2};g.relics=['compass','watch','wick'];g.kills=120;g.shards=45;g.totalTime=65;TG.engine.rebuild();TG.engine.finish(false,'retreat');
+ assert.equal(TG.ui.screen,'ended');assert.equal($('newGoalNote').hidden,false);assert.match($('newGoalNote').textContent,/첫 귀환/);assert.equal(g.newGoals.length,4);assert.equal(TG.store.data.wallet,22);
+ $('resultJournal').onclick();assert.equal(TG.ui.screen,'journal');assert.equal($('historyList').children.length,1);assert.equal($('challengeCount').textContent,'4 / 6');
+ const row=$('historyList').children[0],details=row.children[3];assert.match(row.children[2].textContent,/격파 120/);assert.match(row.children[2].textContent,/지급 조각 22/);assert.match(details.children[1].textContent,/시간 절단 2/);assert.match(details.children[2].textContent,/은빛 나침반/);assert.match(details.children[3].textContent,/잔향 절단/);
+ $('journalBack').onclick();assert.equal(TG.ui.screen,'ended');assert.equal(TG.engine.g,g);
+});
+test('practice results do not add a journal entry or keep an old completion banner',()=>{
+ const {TG,$}=bootUI();$('quickStart').onclick();TG.engine.finish(true,'practice');assert.equal($('newGoalNote').hidden,true);assert.equal(TG.store.data.history.length,0);$('resultJournal').onclick();assert.equal(TG.ui.screen,'journal');assert.equal($('challengeCount').textContent,'0 / 6');$('journalBack').onclick();assert.equal(TG.ui.screen,'ended');
+});

@@ -1,6 +1,6 @@
 'use strict';
 window.TG=window.TG||{};
-TG.VERSION='0.11.0-rc1';
+TG.VERSION='0.12.0-rc1';
 TG.CARDS=[
 {id:'blade',icon:'✧',name:'시간 절단',desc:'칼날 피해 +25% · 공격 간격 -6%',cap:6},
 {id:'pierce',icon:'↟',name:'관통하는 기억',desc:'칼날 관통 +1',cap:3},
@@ -67,3 +67,12 @@ TG.UPGRADES=[
 {id:'map',name:'기억의 노선도',desc:'시작 획득 범위 +12',base:18,cap:5}
 ];
 TG.ENEMY_DEFS={ghost:{hp:28,speed:62,r:14,art:0,behavior:'chase'},hound:{hp:24,speed:94,r:12,art:1,behavior:'charge'},passenger:{hp:43,speed:65,r:15,art:3,behavior:'ranged'},wolf:{hp:36,speed:105,r:13,art:4,behavior:'charge'},conductor:{hp:58,speed:70,r:16,art:6,behavior:'chase'},lost:{hp:42,speed:64,r:15,art:7,behavior:'ranged'},warden:{hp:135,speed:52,r:21,art:9,behavior:'charge',elite:true},witch:{hp:110,speed:58,r:19,art:10,behavior:'ranged',elite:true}};
+
+TG.CHALLENGES=[
+{id:'firstReturn',name:'첫 귀환',desc:'첫 번째 장 탐험을 한 번 정산하세요.',icon:'◷',target:1},
+{id:'mirrorClear',name:'거울 너머로',desc:'거울 유리역을 복원하세요.',icon:'◇',target:1},
+{id:'dualSynergy',name:'겹쳐진 기억',desc:'한 탐험에서 시너지 2개를 완성한 채 귀환하세요.',icon:'◈',target:2},
+{id:'relicCollector',name:'잃어버린 짐의 주인',desc:'한 탐험에서 유물 3개를 모은 채 귀환하세요.',icon:'⌘',target:3},
+{id:'hundredKills',name:'백 개의 잔향',desc:'한 탐험에서 적 100명을 격파하세요.',icon:'✧',target:100},
+{id:'chapterClear',name:'두 개의 불빛',desc:'첫 번째 장을 끝까지 복원하세요.',icon:'✦',target:1}
+];
