@@ -147,3 +147,10 @@ test('wave warning shows a countdown and hint, renders markers and disappears af
  assert.equal($('guide').style.display,'block');assert.match($('guide').textContent,/거울의 포위/);assert.match($('guide').textContent,/초/);
  assert.doesNotThrow(()=>TG.view.draw(1000));g.wave.remaining=.01;TG.engine.update(.04);TG.ui.refreshHud();assert.equal($('guide').style.display,'none');
 });
+
+test('visible browser blur does not open the real pause screen, while app hiding still does',()=>{
+ const h=bootUI();h.$('quickStart').onclick();
+ for(let i=0;i<6;i++){h.TG.engine.g.time+=10;h.fireWindow('blur');assert.equal(h.TG.ui.screen,'playing');assert.equal(h.TG.engine.g.status,'playing')}
+ h.c.document.hidden=true;h.fireDocument('visibilitychange');assert.equal(h.TG.ui.screen,'paused');
+ h.c.document.hidden=false;h.fireDocument('visibilitychange');assert.equal(h.TG.ui.screen,'paused');
+});

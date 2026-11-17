@@ -42,3 +42,14 @@ test('a thrown pointer capture release does not break pause or pagehide',()=>{
  assert.equal(h.saves(),1);
  assert.equal(h.TG.engine.g.status,'paused');
 });
+
+test('repeated visible focus changes never pause combat or drop an active touch',()=>{
+ const h=setup();h.fireJoy('pointerdown',{pointerId:11,clientX:95,clientY:50});
+ for(let i=0;i<6;i++){h.fireWindow('blur');h.fireWindow('focus')}
+ assert.equal(h.TG.engine.g.status,'playing');assert.equal(h.pauses(),0);assert.equal(h.suspends(),0);assert.equal(h.TG.engine.input.x,1);
+ h.fireWindow('pointerup',{pointerId:11});assert.equal(h.TG.engine.input.x,0);
+ h.setHidden(true);h.fireWindow('blur');assert.equal(h.TG.engine.g.status,'paused');assert.equal(h.pauses(),1);
+});
+test('long presses on movement and dash suppress the native context menu',()=>{
+ const h=setup();assert.equal(h.fireJoy('contextmenu').prevented,true);assert.equal(h.fireDash('contextmenu').prevented,true);
+});
