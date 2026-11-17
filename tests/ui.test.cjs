@@ -186,3 +186,9 @@ test('settlement shows new goals and journal retains the exact card, relic and s
 test('practice results do not add a journal entry or keep an old completion banner',()=>{
  const {TG,$}=bootUI();$('quickStart').onclick();TG.engine.finish(true,'practice');assert.equal($('newGoalNote').hidden,true);assert.equal(TG.store.data.history.length,0);$('resultJournal').onclick();assert.equal(TG.ui.screen,'journal');assert.equal($('challengeCount').textContent,'0 / 6');$('journalBack').onclick();assert.equal(TG.ui.screen,'ended');
 });
+
+test('an unsaved journal result immediately explains the storage failure',()=>{
+ const {TG,c,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.engine.g.shards=20;c.localStorage.setItem=()=>{throw Error('quota')};TG.engine.finish(false,'retreat');
+ assert.equal(TG.ui.screen,'ended');assert.equal(TG.store.data.history.length,1);assert.match($('resultSaveStatus').textContent,/저장소/);assert.equal(TG.store.preview(TG.store.export()).history.length,1);
+ $('resultJournal').onclick();assert.match($('journalSaveStatus').textContent,/저장소/);
+});
