@@ -24,7 +24,8 @@ S.canWrite=function(){
  catch{S.status='memory';return false;}
 };
 if(typeof addEventListener==='function')addEventListener('storage',event=>{
- if(event.key===KEY&&event.newValue!==seenRaw)markConflict();
+ if(event.storageArea&&event.storageArea!==localStorage)return;
+ if(event.key===null||(event.key===KEY&&event.newValue!==seenRaw))markConflict();
 });
 try{for(const key of [KEY,BACKUP]){const raw=localStorage.getItem(key);if(key===KEY)seenRaw=raw;if(raw===null)continue;existing=true;try{S.data=decode(raw);S.status=key===BACKUP?'recovered':'ready';break}catch{S.status='corrupt'}}if(!existing){let old,legacy=localStorage.getItem('terminusRecords');try{old=JSON.parse(legacy||'{}')}catch{old={}}for(const k of Object.keys(S.data.stats))S.data.stats[k]=integer(old?.[k]);S.status=legacy?'migrated':'ready';}writeLocked=S.status==='corrupt';}catch{S.status='memory';writeLocked=true;}
 S.save=function(){
@@ -41,9 +42,10 @@ S.save=function(){
 };
 S.export=()=>encode(normal(S.data));S.preview=text=>decode(text);
 S.import=function(text){
- const next=decode(text);S.data=next;
- try{seenRaw=localStorage.getItem(KEY);writeLocked=false;}
- catch{S.status='memory';return next;}
+ const next=decode(text);let current;
+ try{current=localStorage.getItem(KEY);}
+ catch{if(S.status!=='conflict')S.status='memory';throw Error('기기 저장소를 읽지 못해 복원하지 않았습니다. 저장소 접근을 확인한 뒤 다시 시도해 주세요.');}
+ seenRaw=current;writeLocked=false;S.data=next;
  S.save();return next;
 };
 S.buy=function(id){const def=TG.UPGRADES.find(u=>u.id===id);if(!def||!S.canWrite())return false;const lv=S.data.upgrades[id],cost=def.base*(lv+1);if(lv>=def.cap||S.data.wallet<cost)return false;S.data.wallet-=cost;S.data.upgrades[id]++;S.save();return true;};

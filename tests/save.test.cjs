@@ -129,3 +129,18 @@ test('pagehide-style repeated saves do not churn backups or require additional w
  assert.equal(b.S.status,'memory');
  assert.equal(b.values.get(KEY),primary);
 });
+
+test('clearing site storage in another tab locks this tab immediately',()=>{
+ const b=boot();b.S.data.wallet=31;b.S.save();const original=b.S.export();let signals=0;b.S.onConflict=()=>signals++;
+ b.values.clear();b.fireStorage({key:null,newValue:null});
+ assert.equal(b.S.status,'conflict');assert.equal(signals,1);assert.equal(b.S.save(),false);assert.equal(b.S.export(),original);
+});
+test('failed import read preserves conflicted progress until an explicit successful retry',()=>{
+ const a=boot(),b=boot({},a.values);b.S.data.wallet=75;
+ a.S.data.wallet=91;a.S.save();assert.equal(b.S.canWrite(),false);
+ const before=b.S.export(),backup=a.S.export(),read=b.storage.getItem;
+ b.storage.getItem=()=>{throw Error('blocked')};
+ assert.throws(()=>b.S.import(backup),/복원/);assert.equal(b.S.export(),before);assert.equal(b.S.status,'conflict');
+ b.storage.getItem=read;assert.equal(b.S.save(),false);b.S.import(backup);
+ assert.equal(b.S.status,'ready');assert.equal(b.S.data.wallet,91);
+});

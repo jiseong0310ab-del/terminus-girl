@@ -123,3 +123,21 @@ test('settings cannot activate an update while a paused fight or camp is still a
  assert.equal(h.$('applyUpdate').hidden,true);h.$('applyUpdate').onclick();assert.equal(posted,0);
  h.$('settingsBack').onclick();h.$('campHub').onclick();assert.equal(h.$('applyUpdate').hidden,false);h.$('applyUpdate').onclick();assert.equal(posted,1);
 });
+
+test('a conflict during card choice opens backup settings without consuming a card',()=>{
+ const {TG,c,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();
+ const g=TG.engine.g;g.xp=g.xpNeed;TG.engine.checkLevel();const offered=[...g.offered],token=g.offerToken;
+ const changed=TG.store.fresh();changed.wallet=71;c.localStorage.setItem('terminusSaveV1',TG.store.encode(changed));
+ assert.equal(TG.store.canWrite(),false);assert.equal(TG.ui.screen,'settings');assert.equal(TG.ui.returnTo,'cards');
+ assert.equal(g.status,'cards');assert.deepEqual([...g.offered],offered);assert.equal(g.offerToken,token);
+ assert.match($('settingsStatus').textContent,/다른 탭/);
+ assert.equal(TG.engine.choose(offered[0],token),false);
+});
+test('an import read error is shown without discarding the active run',async()=>{
+ const {TG,c,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();$('pauseBtn').onclick();$('pauseSettings').onclick();
+ const g=TG.engine.g,backup=TG.store.export(),before=backup;
+ $('importFile').files=[{size:backup.length,text:async()=>backup}];await $('importFile').onchange();
+ c.localStorage.getItem=()=>{throw Error('blocked')};
+ assert.doesNotThrow(()=>$('modalYes').onclick());assert.equal(TG.engine.g,g);assert.equal(TG.store.export(),before);
+ assert.match($('importNote').textContent,/복원/);
+});
