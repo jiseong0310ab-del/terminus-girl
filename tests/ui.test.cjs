@@ -192,3 +192,42 @@ test('an unsaved journal result immediately explains the storage failure',()=>{
  assert.equal(TG.ui.screen,'ended');assert.equal(TG.store.data.history.length,1);assert.match($('resultSaveStatus').textContent,/저장소/);assert.equal(TG.store.preview(TG.store.export()).history.length,1);
  $('resultJournal').onclick();assert.match($('journalSaveStatus').textContent,/저장소/);
 });
+
+test('route distinguishes this exploration from historically restored stations',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();const route=$('routeList');
+ assert.equal(route.children[0].className,'current');assert.equal(route.children[0].children[1].textContent,'출발');assert(!route.children.some(e=>e.className==='visited'));
+ $('chapterStart').onclick();TG.engine.stageClear();$('campHub').onclick();assert.match($('routeCaption').textContent,/복원 1\/3/);assert.equal(route.children[0].children[1].textContent,'이번 탐험 복원');assert.equal(route.children[1].children[1].textContent,'다음 정차');
+ $('abandonRun').onclick();$('modalYes').onclick();assert.match($('routeCaption').textContent,/첫 역부터/);assert.equal(route.children[0].children[1].textContent,'복원했던 역');assert.equal(route.children[1].children[1].textContent,'앞으로 복원');
+});
+
+test('HUD separates preparation, boss arrival, erasure danger and actual restoration',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();const g=TG.engine.g;
+ assert.match($('goalLabel').textContent,/관리자 도착 3:01/);assert.match($('phaseLabel').textContent,/복원 0\/3/);assert.match($('eraseLabel').textContent,/소거 위험/);
+ g.time=160;TG.ui.refreshHud();assert.match($('goalLabel').textContent,/0:21/);g.bossSpawned=true;TG.ui.refreshHud();assert.match($('goalLabel').textContent,/거울 감시자 처치/);
+ TG.engine.pause();assert.match($('pauseObjective').textContent,/소거까지 1:50/);assert.match($('pauseObjective').textContent,/거울 감시자 처치/);
+});
+
+test('card goals explain missing named levels without changing the offer or forcing a build',()=>{
+ const {TG,$}=bootUI();$('quickStart').onclick();const g=TG.engine.g;g.levels={clock:2};TG.engine.rebuild();g.xp=g.xpNeed;TG.engine.checkLevel();const offered=[...g.offered],token=g.offerToken;
+ assert.match($('cardGoalText').textContent,/푸른 귀환/);assert.match($('cardGoalText').textContent,/푸른 수호 0 → 1/);TG.ui.show('cards');assert.deepEqual([...g.offered],offered);assert.equal(g.offerToken,token);
+});
+
+test('first-run tips wait for real actions, then leave room for combat warnings',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();const g=TG.engine.g;
+ g.time=40;g.nextWave=1000;TG.ui.refreshHud();assert.match($('guide').textContent,/조작판/);TG.engine.input.x=1;TG.engine.update(.04);TG.ui.refreshHud();assert.match($('guide').textContent,/경험치를 주우/);
+ g.drops.push({x:g.p.x,y:g.p.y,value:1});TG.engine.update(.04);TG.ui.refreshHud();assert.match($('guide').textContent,/첫 카드를/);
+ g.xp=g.xpNeed;TG.engine.checkLevel();$('cardList').children[0].onclick();TG.ui.refreshHud();assert.match($('guide').textContent,/대시/);TG.engine.dash();TG.ui.refreshHud();assert.equal($('guide').style.display,'none');
+ g.wave={name:'거울의 포위',remaining:2,hint:'틈으로 이동'};TG.ui.refreshHud();assert.match($('guide').textContent,/거울의 포위/);g.wave=null;g.aftershocks=[{age:.2,warning:1,life:1.25}];TG.ui.refreshHud();assert.match($('guide').textContent,/잔진동/);g.aftershocks=[];
+ g.bossSpawned=true;g.learned.dashed=false;TG.ui.refreshHud();assert.equal($('guide').style.display,'none');
+});
+
+test('result review separates true restoration, why the run ended and retained progression',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();const g=TG.engine.g;g.levels={clock:2};TG.engine.rebuild();const boss=TG.engine.enemy('boss',300,0);boss.hp=boss.maxHp*.2;TG.engine.finish(false,'timeout');
+ assert.match($('resultProgress').textContent,/0\/3/);assert.match($('resultAdvice').textContent,/체력 20%/);assert.match($('resultAdvice').textContent,/푸른 귀환/);assert.match($('resultGrowth').textContent,/다시 시작/);assert.match($('resultGrowth').textContent,/조각.*남습니다/);
+ $('retryBtn').onclick();TG.engine.g.shards=100;TG.engine.finish(false,'retreat');assert.match($('resultAdvice').textContent,/정비할 수/);assert.doesNotMatch($('resultAdvice').textContent,/체력 20%/);
+});
+
+test('camp presents reward choices before any help article',()=>{
+ const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8'),camp=html.split('id="campScreen"')[1].split('</section>')[0],reward=camp.split('bossRewardPanel')[1].split('id="bossRewardList"')[0];
+ assert.doesNotMatch(reward,/<p>|<h3>탐험 기록|<h3>기록 붕괴/);assert.match(reward,/관리자의 유산/);assert.match(html.split('id="aboutScreen"')[1],/기록 붕괴와 정예의 불씨/);
+});

@@ -75,7 +75,7 @@ S.settle=function(run,won){
  const completed=new Set(progress(S.data).filter(goal=>goal.complete).map(goal=>goal.id)),success=won===true,shards=Number.isFinite(run.shards)?Math.max(0,run.shards):0;
  const amount=Math.max(0,Math.floor(shards*(success?1:.5)))+(success?25:0);
  S.data.wallet=Math.min(1e7,S.data.wallet+amount);S.data.stats.runs++;S.data.stats.wins+=success?1:0;S.data.stats.bestKills=Math.max(S.data.stats.bestKills,integer(run.kills,1e5));S.data.stats.totalShards+=amount;
- const clearedStages=success?3:Math.min(3,integer(run.stage,2)+(run.phase==='camp'||run.bossDefeated?1:0));
+ const clearedStages=success?3:Number.isInteger(run.clearedStages)?Math.min(3,Math.max(integer(run.stage,2),run.clearedStages)):Math.min(3,integer(run.stage,2)+(run.phase==='camp'?1:0));
  const entry=journalEntry({...run,won:success,reason:run.reason||'retreat',clearedStages,reward:amount,at:Date.now()});
  S.data.history.unshift(entry);S.data.history=S.data.history.slice(0,10);
  const best=S.data.journalBest;best.maxSynergies=Math.max(best.maxSynergies,entry.synergies.length);best.maxRelics=Math.max(best.maxRelics,entry.relics.length);best.farthestStage=Math.max(best.farthestStage,entry.clearedStages,S.data.unlocked,success?3:0);
