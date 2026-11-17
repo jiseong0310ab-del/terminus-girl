@@ -70,7 +70,7 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  for(let i=g.hostile.length-1;i>=0;i--){const b=g.hostile[i];b.life-=dt;b.x+=b.vx*dt;b.y+=b.vy*dt;if(len(p.x-b.x,p.y-b.y)<b.r+13){G.damage(b.damage);b.life=0}if(b.life<=0)g.hostile.splice(i,1);if(g.status!=='playing')return;}
  if(g.bossDefeated){G.stageClear();return;}if(g.time>=g.duration){G.finish(false,'timeout');return;}
  g.regenClock+=dt;g.pulseClock+=dt;if(g.regenClock>=10){g.regenClock=0;if(g.levels.mend)p.hp=Math.min(p.maxHp,p.hp+2*g.levels.mend*(g.synergies.warmHeart?2:1))}if(g.pulseClock>=4&&g.levels.lantern){g.pulseClock=0;const radius=100+15*g.levels.lantern;ring(p.x,p.y,radius,'#e9c891');for(const e of [...g.enemies])if(len(e.x-p.x,e.y-p.y)<radius+e.r)G.hitEnemy(e,(14+g.levels.lantern*7)*(g.relics.includes('wick')?1.35:1),g.synergies.emberLantern);if(g.bossDefeated){G.stageClear();return;}}
- if(g.levels.shield&&g.time-g.lastShield>=18){p.shield=Math.min(g.levels.shield,p.shield+1);g.lastShield=g.time}
+ if(g.levels.shield&&g.time-g.lastShield>=18){p.shield=Math.max(p.shield,Math.min(g.levels.shield,p.shield+1));g.lastShield=g.time}
  for(let i=g.drops.length-1;i>=0;i--){const drop=g.drops[i],dx=p.x-drop.x,dy=p.y-drop.y,dd=len(dx,dy)||1;if(dd<p.magnet){const v=Math.max(150,550*(1-dd/p.magnet));drop.x+=dx/dd*v*dt;drop.y+=dy/dd*v*dt}if(dd<20){g.xp+=drop.value*(1+.15*(g.levels.wisdom||0));g.drops.splice(i,1)}}
  for(const v of g.particles){v.life-=dt;v.x+=v.vx*dt;v.y+=v.vy*dt}g.particles=g.particles.filter(v=>v.life>0);for(const r of g.rings)r.life-=dt;g.rings=g.rings.filter(r=>r.life>0);G.checkLevel();
 };

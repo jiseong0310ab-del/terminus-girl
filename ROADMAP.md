@@ -12,3 +12,5 @@
 8. 별도 예산과 빌드 환경 확보 후 App Store 패키징·TestFlight·심사
 
 세부 계획: [다음 작업 로드맵](docs/NEXT_ROADMAP.md), [출시 체크리스트](docs/RELEASE_CHECKLIST.md).
+
+2026-11-17: v0.9.4 안정화에서 유물 보호막 손실 수정. 다음은 역 경계 진행 안전성 검증과 아이폰 실기 결과 확보.

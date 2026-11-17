@@ -1,6 +1,6 @@
 'use strict';
 window.TG=window.TG||{};
-TG.VERSION='0.9.4-rc1';
+TG.VERSION='0.9.4-rc2';
 TG.CARDS=[
 {id:'blade',icon:'✧',name:'시간 절단',desc:'칼날 피해 +25% · 공격 간격 -6%',cap:6},
 {id:'pierce',icon:'↟',name:'관통하는 기억',desc:'칼날 관통 +1',cap:3},
