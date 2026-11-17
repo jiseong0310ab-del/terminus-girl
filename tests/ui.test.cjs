@@ -141,3 +141,9 @@ test('an import read error is shown without discarding the active run',async()=>
  assert.doesNotThrow(()=>$('modalYes').onclick());assert.equal(TG.engine.g,g);assert.equal(TG.store.export(),before);
  assert.match($('importNote').textContent,/복원/);
 });
+
+test('wave warning shows a countdown and hint, renders markers and disappears after spawning',()=>{
+ const {TG,$}=bootUI();$('quickStart').onclick();const g=TG.engine.g;g.time=25;TG.engine.update(.04);TG.ui.refreshHud();
+ assert.equal($('guide').style.display,'block');assert.match($('guide').textContent,/거울의 포위/);assert.match($('guide').textContent,/초/);
+ assert.doesNotThrow(()=>TG.view.draw(1000));g.wave.remaining=.01;TG.engine.update(.04);TG.ui.refreshHud();assert.equal($('guide').style.display,'none');
+});
