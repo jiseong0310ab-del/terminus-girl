@@ -34,3 +34,8 @@ test('renderer draws atlas props behind enemies and keeps overcharge readable wi
  TG.store.data.settings.reduceFX=true;arcs.length=0;assert.doesNotThrow(()=>TG.view.draw(2000));
  assert(arcs.some(a=>a[0]===0&&a[1]===-8&&a[2]===39));
 });
+
+test('painted memory lantern loads as a real sprite and stays behind enemy threats',()=>{
+ const {TG,G,draws}=scene();const g=G.start();g.memoryAnchor={x:100,y:50,r:42,remaining:18,charge:.6,required:1.2,xp:8};G.enemy('ghost',90,50);TG.view.draw(1000);
+ const lantern=draws.findIndex(args=>args[0].src==='assets/memory-lantern-v013.webp'),enemy=draws.findIndex(args=>args[0].src==='assets/enemies-v09.webp');assert(lantern>=0);assert(lantern<enemy);assert(draws[lantern].slice(1).every(Number.isFinite));
+});

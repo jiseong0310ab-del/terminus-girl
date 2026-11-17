@@ -21,3 +21,14 @@ Use case: stylized-concept. Asset type: game environment sprite atlas for Termin
 ```
 
 v0.11의 보스 2단계 오라·예고·불씨 표시는 기존 아트와 `js/render.js`의 Canvas 도형으로 구현했다. 새 외부 음원/이미지 의존성은 없다.
+
+## v0.13 기억 등불
+
+- `assets/memory-lantern-v013.webp`: 선택형 전투 목표를 위한 프로젝트용 생성 아트. 내장 이미지 생성으로 제작했다. 새벽 남색 금속·오래된 황동·호박빛 불꽃·푸른 기억의 결을 기존 리제/역의 분위기와 맞췄다.
+- 1199×1312 투명 PNG 원본을 비율과 알파를 유지해 234×256 WebP로 축소/압축했다. 13,574바이트. 게임에 직접 로드하며 PWA 오프라인 묶음에 포함한다. 원본은 대화의 생성 기록에 보관한다.
+- 복원 링·카운트다운·화면 밖 방향 표시는 Canvas로 그린다. 이미지 로드 전에도 간단한 등불 도형으로 위치와 상호작용을 읽을 수 있다. 이펙트 감소/저화질에서도 필수 진행 표시는 유지한다.
+- 최종 프롬프트(내장 도구 사용, 외부 CLI/API 생성 미사용):
+
+```text
+Use case: stylized-concept. Asset type: single transparent sprite for the gothic fantasy mobile game Terminus Girl. A beautiful small antique railway memory lantern, isolated on a genuinely transparent background. Dark midnight navy iron frame, aged brass fine gothic ornament, delicate arched carrying handle, clear tall glass panes containing a calm warm amber flame and a very subtle pale blue memory wisp. Three-quarter front view seen slightly from above, matching polished Japanese fantasy RPG painted environment props. Quiet melancholy snowy railway mood, silver blue reflected edge light, ornate but readable strong silhouette at 60 pixels. One lantern only, centered, complete intact object, approximately 70 percent of canvas height with transparent margin around it. Crisp opaque metal edges and glass detail, contained interior glow only, no large bloom, no ground, no shadow platform, no background, no text, no UI circle, no frame, no watermark.
+```

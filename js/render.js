@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const V=TG.view={width:390,height:844};let canvas,ctx;const images={};const TAU=Math.PI*2;const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
+V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
 V.resize=function(){
  if(!ctx)return;
  V.width=canvas.clientWidth>0?canvas.clientWidth:innerWidth;
@@ -81,6 +81,31 @@ function enemy(e,g,t){
  if(e.burn>0){ctx.strokeStyle='#e9b36b';ctx.beginPath();ctx.arc(0,0,e.r+5,0,TAU*.7);ctx.stroke()}
  if(e.type==='boss'||e.elite){ctx.fillStyle='#21182b';ctx.fillRect(-34,-h*.75,68,5);ctx.fillStyle=e.type==='boss'?'#e3b4d2':'#d9c18f';ctx.fillRect(-34,-h*.75,68*clamp(e.hp/e.maxHp,0,1),5)}ctx.restore();
 }
+// Keep an optional field goal findable without covering the HUD or touch controls.
+V.anchorMarker=function(anchor,p,width=V.width,height=V.height){
+ if(!anchor)return null;
+ const worldX=anchor.x-p.x+width/2,worldY=anchor.y-p.y+height/2,top=Math.min(205,Math.max(160,height*.29)),bottom=Math.max(top+30,height-Math.min(205,height*.28));
+ const x=clamp(worldX,32,width-32),y=clamp(worldY,top,bottom);
+ return {x,y,worldX,worldY,edge:x!==worldX||y!==worldY,angle:Math.atan2(worldY-y,worldX-x)};
+};
+function memoryAnchor(g,t){
+ const a=g.memoryAnchor;if(!a)return;const marker=V.anchorMarker(a,g.p),reduced=TG.store.data.settings.reduceFX,low=TG.store.data.settings.quality==='low';
+ ctx.save();ctx.translate(marker.x,marker.y);ctx.lineWidth=2;
+ if(marker.edge){
+  circle(0,0,17,'#102b32ef','#e9d39a');ctx.save();ctx.rotate(marker.angle);ctx.fillStyle='#f2d48e';ctx.beginPath();ctx.moveTo(9,0);ctx.lineTo(-5,-6);ctx.lineTo(-5,6);ctx.closePath();ctx.fill();ctx.restore();
+  ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#f6e6c4';ctx.fillText(Math.ceil(a.remaining)+'초',0,32);
+ }else{
+  if(!low&&!reduced){const light=ctx.createRadialGradient(0,-12,1,0,-12,75);light.addColorStop(0,'#f3d58c55');light.addColorStop(1,'#e9bb5b00');ctx.fillStyle=light;ctx.fillRect(-75,-87,150,150);}
+  circle(0,0,a.r,'#d8c07b16','#e5c888aa');ctx.strokeStyle='#fff0b9';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,a.r,-Math.PI/2,-Math.PI/2+TAU*clamp(a.charge/a.required,0,1));ctx.stroke();
+  // A small railway lantern with a glass pane, distinct from damage circles.
+  const bob=reduced?0:Math.sin(t*3)*2;
+  if(ready(images.anchor))ctx.drawImage(images.anchor,-40,-66+bob,80,88);
+  else{ctx.save();ctx.translate(0,bob-7);ctx.strokeStyle='#e6c994';ctx.lineWidth=2;ctx.beginPath();ctx.arc(0,-13,6,Math.PI,TAU);ctx.stroke();ctx.fillStyle='#142837';ctx.fillRect(-10,-13,20,27);ctx.strokeRect(-10,-13,20,27);ctx.fillStyle='#ffe6a2';ctx.fillRect(-6,-9,12,18);ctx.strokeStyle='#9e7846';ctx.beginPath();ctx.moveTo(0,-11);ctx.lineTo(0,13);ctx.stroke();ctx.fillStyle='#e6c994';ctx.fillRect(-13,14,26,3);ctx.restore();}
+  ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff0c9';ctx.fillText('기억 등불 · '+Math.ceil(a.remaining)+'초',0,-a.r-34);
+  ctx.font='10px sans-serif';ctx.fillStyle='#e8d8b7';ctx.fillText(a.charge>0?'복원 '+Math.floor(a.charge/a.required*100)+'%':'원 안에 잠시 머물기',0,a.r+16);
+ }
+ ctx.restore();
+}
 function hero(g,t){const x=V.width/2,y=V.height/2;ctx.save();ctx.translate(x,y);const grad=ctx.createRadialGradient(-17,14,0,-17,14,90);grad.addColorStop(0,'#f7bc7328');grad.addColorStop(1,'#f7bc7300');ctx.fillStyle=grad;ctx.fillRect(-107,-76,180,180);ctx.fillStyle='#02040c99';ctx.beginPath();ctx.ellipse(0,22,21,6,0,0,TAU);ctx.fill();ctx.strokeStyle='#c8bd9677';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,14,0,TAU);ctx.stroke();
  const frame=g.moving?1+Math.floor(t*8)%2:0,index=frame*4+g.face,w=91,h=91,bob=g.moving&&!TG.store.data.settings.reduceFX?Math.sin(t*16)*1.2:0;const hurt=g.time-g.lastHit<.3;if(g.overcharge>0){const reduced=TG.store.data.settings.reduceFX;ctx.lineWidth=2;circle(0,-8,reduced?39:39+Math.sin(t*5)*2,'#f3cc7c0d','#efd18b99');}if(g.dash.invulnerable){
   if(!TG.store.data.settings.reduceFX&&TG.store.data.settings.quality!=='low'){
@@ -94,7 +119,7 @@ function hero(g,t){const x=V.width/2,y=V.height/2;ctx.save();ctx.translate(x,y);
  if(g.p.hp/g.p.maxHp<=.30){ctx.lineWidth=1.8;circle(0,0,23,null,'#ec91b0')}
   if(g.p.shield){ctx.strokeStyle='#afd8f0';ctx.beginPath();ctx.ellipse(0,-12,33,44,0,0,TAU);ctx.stroke()}
  for(let i=0;i<g.p.orbit;i++){const a=t*2.4+i*TAU/g.p.orbit;ctx.save();ctx.translate(Math.cos(a)*65,Math.sin(a)*65);ctx.rotate(a);ctx.fillStyle=g.synergies.frostOrbit?'#aee5fb':'#e8d1a1';ctx.fillRect(-3,-10,6,20);ctx.restore()}ctx.restore();}
-V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?.time||now/1000,cx=g?.p.x||0,cy=g?.p.y||0,W=V.width,H=V.height;ctx.save();if(g&&g.shake&&!TG.store.data.settings.reduceFX)ctx.translate(Math.sin(now*.13)*g.shake*.5,Math.cos(now*.19)*g.shake*.5);background(g,t,cx,cy);if(g){const sx=x=>x-cx+W/2,sy=y=>y-cy+H/2;for(const h of g.hazards){ctx.lineWidth=1.5;const warning=h.age<h.warning;ctx.setLineDash(warning?[6,5]:[]);circle(sx(h.x),sy(h.y),h.r,warning?'#ae769422':'#23102a99',warning?'#dd9cba':'#ce7aa2');ctx.setLineDash([]);if(warning){ctx.fillStyle='#f4c7dc';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('소거 예고',sx(h.x),sy(h.y)+3)}}
+V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?.time||now/1000,cx=g?.p.x||0,cy=g?.p.y||0,W=V.width,H=V.height;ctx.save();if(g&&g.shake&&!TG.store.data.settings.reduceFX)ctx.translate(Math.sin(now*.13)*g.shake*.5,Math.cos(now*.19)*g.shake*.5);background(g,t,cx,cy);if(g){memoryAnchor(g,t);const sx=x=>x-cx+W/2,sy=y=>y-cy+H/2;for(const h of g.hazards){ctx.lineWidth=1.5;const warning=h.age<h.warning;ctx.setLineDash(warning?[6,5]:[]);circle(sx(h.x),sy(h.y),h.r,warning?'#ae769422':'#23102a99',warning?'#dd9cba':'#ce7aa2');ctx.setLineDash([]);if(warning){ctx.fillStyle='#f4c7dc';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('소거 예고',sx(h.x),sy(h.y)+3)}}
  for(const shock of g.aftershocks||[]){
   const x=sx(shock.x),y=sy(shock.y);if(x+shock.r<0||x-shock.r>W||y+shock.r<0||y-shock.r>H)continue;
   const warning=shock.age<shock.warning;ctx.lineWidth=2;ctx.setLineDash(warning?[6,5]:[]);

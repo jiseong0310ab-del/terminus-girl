@@ -37,3 +37,16 @@ test('elite ember marker culls distant drops and the guide prioritizes a wave wa
  g.wave={name:'설원의 협공',remaining:1.2,hint:'빈 통로로 이동',points:[]};TG.ui.refreshHud();assert.match($('guide').textContent,/설원의 협공/);assert.doesNotMatch($('guide').textContent,/정예의 불씨/);
  g.wave=null;g.eliteDrops=[];TG.ui.refreshHud();assert.equal($('guide').style.display,'none');
 });
+
+test('memory lantern has a world-anchored charge ring, reduced-effects support and an edge direction',()=>{
+ const {TG,$,trace,reset}=surface();$('enterHub').onclick();$('chapterStart').onclick();const g=TG.engine.g;g.p.x=40;g.p.y=50;g.memoryAnchor={x:100,y:140,r:42,remaining:12,charge:.6,required:1.2,xp:10};TG.store.data.settings.reduceFX=true;
+ reset();TG.view.draw(1000);assert(trace.texts.some(a=>a[0]==='기억 등불 · 12초'));assert(trace.texts.some(a=>a[0]==='복원 50%'));const mark=TG.view.anchorMarker(g.memoryAnchor,g.p);assert.equal(mark.x,255);assert.equal(mark.y,512);assert.equal(mark.edge,false);
+ const progress=trace.arcs.find(a=>a[2]===42&&Math.abs(a[4]-a[3]-Math.PI)<1e-8);assert(progress);assert(trace.rects.some(a=>a[0]===-10&&a[2]===20));
+ g.memoryAnchor.x=10000;reset();TG.view.draw(1000);const edge=TG.view.anchorMarker(g.memoryAnchor,g.p);assert.equal(edge.edge,true);assert.equal(edge.x,358);assert(trace.texts.some(a=>a[0]==='12초'));assert(!trace.texts.some(a=>a[0]==='복원 50%'));
+ for(const [w,h]of [[390,844],[320,568],[844,390]]){const m=TG.view.anchorMarker({x:-10000,y:10000},g.p,w,h);assert(m.x>=0&&m.x<w&&m.y>=0&&m.y<h)}
+});
+
+test('optional lantern explains its exact reward while urgent warnings keep priority',()=>{
+ const {TG,$}=surface();$('enterHub').onclick();$('chapterStart').onclick();const g=TG.engine.g;g.memoryAnchor={x:100,y:0,r:42,remaining:17.4,charge:0,required:1.2,xp:12};TG.ui.refreshHud();assert.match($('guide').textContent,/선택/);assert.match($('guide').textContent,/경험치 12/);assert.match($('guide').textContent,/소거 위험 최대 -10/);
+ g.p.x=100;g.memoryAnchor.charge=.6;TG.ui.refreshHud();assert.match($('guide').textContent,/복원 50%/);g.aftershocks=[{age:.5,warning:1}];TG.ui.refreshHud();assert.match($('guide').textContent,/잔진동/);g.wave={name:'포위',remaining:1,hint:'회피',points:[]};TG.ui.refreshHud();assert.match($('guide').textContent,/포위/);
+});

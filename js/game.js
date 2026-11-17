@@ -46,6 +46,7 @@ function initialize(mode,stage,carry,resuming=false,prepareOnly=false){
  const old=carry||{};const g=G.g={id:old.id||makeId(),mode,stage,duration:mode==='quick'?90:mode==='single'?300:TG.STAGES[stage].duration,status:'playing',time:0,totalTime:old.totalTime||0,level:old.level||1,xp:old.xp||0,xpNeed:0,levels:{...(old.levels||{})},relics:[...(old.relics||[])],shards:old.shards||0,kills:old.kills||0,erase:old.erase||0,bossSpawned:false,bossDefeated:false,spawn:.4,eliteCount:0,enemySeq:0,lastFire:0,lastHit:-9,lastShield:0,regenClock:0,pulseClock:0,hazardClock:0,bonusCards:old.bonusCards||0,event:old.event||0,eventDone:false,bossOffers:resuming&&old.phase==='camp'?[...(old.bossOffers||[])]:[],bossReward:resuming&&old.phase==='camp'?(old.bossReward||null):null,p:player(),dash:{active:0,cooldown:0,invulnerable:false,x:0,y:1,lastX:0,lastY:1,maxCooldown:3},enemies:[],bullets:[],hostile:[],drops:[],particles:[],rings:[],hazards:[],links:[],flames:[],aftershocks:[],eliteDrops:[],offered:[],offerToken:0,shake:0,flash:0,face:0,moving:false,toast:null,chain:0,chainTime:0,overcharge:0,nextWave:25,waveIndex:0,wave:null,waveRestUntil:0};
  g.clearedStages=clamp(Math.max(stage,Number.isFinite(old.clearedStages)?Math.floor(old.clearedStages):0,resuming&&old.phase==='camp'?stage+1:0),0,3);
  g.learned={moved:stage>0||old.learned?.moved===true,dashed:old.learned?.dashed===true,collected:old.learned?.collected===true||g.xp>0||g.level>1,chosen:old.learned?.chosen===true||Object.values(g.levels).some(lv=>lv>0)};
+ g.anchorSeen=false;g.memoryAnchor=null;
  g.xpNeed=12+Math.max(0,g.level-1)*7;G.input.x=G.input.y=0;G.rebuild();g.p.hp=old.hp?Math.min(g.p.maxHp,old.hp):g.p.maxHp;g.p.shield=Math.min(3,(g.levels.shield||0)+(g.relics.includes('bell')?1:0));
  if(prepareOnly)return g;
  if(mode==='chapter'){TG.store.remember('arrival');if(stage===1)TG.store.remember('snow');if(stage===2)TG.store.remember('order');if(!resuming)TG.store.snapshot(g);}
@@ -121,6 +122,25 @@ function encounterTick(dt){const g=G.g,p=g.p;
  for(const shock of g.aftershocks){shock.age+=dt;if(!shock.triggered&&shock.age>=shock.warning){shock.triggered=true;if(len(p.x-shock.x,p.y-shock.y)<shock.r+14)G.damage(shock.damage);if(g.status!=='playing')break;}}
  g.aftershocks=g.aftershocks.filter(s=>s.age<s.life);
 }
+// An optional, stationary risk/reward detour before the manager arrives.
+// Experience joins the normal level queue at the end of this update.
+function anchorTick(dt){
+ const g=G.g;
+ if(g.mode!=='chapter'){g.memoryAnchor=null;return;}
+ if(g.bossSpawned||g.time>=g.duration*.60){g.memoryAnchor=null;g.anchorSeen=true;return;}
+ if(!g.anchorSeen&&g.time>=45){
+  const angle=rand(0,TAU),radiusX=Math.min(145,(TG.view?.width||390)*.32),radiusY=Math.min(165,(TG.view?.height||844)*.2);
+  g.anchorSeen=true;g.memoryAnchor={x:g.p.x+Math.cos(angle)*radiusX,y:g.p.y+Math.sin(angle)*radiusY,remaining:18,charge:0,required:1.2,r:42,xp:clamp(Math.ceil(g.xpNeed*.5),8,24)};
+  G.notify('기억 등불 발견 · 원 안에서 1.2초 머물러 회수하세요');return;
+ }
+ const anchor=g.memoryAnchor;if(!anchor)return;
+ anchor.remaining=Math.max(0,anchor.remaining-dt);
+ if(anchor.remaining<=0){g.memoryAnchor=null;return;}
+ anchor.charge=clamp(anchor.charge+(len(g.p.x-anchor.x,g.p.y-anchor.y)<=anchor.r?dt:-dt*.5),0,anchor.required);
+ if(anchor.charge<anchor.required)return;
+ g.xp+=anchor.xp;g.erase=Math.max(0,g.erase-10);g.learned.collected=true;g.memoryAnchor=null;
+ ring(anchor.x,anchor.y,75,'#f3d285');G.notify('기억 등불 회수 · 경험치 +'+anchor.xp+' · 소거 위험 최대 10 감소');G.onSound('card');
+}
 G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt=clamp(delta,0,.04),p=g.p;g.overcharge=Math.max(0,g.overcharge-dt);g.chainTime=Math.max(0,g.chainTime-dt);if(g.chainTime===0)g.chain=0;g.time+=dt;g.totalTime+=dt;g.flash=Math.max(0,g.flash-dt);g.shake=Math.max(0,g.shake-25*dt);if(g.toast)g.toast.life-=dt;
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
@@ -136,10 +156,11 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  g.regenClock+=dt;g.pulseClock+=dt;if(g.regenClock>=10){g.regenClock=0;if(g.levels.mend)p.hp=Math.min(p.maxHp,p.hp+2*g.levels.mend*(g.synergies.warmHeart?2:1))}if(g.pulseClock>=4&&g.levels.lantern){g.pulseClock=0;const radius=100+15*g.levels.lantern;ring(p.x,p.y,radius,'#e9c891');if(g.synergies.emberLantern&&g.flames.length<3)g.flames.push({x:p.x,y:p.y,r:radius*.65,life:2});for(const e of [...g.enemies])if(len(e.x-p.x,e.y-p.y)<radius+e.r)G.hitEnemy(e,(14+g.levels.lantern*7)*(g.relics.includes('wick')?1.35:1),g.synergies.emberLantern);if(g.bossDefeated){G.stageClear();return;}}
  if(g.levels.shield&&g.time-g.lastShield>=18){p.shield=Math.max(p.shield,Math.min(g.levels.shield,p.shield+1));g.lastShield=g.time}
  for(let i=g.drops.length-1;i>=0;i--){const drop=g.drops[i],dx=p.x-drop.x,dy=p.y-drop.y,dd=len(dx,dy)||1;const magnet=p.magnet*(g.overcharge>0?1.5:1);if(dd<magnet){const v=Math.max(150,550*(1-dd/magnet));drop.x+=dx/dd*v*dt;drop.y+=dy/dd*v*dt}if(dd<20){g.learned.collected=true;g.xp+=drop.value*(1+.15*(g.levels.wisdom||0));g.drops.splice(i,1)}}
+ anchorTick(dt);
  for(const link of g.links)link.life-=dt;g.links=g.links.filter(link=>link.life>0);
  for(const v of g.particles){v.life-=dt;v.x+=v.vx*dt;v.y+=v.vy*dt}g.particles=g.particles.filter(v=>v.life>0);for(const r of g.rings)r.life-=dt;g.rings=g.rings.filter(r=>r.life>0);G.checkLevel();
 };
-G.stageClear=function(){const g=G.g;if(!g||g.status!=='playing'||g.p.hp<=0||(g.mode==='chapter'&&!TG.store.canWrite()))return;g.clearedStages=g.stage+1;g.status='camp';G.input.x=G.input.y=0;if(g.mode!=='chapter'){G.finish(true,'practice');return;}TG.store.data.unlocked=Math.max(TG.store.data.unlocked,Math.min(2,g.stage+1));TG.store.remember(['mirror','bell','ending'][g.stage]);if(g.stage===2){G.finish(true,'ending');return;}g.event=Math.floor(Math.random()*TG.EVENTS.length);g.eventDone=false;g.bossOffers=TG.BOSS_REWARDS.map(r=>r.id);g.bossReward=null;TG.store.snapshot(g,'camp');G.onChange('camp');G.onSound('clear');};
+G.stageClear=function(){const g=G.g;if(!g||g.status!=='playing'||g.p.hp<=0||(g.mode==='chapter'&&!TG.store.canWrite()))return;g.memoryAnchor=null;g.clearedStages=g.stage+1;g.status='camp';G.input.x=G.input.y=0;if(g.mode!=='chapter'){G.finish(true,'practice');return;}TG.store.data.unlocked=Math.max(TG.store.data.unlocked,Math.min(2,g.stage+1));TG.store.remember(['mirror','bell','ending'][g.stage]);if(g.stage===2){G.finish(true,'ending');return;}g.event=Math.floor(Math.random()*TG.EVENTS.length);g.eventDone=false;g.bossOffers=TG.BOSS_REWARDS.map(r=>r.id);g.bossReward=null;TG.store.snapshot(g,'camp');G.onChange('camp');G.onSound('clear');};
 G.eventChoice=function(index){const g=G.g;if(!g||g.status!=='camp'||g.eventDone||!Number.isInteger(index)||!TG.store.canWrite())return false;const event=TG.EVENTS[g.event],c=event?.choices[index];if(!c||c.damage&&g.p.hp<=c.damage)return false;g.eventDone=true;g.p.hp=Math.min(g.p.maxHp,g.p.hp+(c.heal||0));g.p.hp-=c.damage||0;g.shards+=c.shards||0;g.erase=clamp(g.erase+(c.erase||0),0,100);g.bonusCards+=c.card||0;let reward='';if(c.relic){const pool=TG.RELICS.filter(r=>!g.relics.includes(r.id));if(pool.length){const item=pool[Math.floor(Math.random()*pool.length)];g.relics.push(item.id);reward=item.name;}else{g.shards+=12;reward='모든 유물을 보유해 기억 조각 12개를 얻었습니다.'}G.rebuild()}TG.store.snapshot(g,'camp');G.onChange('camp');G.onSound('card');return reward||true;};
 G.chooseBossReward=function(id,stage=G.g?.stage){const g=G.g;if(!g||g.status!=='camp'||g.mode!=='chapter'||g.stage>=2||stage!==g.stage||g.bossReward||!g.bossOffers.includes(id)||!TG.store.canWrite())return false;const reward=TG.BOSS_REWARDS.find(r=>r.id===id);if(!reward)return false;g.bossReward=id;g.bonusCards+=reward.card||0;g.p.hp=Math.min(g.p.maxHp,g.p.hp+(reward.heal||0));g.erase=clamp(g.erase+(reward.erase||0),0,100);g.shards+=reward.shards||0;TG.store.snapshot(g,'camp');G.onChange('camp');G.onSound('card');return true;};
 G.nextStage=function(){const g=G.g;if(!g||g.status!=='camp'||!g.eventDone||!g.bossReward||g.stage>=2||!TG.store.canWrite())return false;
@@ -150,7 +171,7 @@ G.nextStage=function(){const g=G.g;if(!g||g.status!=='camp'||!g.eventDone||!g.bo
  TG.store.remember(candidate.stage===1?'snow':'order');
  G.notify(TG.STAGES[candidate.stage].intro);G.onChange('playing');G.onSound('start');G.checkLevel();return true;
 };
-G.finish=function(won,reason){const g=G.g;if(!g||g.status==='ended')return false;if(g.mode==='chapter'&&!TG.store.canWrite()){G.pause();G.notify('기록 저장을 확인할 수 없어 멈췄습니다. 저장소 접근을 확인한 뒤 계속하거나 설정에서 백업하세요.');return false;}g.status='ended';G.input.x=G.input.y=0;g.won=won;g.reason=reason;if(g.mode==='chapter'){g.reward=TG.store.settle(g,won);g.newGoals=[...(TG.store.lastUnlocked||[])];if(won){for(const m of TG.MEMORIES)TG.store.remember(m.id)}}else{g.reward=0;g.practice=true;}G.onChange('ended');G.onSound(won?'clear':'hurt');return true;};
+G.finish=function(won,reason){const g=G.g;if(!g||g.status==='ended')return false;if(g.mode==='chapter'&&!TG.store.canWrite()){G.pause();G.notify('기록 저장을 확인할 수 없어 멈췄습니다. 저장소 접근을 확인한 뒤 계속하거나 설정에서 백업하세요.');return false;}g.memoryAnchor=null;g.status='ended';G.input.x=G.input.y=0;g.won=won;g.reason=reason;if(g.mode==='chapter'){g.reward=TG.store.settle(g,won);g.newGoals=[...(TG.store.lastUnlocked||[])];if(won){for(const m of TG.MEMORIES)TG.store.remember(m.id)}}else{g.reward=0;g.practice=true;}G.onChange('ended');G.onSound(won?'clear':'hurt');return true;};
 G.abandon=function(){const g=G.g;if(g&&g.status!=='ended')return G.finish(false,'retreat');const c=TG.store.data.checkpoint;if(c){if(!TG.store.canWrite())return false;TG.store.settle(c,false);G.g=null;G.onChange('hub');return true}return false;};
 G.hub=function(){if(G.g?.status==='playing')G.pause();G.onChange('hub');};
 G.particle=spark;G.kill=kill;G.initialize=initialize;

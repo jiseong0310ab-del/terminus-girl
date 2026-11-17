@@ -231,3 +231,7 @@ test('camp presents reward choices before any help article',()=>{
  const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8'),camp=html.split('id="campScreen"')[1].split('</section>')[0],reward=camp.split('bossRewardPanel')[1].split('id="bossRewardList"')[0];
  assert.doesNotMatch(reward,/<p>|<h3>탐험 기록|<h3>기록 붕괴/);assert.match(reward,/관리자의 유산/);assert.match(html.split('id="aboutScreen"')[1],/기록 붕괴와 정예의 불씨/);
 });
+
+test('empty retreat gives a first-growth step instead of implying a shard payout',()=>{
+ const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.engine.finish(false,'retreat');assert.match($('resultAdvice').textContent,/지급 조각은 0개/);assert.match($('resultNote').textContent,/보관할 조각은 없습니다/);
+});
