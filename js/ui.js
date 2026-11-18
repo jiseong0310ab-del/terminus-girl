@@ -28,7 +28,7 @@ function storyEntryLabels(){const state=TG.story.state(),label=state.completed?'
 function openStory(){TG.audio.unlock();if(G.g&&G.g.status!=='ended')return;if(!TG.story.begin()){if(U.screen==='hub')renderHub();else renderMenu();notify(status()||'이야기를 저장하지 못했습니다.');return;}G.g=null;U.show('story');}
 function renderStory(){
  const state=TG.story.state(),node=TG.STORY.nodes[state.node],line=node.lines?.[state.line],battle=TG.STORY.battles[state.node];
- const boundary=['battle','rest'].includes(node.kind);$('storyDeck').hidden=!boundary;$('storyPartySelect').hidden=state.node!=='rest';$('storyTraining').hidden=!boundary||!state.companions.includes('mare');text('storyTitle',node.title);text('storySaveStatus',status());text('storySpeaker',line?.speaker||(battle?'현재 임무':'첫 동행'));
+ const boundary=['battle','rest'].includes(node.kind);$('storyDeck').hidden=!boundary;$('storyPartySelect').hidden=state.node!=='rest';$('storyTraining').hidden=!boundary||!state.companions.length;text('storyTitle',node.title);text('storySaveStatus',status());text('storySpeaker',line?.speaker||(battle?'현재 임무':'첫 동행'));
  text('storyText',line?.text||(battle?battle.detail:'거울역의 사건과 선택은 다음 여정으로 이어집니다.'));
  text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'전투 '+battle.duration+'초 · 공격 자동 · 이동과 대시':'첫 동행 완료 · 지휘 덱을 편성하고 연습할 수 있습니다');
  const portrait=line?.portrait||(state.companions.includes('mare')?'mare':'rize');$('storyPortrait').className='storyPortrait '+portrait;
