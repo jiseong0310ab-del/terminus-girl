@@ -130,10 +130,10 @@ TG.STORY={nodes:{
  ],next:'recruitHub'}
 
 },battles:{
- approach:{stage:0,duration:45,title:'안내 회선 복구',objective:'수호 잔향을 무찌르고 전원 스위치를 직접 작동',detail:'회선을 지키는 잔향을 물리친 뒤 금빛 안내 스위치로 이동해 작동하세요. 45초는 승리 조건이 아닌 제한시간입니다.',successTitle:'안내 방송이 돌아왔다',successStory:'되풀이되던 도착 시각 사이로, 승강장에 남은 사람의 목소리가 들렸다.',next:'meeting'},
- escort:{stage:0,duration:75,title:'함께 여는 귀환로',objective:'마레와 함께 적을 막고 객차 문까지 이동',detail:'귀환로를 막는 두 수호 잔향을 물리치고 금빛 열차 문에 도착하세요. 방어와 대시를 활용하면 75초를 기다리지 않고 끝납니다.',successTitle:'함께 열차에 올랐다',successStory:'리제와 마레는 열린 귀환로를 지나 같은 객실에 들어섰다. 거울역의 진실은 아직 승강장에 남아 있다.',next:'debrief'},
- archive:{stage:0,duration:95,title:'기억 기록장치 회수',objective:'기록장치를 확보한 뒤 열차 문으로 직접 귀환',detail:'파란빛 기록 장치에 다가가 1.25초 머무른 뒤 금빛 열차 문으로 돌아가세요. 귀환하면 즉시 승리하며 95초는 실패 제한입니다.',successTitle:'지워진 이름의 기록 확보',successStory:'거울역 봉인 당시 남겨진 승객 명단과 구조 신호가 열차로 전송되었다.',next:'evidence'},
- snowMission:{stage:1,duration:105,title:'설원역 구조 신호 안정화',objective:'구조 중계기를 직접 안정화하면 즉시 임무 완료',detail:'구조 신호를 열었다면 2개 중계기를, 봉인을 유지했다면 1개 명부 장치를 회수하세요. 목표를 달성하면 시간을 기다리지 않고 성공합니다.',successTitle:'설원역 기록 확보',successStory:'신호와 명부 중 선택에 맞는 기록을 열차로 회수했다.',next:'snowDebrief'},
+ approach:{stage:0,duration:45,title:'안내 회선 복구',objective:'수호 잔향을 무찌르고 전원 스위치를 직접 작동',detail:'회선을 지키는 잔향을 물리친 뒤 금빛 안내 스위치로 이동해 작동하세요. 45초는 승리 조건이 아닌 제한시간입니다. 붉은 침식 원이 생기면 움직여 피하세요.',successTitle:'안내 방송이 돌아왔다',successStory:'되풀이되던 도착 시각 사이로, 승강장에 남은 사람의 목소리가 들렸다.',next:'meeting'},
+ escort:{stage:0,duration:75,title:'함께 여는 귀환로',objective:'마레와 함께 적을 막고 객차 문까지 이동',detail:'귀환로를 막는 두 수호 잔향을 물리치고 금빛 열차 문에 도착하세요. 방어와 대시를 활용하면 75초를 기다리지 않고 끝납니다. 제자리에 오래 서 있으면 침식 파동이 발생합니다.',successTitle:'함께 열차에 올랐다',successStory:'리제와 마레는 열린 귀환로를 지나 같은 객실에 들어섰다. 거울역의 진실은 아직 승강장에 남아 있다.',next:'debrief'},
+ archive:{stage:0,duration:95,title:'기억 기록장치 회수',objective:'기록장치를 확보한 뒤 열차 문으로 직접 귀환',detail:'파란빛 기록 장치에 다가가 1.25초 머무른 뒤 금빛 열차 문으로 돌아가세요. 귀환하면 즉시 승리하며 95초는 실패 제한입니다. 붉은 침식 파동은 바깥으로 이동해 피하세요.',successTitle:'지워진 이름의 기록 확보',successStory:'거울역 봉인 당시 남겨진 승객 명단과 구조 신호가 열차로 전송되었다.',next:'evidence'},
+ snowMission:{stage:1,duration:105,title:'설원역 구조 신호 안정화',objective:'구조 중계기를 직접 안정화하면 즉시 임무 완료',detail:'구조 신호를 열었다면 2개 중계기를, 봉인을 유지했다면 1개 명부 장치를 회수하세요. 목표를 달성하면 시간을 기다리지 않고 성공합니다. 붉은 침식 예고를 보고 이동하세요.',successTitle:'설원역 기록 확보',successStory:'신호와 명부 중 선택에 맞는 기록을 열차로 회수했다.',next:'snowDebrief'},
  velaEscort:{stage:1,duration:100,title:'벨라와 환자 · 객차까지 호위',objective:'환자를 안정화하고 객차로 데려가기',detail:'환자에게 접근하여 안정시키세요. 벨라의 온기 처치는 안정화를 돕고, 마레의 방패는 환자 공격을 막습니다. 환자가 객차 문 안에 들어와야 성공합니다.',successTitle:'환자가 마지막 객차에 탑승했다',successStory:'벨라의 치료로 환자가 일어났고, 출전 동료가 길을 지킨 사이 두 발로 객차에 올라탔다.',next:'patientDebrief'}
 }};
 const A=TG.story={};
