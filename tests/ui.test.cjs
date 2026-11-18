@@ -425,3 +425,40 @@ test('R4 story UI recruits named allies, gates party formation and launches rout
  assert.equal($('storyPartySelect').hidden,false);
  assert.equal($('storyRecruitPanel').hidden,true);
 });
+
+test('Vela patient sidequest shows target cards, actual party results and passenger in train cabin',()=>{
+ const {TG,$}=bootUI(),s=TG.store.data.story;
+ Object.assign(s,{started:true,node:'recruitHub',line:0,completed:false,recruited:['vela','aster'],companions:['mare','vela','aster'],recordRecovered:true,decision:'rescue',erosion:18,commandDeck:TG.commandDeck.preset('protect',['mare','vela','aster'])});
+ assert(TG.store.save());$('menuStory').onclick();
+ assert.equal($('storyPatientMission').hidden,false);assert.equal($('storyPatientCabin').hidden,true);
+ $('storyPatientMission').onclick();assert.equal(TG.story.state().node,'patientBrief');
+ for(let i=0;i<5;i++)$('storyAction').onclick();
+ assert.equal(TG.story.state().node,'velaEscort');
+ $('storyAction').onclick();assert.equal(TG.ui.screen,'playing');
+ const g=TG.engine.g;assert.deepEqual(JSON.parse(JSON.stringify(g.party)),['mare','vela','aster']);
+ assert.equal(g.patient.phase,'stabilize');
+ g.p.x=g.patient.x;g.p.y=g.patient.y;
+ assert(TG.engine.openCommands());assert.equal(TG.ui.screen,'commands');
+ assert($('commandList').children.length>=3);assert($('commandDetailsList').children.length>=3);
+ assert($('commandList').children.some(c=>c.classList&&c.attrs['aria-label']?.includes('온기 처치')));
+ const card=$('commandList').children.find(c=>c.attrs['aria-label']?.includes('온기 처치'));
+ assert(card.classList);assert(card.children[1].children.some(x=>x.className==='commandTarget'));
+ TG.engine.g.enemies=[];TG.engine.g.hazards=[];TG.engine.g.hostile=[];TG.engine.g.spawn=-1000;TG.engine.g.nextWave=Infinity;
+ TG.engine.castCommand('vela_heal',g.commands.token);assert.equal(g.patient.treatments,1);
+ for(let i=0;i<42;i++)TG.engine.update(.04);
+ assert.equal(g.patient.phase,'escort');
+ const gate=g.trainExit;
+ for(let i=0;i<150&&g.status==='playing';i++){
+  const pt=g.patient,d=Math.hypot(gate.x-pt.x,gate.y-pt.y)||1;
+  g.p.x=pt.x+(gate.x-pt.x)/d*78;g.p.y=pt.y+(gate.y-pt.y)/d*78;TG.engine.update(.04);
+ }
+ assert.equal(g.status,'ended');assert.equal(g.won,true);
+ assert.match($('resultProgress').textContent,/리제 \+ 마레 · 벨라 · 아스터/);
+ assert.match($('resultProgress').textContent,/벨라의 처치 1회/);
+ $('backBtn').onclick();
+ for(let i=0;i<4;i++)$('storyAction').onclick();
+ assert.equal(TG.story.state().node,'recruitHub');
+ assert.equal($('storyPatientMission').hidden,true);
+ assert.equal($('storyPatientCabin').hidden,false);
+ assert.match($('storyPatientText').textContent,/벨라 처치 1회/);
+});
