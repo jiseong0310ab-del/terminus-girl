@@ -39,7 +39,7 @@ function renderStory(){
  text('storyTitle',node.title);text('storySaveStatus',status());
  text('storySpeaker',line?.speaker||(battle?'현재 임무':'열차의 기록'));
  text('storyText',line?.text||(battle?battle.detail:'열차의 창밖으로 다음 역의 불빛이 흔들린다.'));
- text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'기록 임무 · '+battle.duration+'초 · 이동과 대시':choice?'중요한 선택 · 기록에 영구 보존':state.node==='rest2'?'제1장 기록 확보 완료':'첫 동행 완료 · 다음 임무 출발 가능');
+ text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'기록 임무 · '+battle.duration+'초 · 이동과 대시':choice?'중요한 선택 · 기록에 영구 보존':state.node==='rest2'?'제1장 기록 확보 완료':'첫 동행 완료 · 지휘 덱 편성 및 다음 임무 출발 가능');
  $('storyPortrait').className='storyPortrait '+(line?.portrait||(state.companions.includes('mare')?'mare':'rize'));
  const names=state.companions.map(id=>TG.PARTY.find(x=>x.id===id)?.name||id);
  text('storyParty',state.companions.length?'출전 · 리제 + '+names.join(' · '):state.node==='meeting'?'이 대화 후 마레 합류 · 체력 최대 40 회복':'일행 · 리제');
