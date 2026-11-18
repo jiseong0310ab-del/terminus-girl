@@ -380,7 +380,8 @@ test('R3 choice UI follows a recovered archive mission and shows persistent cons
  assert.equal(TG.story.choose('contain'),false);
  while(TG.story.state().node!=='rest2')$('storyAction').onclick();
  assert.equal($('storyDeck').hidden,false);
- assert.equal($('storyNextMission').hidden,true);
+ assert.equal($('storyNextMission').hidden,false);
+ assert.match($('storyNextMission').textContent,/설원역/);
  assert.match($('storyText').textContent,/기억/);
 });
 
