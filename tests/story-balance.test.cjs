@@ -35,7 +35,7 @@ test('walking out of the warned circle avoids damage, while pausing freezes its 
  assert(g.storyPressure.warning>0);const hp=g.p.hp,remaining=g.storyPressure.warning;
  b.G.pause();step(b.G,20);assert.equal(g.storyPressure.warning,remaining);b.G.resume();
  b.G.input.x=1;step(b.G,10);b.G.input.x=0;step(b.G,29);
- assert.equal(g.storyPressure.pulses,1);assert.equal(g.storyPressure.hits,0);assert.equal(g.p.hp,hp);
+ assert.equal(g.storyPressure.pulses,1);assert.equal(g.storyPressure.hits,0);assert.equal(g.storyPressure.dodges,1);assert.equal(g.p.hp,hp);
 });
 test('story-only spawn radius is close enough to threaten before the final ten seconds and has a mobile enemy cap',()=>{
  const b=boot(55),g=first(b);empty(g);g.spawn=200;g.waveRestUntil=0;const x=g.p.x,y=g.p.y;
