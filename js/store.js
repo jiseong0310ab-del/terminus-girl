@@ -4,10 +4,10 @@ const KEY='terminusSaveV1',BACKUP='terminusSaveV1Backup',S=TG.store={status:'rea
 const integer=(v,max=1e7)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 const arr=(v,allowed,max=64)=>Array.isArray(v)?[...new Set(v.filter(x=>typeof x==='string'&&(!allowed||allowed.includes(x))))].slice(-max):[];
 const clone=o=>JSON.parse(JSON.stringify(o));
-function freshStory(){return{version:1,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
+function freshStory(){return{version:2,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
 function normalStory(raw){
  if(raw===undefined)return freshStory();
- if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.version!==1)throw Error('지원하지 않는 이야기 저장 형식입니다.');
+ if(!raw||typeof raw!=='object'||Array.isArray(raw)||![1,2].includes(raw.version))throw Error('지원하지 않는 이야기 저장 형식입니다.');
  const order=['departure','arrival','approach','meeting','escort','debrief','rest'],index=order.indexOf(raw.node);
  if(index<0)throw Error('이야기 진행 위치가 올바르지 않습니다.');
  const lengths={departure:4,arrival:2,meeting:4,debrief:4},battle=['approach','escort'].includes(raw.node);
@@ -16,9 +16,10 @@ function normalStory(raw){
  if(battle&&!/^story-[\w-]{1,80}$/.test(raw.encounterId||''))throw Error('이야기 전투 기록이 올바르지 않습니다.');
  const load=raw.loadout&&typeof raw.loadout==='object'?raw.loadout:{},levels={};
  for(const card of TG.CARDS){const level=integer(load.levels?.[card.id],card.cap);if(level>0)levels[card.id]=level;}
- const line=lengths[raw.node]?integer(raw.line,lengths[raw.node]-1):0,companions=index>=4?['mare']:[];
+ const line=lengths[raw.node]?integer(raw.line,lengths[raw.node]-1):0,trial=TG.PARTY.filter(x=>x.trial).map(x=>x.id),saved=arr(raw.companions,trial,3);
+ const companions=index===6?(saved.length?saved:['mare']):index>=4?['mare']:[];
  const commandSeed=Number.isInteger(raw.commandSeed)&&raw.commandSeed>=0&&raw.commandSeed<=0xffffffff?raw.commandSeed:TG.commandDeck.seedFor(battle?raw.encounterId:raw.node);
- return {version:1,started:raw.started===true||index>0||line>0,node:raw.node,line,companions,encounterId:battle?raw.encounterId:null,commandDeck:TG.commandDeck.normalize(raw.commandDeck,companions),commandSeed,
+ return {version:2,started:raw.started===true||index>0||line>0,node:raw.node,line,companions,encounterId:battle?raw.encounterId:null,commandDeck:TG.commandDeck.normalize(raw.commandDeck,companions),commandSeed,
   loadout:{hp:Number.isFinite(load.hp)?Math.max(.01,Math.min(500,load.hp)):100,levels,level:Math.max(1,integer(load.level,80)),xp:Number.isFinite(load.xp)?Math.max(0,Math.min(1e5,load.xp)):0,kills:integer(load.kills,1e5),totalTime:Number.isFinite(load.totalTime)?Math.max(0,Math.min(1e6,load.totalTime)):0,relics:arr(load.relics,TG.RELICS.map(r=>r.id),6)},
   seen:order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id)),completed:raw.node==='rest'};
 }

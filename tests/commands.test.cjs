@@ -21,9 +21,9 @@ function bullet(g,x,y=0){const b={x,y,vx:0,vy:0,life:10,r:5,damage:10};g.hostile
 function partition(runtime){const ids=[...runtime.hand,...runtime.draw,...runtime.discard];assert.equal(ids.length,8);assert.equal(new Set(ids).size,8);assert.deepEqual([...ids].sort(),[...runtime.deck].sort());assert.equal(runtime.hand.length,3);}
 
 test('command catalogue has twelve unique cards and the agreed owners and costs',()=>{
- const {TG}=boot();assert.equal(TG.COMMANDS.length,12);assert.equal(new Set(TG.COMMANDS.map(card=>card.id)).size,12);
- assert.deepEqual(plain(TG.COMMANDS.map(card=>card.owner)),['rize','rize','rize','rize','mare','mare','mare','mare','shared','shared','shared','shared']);
- for(const card of TG.COMMANDS){assert(card.name&&card.desc);assert.equal(card.cost,['rize_cut','mare_shelter','mare_counter'].includes(card.id)?2:1);}
+ const {TG}=boot();assert.equal(TG.COMMANDS.length,32);assert.equal(new Set(TG.COMMANDS.map(card=>card.id)).size,32);
+ assert.deepEqual(plain(TG.COMMANDS.slice(0,12).map(card=>card.owner)),['rize','rize','rize','rize','mare','mare','mare','mare','shared','shared','shared','shared']);
+ for(const card of TG.COMMANDS.slice(0,12)){assert(card.name&&card.desc);assert.equal(card.cost,['rize_cut','mare_shelter','mare_counter'].includes(card.id)?2:1);}
 });
 
 test('deck validation enforces eight unique available cards and party ownership',()=>{

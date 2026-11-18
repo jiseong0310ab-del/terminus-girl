@@ -51,7 +51,7 @@ function initialize(mode,stage,carry,resuming=false,prepareOnly=false){
  const old=carry||{};const g=G.g={id:old.id||makeId(),mode,stage,duration:mode==='quick'?90:mode==='single'?300:TG.STAGES[stage].duration,status:'playing',time:0,totalTime:old.totalTime||0,level:old.level||1,xp:old.xp||0,xpNeed:0,levels:{...(old.levels||{})},relics:[...(old.relics||[])],shards:old.shards||0,kills:old.kills||0,erase:old.erase||0,bossSpawned:false,bossDefeated:false,spawn:.4,eliteCount:0,enemySeq:0,lastFire:0,lastHit:-9,lastShield:0,regenClock:0,pulseClock:0,hazardClock:0,bonusCards:old.bonusCards||0,event:old.event||0,eventDone:false,bossOffers:resuming&&old.phase==='camp'?[...(old.bossOffers||[])]:[],bossReward:resuming&&old.phase==='camp'?(old.bossReward||null):null,p:player(),dash:{active:0,cooldown:0,invulnerable:false,x:0,y:1,lastX:0,lastY:1,maxCooldown:3},enemies:[],bullets:[],hostile:[],drops:[],particles:[],rings:[],hazards:[],links:[],flames:[],aftershocks:[],eliteDrops:[],offered:[],offerToken:0,shake:0,flash:0,face:0,moving:false,toast:null,chain:0,chainTime:0,overcharge:0,nextWave:25,waveIndex:0,wave:null,waveRestUntil:0};
  g.clearedStages=clamp(Math.max(stage,Number.isFinite(old.clearedStages)?Math.floor(old.clearedStages):0,resuming&&old.phase==='camp'?stage+1:0),0,3);
  g.learned={moved:stage>0||old.learned?.moved===true,dashed:old.learned?.dashed===true,collected:old.learned?.collected===true||g.xp>0||g.level>1,chosen:old.learned?.chosen===true||Object.values(g.levels).some(lv=>lv>0)};
- g.anchorSeen=false;g.memoryAnchor=null;g.mare=null;
+ g.anchorSeen=false;g.memoryAnchor=null;g.mare=null;g.allies=[];
  g.xpNeed=12+Math.max(0,g.level-1)*7;G.input.x=G.input.y=0;G.rebuild();g.p.hp=old.hp?Math.min(g.p.maxHp,old.hp):g.p.maxHp;g.p.shield=Math.min(3,(g.levels.shield||0)+(g.relics.includes('bell')?1:0));
  if(prepareOnly)return g;
  if(mode==='chapter'){TG.store.remember('arrival');if(stage===1)TG.store.remember('snow');if(stage===2)TG.store.remember('order');if(!resuming)TG.store.snapshot(g);}
@@ -68,6 +68,8 @@ function startStoryBattle(spec,training=false){
  g.commands=TG.commandDeck.create(TG.commandDeck.normalize(spec.commandDeck,spec.companions),spec.commandSeed??TG.commandDeck.seedFor(spec.id));
  g.commandEffects={guardWindow:0,ward:0};
  if(spec.companions.includes('mare'))g.mare={x:g.p.x-45,y:g.p.y+30,cooldown:0,maxCooldown:12,pulse:0,protected:0,face:0,moving:false};
+g.party=[...spec.companions];
+g.allies=spec.companions.filter(id=>id!=='mare').map((id,i)=>({id,x:g.p.x+45+i*20,y:g.p.y+40+i*20,cooldown:3+i*2,pulse:0,moving:false,face:0}));
  G.notify(training?'90초 합동 지휘 훈련 · 지휘 카드를 시험하세요':battle.objective);G.onChange('playing');G.onSound('start');G.checkLevel();return g;
 }
 G.startStory=function(){
@@ -77,7 +79,7 @@ G.startStory=function(){
 G.startCommandTraining=function(){
  if(G.g&&G.g.status!=='ended')return false;
  const spec=TG.story?.prepareTraining?.();
- if(!spec?.companions?.includes('mare')||!TG.store.canWrite())return false;
+ if(!spec?.companions?.length||!TG.store.canWrite())return false;
  return startStoryBattle(spec,true);
 };
 G.continue=function(){const c=TG.store.data.checkpoint;if(!c||!TG.store.canWrite())return false;initialize(c.mode,c.stage,c,true);if(c.phase==='camp'){G.g.status='camp';G.g.event=c.event;G.g.eventDone=c.eventDone;G.onChange('camp')}TG.store.snapshot(G.g,c.phase);return true;};
@@ -95,6 +97,7 @@ G.commandInfo=function(id){
  if(!g||g.mode!=='story'||!g.commands||!['playing','command'].includes(g.status)||g.p.hp<=0)return no('진행 중인 이야기 전투에서 사용할 수 있습니다.');
  if(!g.commands.hand.includes(id))return no('현재 손패에 없는 카드입니다.');
  if(card.owner==='mare'&&!g.mare)return no('마레가 파티에 필요합니다.');
+if(!['rize','shared','mare'].includes(card.owner)&&!g.party?.includes(card.owner))return no('해당 동료가 출전하지 않았습니다.');
  if(g.commands.energy<card.cost)return no('지휘력이 부족합니다.');
  const enemies=radius=>g.enemies.some(enemy=>nearPlayer(enemy,radius)),hostile=radius=>g.hostile.some(bullet=>nearPlayer(bullet,radius));
  if(id==='rize_pulse'&&!enemies(155)||id==='rize_cut'&&!enemies(450)||id==='rize_frost'&&!enemies(180))return no('범위 안에 적이 없습니다.');
@@ -108,6 +111,14 @@ G.commandInfo=function(id){
  if(id==='shared_heal'&&g.p.hp>=g.p.maxHp)return no('체력이 가득 찼습니다.');
  if(id==='shared_push'&&!enemies(160)&&!hostile(110))return no('밀어낼 적이나 제거할 적탄이 없습니다.');
  if(id==='shared_dash'&&g.dash.cooldown<=0)return no('대시가 이미 준비되어 있습니다.');
+if(['strike','burst','freeze'].includes(card.action)&&!enemies(card.action==='strike'?450:180))return no('범위 안에 적이 없습니다.');
+if(card.action==='magnet'&&!g.drops.some(d=>nearPlayer(d,300)))return no('회수할 기억이 없습니다.');
+if(card.action==='heal'&&g.p.hp>=g.p.maxHp)return no('체력이 가득 찼습니다.');
+if(card.action==='guard'&&g.p.shield>=3)return no('보호막이 가득 찼습니다.');
+if(card.action==='ward'&&g.commandEffects.ward>=4)return no('보호 장막이 활성화되어 있습니다.');
+if(card.action==='push'&&!enemies(160)&&!hostile(110)||card.action==='clear'&&!hostile(180))return no('범위 안에 대상이 없습니다.');
+if(card.action==='dash'&&g.dash.cooldown<=0)return no('대시가 준비되어 있습니다.');
+if(card.action==='flame'&&g.flames.filter(f=>f.life>0).length>=3)return no('등불은 최대 3개입니다.');
  return {card,enabled:true,reason:''};
 };
 G.castCommand=function(id,token){
@@ -144,6 +155,20 @@ G.castCommand=function(id,token){
   color='#a7d4f0';radius=160;for(const enemy of enemies(radius)){const dx=enemy.x-p.x,dy=enemy.y-p.y,distance=len(dx,dy);enemy.x+=distance?dx/distance*90:90;enemy.y+=distance?dy/distance*90:0;}clearHostile(110);
  }else if(id==='shared_dash'){
   color='#ead8ae';g.dash.cooldown=0;
+ }else if(info.card.action){
+  color=TG.PARTY.find(x=>x.id===info.card.owner)?.color||'#d7c391';
+  const action=info.card.action;
+  if(action==='strike'){const target=enemies(450).sort((a,b)=>len(a.x-p.x,a.y-p.y)-len(b.x-p.x,b.y-p.y))[0];G.hitEnemy(target,p.attack*1.8);radius=90;}
+  if(action==='burst'){radius=180;for(const target of enemies(180))G.hitEnemy(target,p.attack*1.3);}
+  if(action==='freeze'){radius=180;for(const target of enemies(180))if(target.type==='boss')target.slow=Math.max(target.slow,.8);else target.frozen=Math.max(target.frozen,.7);}
+  if(action==='magnet'){radius=300;const found=g.drops.filter(d=>nearPlayer(d,300));g.xp+=found.reduce((sum,d)=>sum+d.value*(1+.15*(g.levels.wisdom||0)),0);g.drops=g.drops.filter(d=>!nearPlayer(d,300));g.learned.collected=true;}
+  if(action==='heal')p.hp=Math.min(p.maxHp,p.hp+20);
+  if(action==='guard'){p.shield=Math.min(3,p.shield+1);g.lastShield=g.time;}
+  if(action==='ward')effects.ward=4;
+  if(action==='push'){radius=160;for(const e of enemies(160)){const dx=e.x-p.x,dy=e.y-p.y,d=len(dx,dy)||1;e.x+=dx/d*90;e.y+=dy/d*90;}clearHostile(110);}
+  if(action==='clear'){radius=180;clearHostile(180);}
+  if(action==='dash')g.dash.cooldown=0;
+  if(action==='flame'){radius=95;g.flames.push({x:p.x,y:p.y,r:95,life:3});}
  }
  effects.title=info.card.name;ring(p.x,p.y,radius,color);spark(p.x,p.y,color,8);
  }finally{castingCommand=false;}
@@ -240,6 +265,24 @@ function anchorTick(dt){
  g.xp+=anchor.xp;g.erase=Math.max(0,g.erase-10);g.learned.collected=true;g.memoryAnchor=null;
  ring(anchor.x,anchor.y,75,'#f3d285');G.notify('기억 등불 회수 · 경험치 +'+anchor.xp+' · 소거 위험 최대 10 감소');G.onSound('card');
 }
+function allyTick(dt){
+ const g=G.g;if(g.mode!=='story'||!g.allies?.length)return;
+ for(let i=0;i<g.allies.length;i++){
+  const a=g.allies[i],angle=(i+.7)*Math.PI*2/3,dx=g.p.x+Math.cos(angle)*65-a.x,dy=g.p.y+Math.sin(angle)*65-a.y,step=1-Math.exp(-6*dt);
+  a.moving=Math.hypot(dx,dy)>2&&dt>0;
+  if(a.moving){a.face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?0:2);a.x=advance(a.x,dx*step);a.y=advance(a.y,dy*step);}
+  a.pulse=Math.max(0,a.pulse-dt);a.cooldown=Math.max(0,a.cooldown-dt);
+  if(a.cooldown>0||dt<=0)continue;
+  const target=g.enemies.filter(e=>Math.hypot(e.x-a.x,e.y-a.y)<270).sort((x,y)=>Math.hypot(x.x-a.x,x.y-a.y)-Math.hypot(y.x-a.x,y.y-a.y))[0];
+  let used=false;
+  if(a.id==='aster'&&target){G.hitEnemy(target,Math.max(4,g.p.attack*.6));used=true;}
+  if(a.id==='noa'&&g.hostile.some(b=>Math.hypot(b.x-g.p.x,b.y-g.p.y)<140)){g.hostile=g.hostile.filter(b=>Math.hypot(b.x-g.p.x,b.y-g.p.y)>=140);used=true;}
+  if(a.id==='vela'&&g.p.hp<g.p.maxHp){g.p.hp=Math.min(g.p.maxHp,g.p.hp+5);used=true;}
+  if(a.id==='iris'&&target){target.slow=Math.max(target.slow,1.5);used=true;}
+  if(a.id==='crow'&&target){G.hitEnemy(target,Math.max(4,g.p.attack*.5),true);used=true;}
+  if(used){a.cooldown=a.id==='vela'?12:9;a.pulse=.55;ring(a.x,a.y,35,TG.PARTY.find(x=>x.id===a.id)?.color||'#b6d2e0');}
+ }
+}
 function mareTick(dt){
  const g=G.g,m=g.mare;if(!m)return;
  m.cooldown=Math.max(0,m.cooldown-dt);m.pulse=Math.max(0,m.pulse-dt);
@@ -250,7 +293,7 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  if(g.mode==='story'&&g.commands){TG.commandDeck.tick(g.commands,dt);g.commandEffects.guardWindow=Math.max(0,g.commandEffects.guardWindow-dt);g.commandEffects.ward=Math.max(0,g.commandEffects.ward-dt);}
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
- mareTick(dt);encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
+ mareTick(dt);allyTick(dt);encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
  const bossBeforeFlames=g.bossDefeated;for(const flame of g.flames){const active=Math.min(dt,flame.life);flame.life-=dt;for(const e of [...g.enemies])if(len(e.x-flame.x,e.y-flame.y)<flame.r+e.r)G.hitEnemy(e,6*active);}g.flames=g.flames.filter(f=>f.life>0);if(g.mode!=='story'&&!bossBeforeFlames&&g.bossDefeated){G.stageClear();return;}
  waveTick(dt);g.spawn+=dt;const interval=g.storyTraining?Math.max(.35,.8-g.time/g.duration*.45):Math.max(.42,1.3-g.time/g.duration*.7-g.stage*.09);while(g.spawn>=interval){g.spawn-=interval;if(g.enemies.length<65&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
  if(g.mode!=='story'&&g.time>75+g.eliteCount*100&&g.eliteCount<2){G.enemy(g.eliteCount%2?'witch':'warden',p.x+250,p.y-350);g.eliteCount++}
