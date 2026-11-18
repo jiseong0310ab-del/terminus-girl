@@ -24,22 +24,37 @@ function renderHub(){storyEntryLabels();text('walletLabel',`기억 조각 ${S.da
  e.className=done?'visited':current?'current':'';const name=document.createElement('strong'),state=document.createElement('small');name.textContent=`0${i+1} · ${s.name}`;state.textContent=cp?done?'이번 탐험 복원':current?cp.phase==='camp'?'다음 정차':'이어갈 역':'미도달':done?'복원했던 역':i===0?'출발':'앞으로 복원';e.append(name,state);route.appendChild(e)});
  text('mareText',S.data.memories.includes('ending')?'“기억이 아파도 괜찮아. 함께 타고 가면 되니까.” 랜턴 옆에 작은 불빛이 흔들린다.':S.data.memories.includes('bell')?'“네가 기억하는 한, 나는 여기 있어.” 안내 장치 너머로 익숙한 목소리가 흐른다.':S.data.memories.includes('mirror')?'“왕복표는 한 장 더 남겨 뒀어.” 지워진 이름이 마음속에서 천천히 선명해진다.':'“랜턴을 내려놓지 마.” 낡은 차내 방송에서 낯익은 목소리가 새어 나온다.');
  const list=clear('upgradeList');for(const u of TG.UPGRADES){const lv=S.data.upgrades[u.id],cost=u.base*(lv+1),row=document.createElement('div');row.className='upgradeBuy';const content=document.createElement('div'),title=document.createElement('b'),desc=document.createElement('small');title.textContent=`${u.name} · ${lv}/${u.cap}`;desc.textContent=u.desc;content.append(title,desc);const buy=button(lv>=u.cap?'정비 완료':`${cost}개 · 정비`,()=>{if(S.buy(u.id)){TG.audio.play('card');renderHub()}},'textbtn');buy.disabled=!!cp||lv>=u.cap||S.data.wallet<cost;row.append(content,buy);list.appendChild(row)}text('hubSaveStatus',status());const nextGoal=S.challengeProgress().find(goal=>!goal.complete);text('nextGoalText',nextGoal?'다음 도전 · '+nextGoal.name+' — '+nextGoal.desc+' ('+nextGoal.current+'/'+nextGoal.target+')':'여섯 개의 도전 기록을 모두 채웠습니다. 새로운 기억 조합으로 다음 여정을 시작해 보세요.');}
-function storyEntryLabels(){const state=TG.story.state(),label=state.node==='rest2'?'제1장 · 기록 회수 완료 · '+(state.decision==='rescue'?'구조 신호 개방':'봉인 유지'):state.node==='rest'?'첫 동행 후일담 · 다음 임무를 시작하세요':state.started?'이야기 이어가기 · '+TG.STORY.nodes[state.node].title:'이야기 · 리제와 마레의 첫 동행';text('menuStory',label);text('hubStory',label);}
+function storyEntryLabels(){const state=TG.story.state(),label=state.node==='rest3'?'제2장 · 설원역 임무 완료 · '+(state.decision==='rescue'?'구조 통로 안정화':'명부 확보'):state.node==='rest2'?'제1장 · 기록 회수 완료 · '+(state.decision==='rescue'?'구조 신호 개방':'봉인 유지'):state.node==='rest'?'첫 동행 후일담 · 다음 임무를 시작하세요':state.started?'이야기 이어가기 · '+TG.STORY.nodes[state.node].title:'이야기 · 리제와 마레의 첫 동행';text('menuStory',label);text('hubStory',label);}
 function openStory(){TG.audio.unlock();if(G.g&&G.g.status!=='ended')return;if(!TG.story.begin()){if(U.screen==='hub')renderHub();else renderMenu();notify(status()||'이야기를 저장하지 못했습니다.');return;}G.g=null;U.show('story');}
 function renderStory(){
  const state=TG.story.state(),node=TG.STORY.nodes[state.node],line=TG.story.currentLine(state),battle=TG.STORY.battles[state.node];
- const boundary=['battle','rest'].includes(node.kind)||state.node==='rest2',atRest=['rest','rest2'].includes(state.node),choice=node.kind==='choice';
+ const boundary=['battle','rest','recruit'].includes(node.kind),atRest=['rest','rest2','recruitHub','rest3'].includes(state.node),choice=node.kind==='choice',recruit=node.kind==='recruit';
  $('storyDeck').hidden=!boundary;
- $('storyPartySelect').hidden=!atRest;
+ $('storyPartySelect').hidden=!atRest||state.node==='recruitHub'&&state.recruited.length<2;
  $('storyTraining').hidden=!boundary||!state.companions.length;
- $('storyNextMission').hidden=state.node!=='rest';
+ $('storyNextMission').hidden=!['rest','rest2'].includes(state.node);
+ text('storyNextMission',state.node==='rest2'?'제2장 시작 · 침묵의 설원역':'다음 이야기 시작 · 지워진 기록 회수');
+ $('storyRecruitPanel').hidden=!recruit;
+ if(recruit){
+  text('storyRecruitCount',state.recruited.length+' / 3명 정식 영입');
+  for(const id of ['aster','noa','vela']){
+   const member=TG.PARTY.find(x=>x.id===id),btn=$('storyRecruit'+id[0].toUpperCase()+id.slice(1)),done=state.recruited.includes(id);
+   btn.disabled=done;btn.classList.toggle('done',done);
+   btn.setAttribute('aria-label',member.name+(done?' 정식 영입 완료':'의 영입 사건 보기'));
+   btn.onclick=()=>{TG.audio.unlock();if(TG.story.openRecruit(id))renderStory();else{renderStory();notify(status()||'영입 대화를 시작할 수 없습니다.');}};
+  }
+  const available=state.recruited.length>=2&&state.companions.length===3;
+  $('storySnowLaunch').hidden=!available;
+  $('storySnowLaunch').disabled=!available;
+  $('storySnowLaunch').onclick=()=>{TG.audio.unlock();if(TG.story.departSnow())renderStory();else{renderStory();notify(status()||'출전할 동료 3명을 편성해 주세요.');}};
+ }
  $('storyChoicePanel').hidden=!choice;
- $('storyAction').hidden=choice;
+ $('storyAction').hidden=choice||recruit;
  text('storyTraining',state.companions.length>=2?'출전 동료와 90초 전술 연습':'마레와 지휘 연습 · 90초');
  text('storyTitle',node.title);text('storySaveStatus',status());
  text('storySpeaker',line?.speaker||(battle?'현재 임무':'열차의 기록'));
  text('storyText',line?.text||(battle?battle.detail:'열차의 창밖으로 다음 역의 불빛이 흔들린다.'));
- text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'기록 임무 · '+battle.duration+'초 · 이동과 대시':choice?'중요한 선택 · 기록에 영구 보존':state.node==='rest2'?'제1장 기록 확보 완료':'첫 동행 완료 · 지휘 덱 편성 및 다음 임무 출발 가능');
+ text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'임무 · '+battle.duration+'초 · 이동과 대시':recruit?'기록실·신호탑·구호실 · 원하는 순서로 영입':choice?'중요한 선택 · 기록에 영구 보존':state.node==='rest2'?'제1장 기록 확보 완료':state.node==='rest3'?'제2장 설원역 귀환 완료':'첫 동행 완료 · 지휘 덱 편성 및 다음 임무 출발 가능');
  $('storyPortrait').className='storyPortrait '+(line?.portrait||(state.companions.includes('mare')?'mare':'rize'));
  const names=state.companions.map(id=>TG.PARTY.find(x=>x.id===id)?.name||id);
  text('storyParty',state.companions.length?'출전 · 리제 + '+names.join(' · '):state.node==='meeting'?'이 대화 후 마레 합류 · 체력 최대 40 회복':'일행 · 리제');
@@ -48,7 +63,7 @@ function renderStory(){
  text('storyErosion',TG.story.summary(state));
  const bonded=Object.entries(state.bonds||{}).filter(([,value])=>value>0).map(([id,value])=>(TG.PARTY.find(a=>a.id===id)?.name||id)+' 유대 +'+value);
  text('storyBonds',bonded.length?bonded.join(' · '):'동료와의 유대는 이야기를 통해 쌓입니다.');
- text('storyBoundaryNote',choice?'기록의 진실을 확인했습니다. 결정은 저장되며 다시 고를 수 없습니다.':node.kind==='battle'?'전투에 실패하면 이 전투 시작점에서 재도전합니다. 생존 탐험의 조각·기록은 변경되지 않습니다.':'읽은 대사와 선택은 자동 저장됩니다. 재접속해도 이어집니다.');
+ text('storyBoundaryNote',recruit?'동료 두 명 이상을 정식 영입하고 출전 셋을 편성하세요. 누구를 데려가느냐에 따라 설원역 장치 회수 시간·적 출현·회복 지원이 달라집니다.':choice?'기록의 진실을 확인했습니다. 결정은 저장되며 다시 고를 수 없습니다.':node.kind==='battle'?'전투에 실패하면 이 전투 시작점에서 재도전합니다. 생존 탐험의 조각·기록은 변경되지 않습니다.':'읽은 대사와 선택은 자동 저장됩니다. 재접속해도 이어집니다.');
  text('storyAction',node.kind==='dialogue'?(state.line+1<node.lines.length?'다음':state.node==='meeting'?'마레와 함께 출발':'이어서'):node.kind==='battle'?'임무 시작 · '+battle.duration+'초':'열차로 돌아가기');
  const expectedNode=state.node,expectedLine=state.line;
  $('storyAction').onclick=()=>{
@@ -57,7 +72,7 @@ function renderStory(){
   else if(node.kind==='battle'){if(G.g&&G.g.status!=='ended')return;G.g=null;if(!G.startStory())renderStory();}
   else{G.g=null;U.show('hub');}
  };
- $('storyNextMission').onclick=()=>{TG.audio.unlock();if(TG.story.beginR3())renderStory();else{renderStory();notify(status()||'다음 임무를 시작할 수 없습니다.');}};
+ $('storyNextMission').onclick=()=>{TG.audio.unlock();if((state.node==='rest2'?TG.story.beginR4():TG.story.beginR3()))renderStory();else{renderStory();notify(status()||'다음 임무를 시작할 수 없습니다.');}};
  $('storyRescue').onclick=()=>{TG.audio.unlock();if(TG.story.choose('rescue',expectedNode))renderStory();else{renderStory();notify(status()||'이미 선택했거나 진행을 저장하지 못했습니다.');}};
  $('storyContain').onclick=()=>{TG.audio.unlock();if(TG.story.choose('contain',expectedNode))renderStory();else{renderStory();notify(status()||'이미 선택했거나 진행을 저장하지 못했습니다.');}};
  const log=clear('storyLog');
@@ -76,40 +91,40 @@ function renderStory(){
 function renderStoryResult(g){
  if(g.storyTraining){renderTrainingResult(g);return;}
  const battle=TG.STORY.battles[g.storyBattle];text('resultSaveStatus',status());$('newGoalNote').hidden=true;text('newGoalNote','');$('resultJournal').hidden=true;$('retryBtn').hidden=g.won;
- text('backBtn',g.won&&!g.storySaved?'진행 저장 다시 시도':g.won?'이야기 계속':'이야기로 돌아가기');text('retryBtn','현재 전투 다시 도전');text('endOrnament',g.won?'✦':'◷');text('endOverline','이야기 시범 · 거울 유리역');
- text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:g.storyBattle==='archive'&&g.reason==='record'?'시간이 끝날 때까지 기록장치를 회수하지 못했습니다. 임무 시작 지점에서 다시 도전하세요.':'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
+ text('backBtn',g.won&&!g.storySaved?'진행 저장 다시 시도':g.won?'이야기 계속':'이야기로 돌아가기');text('retryBtn','현재 전투 다시 도전');text('endOrnament',g.won?'✦':'◷');text('endOverline',g.storyBattle==='snowMission'?'이야기 · 침묵의 설원역':'이야기 · 거울 유리역');
+ text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:g.storyBattle==='snowMission'&&g.reason==='signal'?'설원역 목표 장치를 모두 회수하지 못했습니다. 동료를 다시 편성해 도전해 보세요.':g.storyBattle==='archive'&&g.reason==='record'?'시간이 끝날 때까지 기록장치를 회수하지 못했습니다. 임무 시작 지점에서 다시 도전하세요.':'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
  text('resultProgress',(g.mare?'일행 · 리제 + 마레 / 보호 '+g.mare.protected+'회':'일행 · 리제 / 안내 회선 복구')+' · 지휘 '+(g.commands?.casts||0)+'회');text('resultAdvice',g.won?(g.storySaved?'다음 대화에서 이번 만남을 이어가세요.':'설정에서 백업을 확인하거나 저장을 다시 시도하세요. 아직 다음 장면으로 진행하지 않았습니다.'):g.mare?'마레의 보호가 소모되면 12초의 준비 시간이 필요합니다. 공격 예고는 이동과 대시로 피하세요.':'공격은 자동입니다. 적이 남긴 경험치를 모으고 위험할 때 대시로 벗어나세요.');
  text('resultGrowth','이야기는 전투 시작과 완료 경계에서 저장합니다. 전투 중 얻은 기억 강화는 성공했을 때 다음 장면으로 이어집니다.');text('resultTime',fmt(g.totalTime));text('resultKills',g.kills);text('resultShards','0');text('resultNote','이야기 시범은 생존 조각·도전·첫 장 완주 기록을 정산하지 않습니다. 기존 생존 진행은 그대로 보관됩니다.');
 }
 const commandOwner={rize:'리제',mare:'마레',shared:'공용',...Object.fromEntries(TG.PARTY.map(x=>[x.id,x.name]))};
-function openParty(){if(TG.story.state().node!=='rest'||G.g&&G.g.status!=='ended')return;U.partyDraft=[...TG.story.state().companions];U.show('party');}
+function openParty(){if(!['rest','rest2','recruitHub','rest3'].includes(TG.story.state().node)||G.g&&G.g.status!=='ended')return;U.partyDraft=[...TG.story.state().companions];U.show('party');}
 function renderParty(){
- const draft=U.partyDraft||[...TG.story.state().companions],list=clear('partyList');
+ const state=TG.story.state(),official=['recruitHub','rest3'].includes(state.node),draft=U.partyDraft||[...state.companions],list=clear('partyList');
  U.partyDraft=draft;
  text('partyCount',draft.length+' / 3');
  text('partySelection',draft.length===3?'출전 준비 완료 · 다른 동료를 고르려면 기존 선택을 해제하세요.':'동료 '+(3-draft.length)+'명을 더 선택하세요.');
  $('partySave').disabled=draft.length!==3||!S.canWrite();
  for(const ally of TG.PARTY){
-  const selected=draft.includes(ally.id);
+  const selected=draft.includes(ally.id),available=ally.trial&&(!official||ally.id==='mare'||state.recruited.includes(ally.id));
   const b=button('',()=>{
-   if(!ally.trial)return;
+   if(!available)return;
    const idx=draft.indexOf(ally.id);
    if(idx>=0)draft.splice(idx,1);
    else if(draft.length<3)draft.push(ally.id);
    renderParty();
-  },'partyMember char-'+ally.id+(selected?' selected':'')+(!ally.trial?' locked':''));
-  b.disabled=!ally.trial;
+  },'partyMember char-'+ally.id+(selected?' selected':'')+(!available?' locked':''));
+  b.disabled=!available;
   b.setAttribute('aria-pressed',String(selected));
-  b.setAttribute('aria-label',ally.name+' · '+ally.role+' · '+ally.desc+(selected?' · 출전 중':ally.trial?' · 편성 가능':' · 아직 합류하지 않음'));
+  b.setAttribute('aria-label',ally.name+' · '+ally.role+' · '+ally.desc+(selected?' · 출전 중':available?' · 편성 가능':' · 아직 합류하지 않음'));
   const art=document.createElement('span'),fade=document.createElement('span'),body=document.createElement('span'),name=document.createElement('strong'),role=document.createElement('small'),flag=document.createElement('span');
   art.className='partyArt char-'+ally.id;art.setAttribute('aria-hidden','true');
   fade.className='partyFade';fade.setAttribute('aria-hidden','true');
-  body.className='partyMemberText';name.textContent=ally.name;role.textContent=ally.role+' · '+(ally.trial?ally.desc.split(' · ')[0]:'미합류');
-  flag.className='partyFlag';flag.textContent=!ally.trial?'잠금':selected?'✓':'＋';
+  body.className='partyMemberText';name.textContent=ally.name;role.textContent=ally.role+' · '+(available?ally.desc.split(' · ')[0]:'미합류');
+  flag.className='partyFlag';flag.textContent=!available?'잠금':selected?'✓':'＋';
   body.append(name,role);b.append(art,fade,body,flag);list.appendChild(b);
  }
 }
-function openDeck(){const s=TG.story.state();if(!['battle','rest'].includes(TG.STORY.nodes[s.node].kind)||G.g&&G.g.status!=='ended')return;U.deckDraft=[...s.commandDeck];$('deckOwnerFilter').value='all';U.show('deck');}
+function openDeck(){const s=TG.story.state();if(!['battle','rest','recruit'].includes(TG.STORY.nodes[s.node].kind)||G.g&&G.g.status!=='ended')return;U.deckDraft=[...s.commandDeck];$('deckOwnerFilter').value='all';U.show('deck');}
 function renderDeck(){
  const s=TG.story.state(),list=clear('deckList'),draft=U.deckDraft||[...s.commandDeck],available=TG.commandDeck.available(s.companions),filter=$('deckOwnerFilter').value||'all';U.deckDraft=draft;
  const needed=TG.commandDeck.size(s.companions);
