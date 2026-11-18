@@ -28,7 +28,7 @@ function storyEntryLabels(){const state=TG.story.state(),label=state.node==='res
 function openStory(){TG.audio.unlock();if(G.g&&G.g.status!=='ended')return;if(!TG.story.begin()){if(U.screen==='hub')renderHub();else renderMenu();notify(status()||'이야기를 저장하지 못했습니다.');return;}G.g=null;U.show('story');}
 function renderStory(){
  const state=TG.story.state(),node=TG.STORY.nodes[state.node],line=TG.story.currentLine(state),battle=TG.STORY.battles[state.node];
- const boundary=['battle','rest'].includes(node.kind),atRest=['rest','rest2'].includes(state.node),choice=node.kind==='choice';
+ const boundary=['battle','rest'].includes(node.kind)||state.node==='rest2',atRest=['rest','rest2'].includes(state.node),choice=node.kind==='choice';
  $('storyDeck').hidden=!boundary;
  $('storyPartySelect').hidden=!atRest;
  $('storyTraining').hidden=!boundary||!state.companions.length;
