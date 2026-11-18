@@ -9,7 +9,15 @@ function boot(shared){
 }
 function toBattle(b){assert(b.A.begin());let limit=30;while(b.TG.STORY.nodes[b.A.state().node].kind==='dialogue'){const {node,line}=b.A.state();assert(b.A.advance(node,line));assert(limit-->0);}return b;}
 function quiet(g){g.spawn=-1e6;g.nextWave=Infinity;g.hazardClock=-1e6;g.enemies=[];g.hostile=[];g.lastFire=g.time;}
-function battle(mare=true){const b=toBattle(boot());assert(b.G.startStory());if(mare){b.G.finish(true,'story');toBattle(b);assert(b.G.startStory());}quiet(b.G.g);return b;}
+function completeStoryObjective(b){
+ const g=b.G.g,gate=g.storyGate;assert(g&&gate&&g.status==='playing');
+ for(const id of [...gate.guardIds])b.G.hitEnemy(g.enemies.find(e=>e.id===id),100000);
+ g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-1e6;g.nextWave=Infinity;
+ g.p.x=gate.x;g.p.y=gate.y;
+ for(let n=0;n<45&&g.status==='playing';n++)b.G.update(.04);
+ assert.equal(g.status,'ended');assert.equal(g.won,true);
+}
+function battle(mare=true){const b=toBattle(boot());assert(b.G.startStory());if(mare){completeStoryObjective(b);toBattle(b);assert(b.G.startStory());}quiet(b.G.g);return b;}
 function command(b,id){
  const g=b.G.g,ids=[...new Set([id,...b.D.preset('counter',['mare']),...b.D.available(['mare']).map(card=>card.id)])].slice(0,8);
  assert(b.D.validate(ids,['mare']));g.commands=b.D.create(ids,123);g.commands.hand=[id,...ids.filter(card=>card!==id).slice(0,2)];g.commands.draw=ids.filter(card=>!g.commands.hand.includes(card));g.commands.discard=[];g.commands.energy=3;
@@ -163,7 +171,7 @@ test('command kills keep the ordinary chain reward while paused enemies cannot r
 
 test('training requires Mare, lasts ninety seconds and never writes progress, legacy rewards or checkpoints',()=>{
  const solo=battle(false);solo.G.finish(false,'retreat');assert.equal(solo.G.startCommandTraining(),false);
- const b=battle();b.G.finish(true,'story');toBattle(b);assert.equal(b.A.state().node,'rest');const before=b.S.export(),state=JSON.stringify(b.A.state());let completed=0,settled=0;b.A.completeBattle=()=>{completed++;return true;};b.S.settle=()=>{settled++;return 999;};
+ const b=battle();completeStoryObjective(b);toBattle(b);assert.equal(b.A.state().node,'rest');const before=b.S.export(),state=JSON.stringify(b.A.state());let completed=0,settled=0;b.A.completeBattle=()=>{completed++;return true;};b.S.settle=()=>{settled++;return 999;};
  const g=b.G.startCommandTraining();assert(g);assert.equal(g.mode,'story');assert.equal(g.storyTraining,true);assert.equal(g.duration,90);assert(g.mare);assert.equal(g.commands.hand.length,3);assert.equal(b.S.export(),before);assert.match(b.G.objective().title,/90초/);quiet(g);g.time=89.99;b.G.update(.04);assert.equal(g.status,'ended');assert.equal(g.won,true);assert.equal(g.storySaved,true);assert.equal(g.reward,0);assert.equal(completed,0);assert.equal(settled,0);assert.equal(b.S.export(),before);assert.equal(JSON.stringify(b.A.state()),state);assert(b.G.saveStoryResult());assert.equal(completed,0);assert(b.G.startCommandTraining());b.G.finish(false,'retreat');assert.equal(b.S.export(),before);assert.equal(completed,0);
 });
 
