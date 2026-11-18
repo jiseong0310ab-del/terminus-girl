@@ -35,6 +35,11 @@ function renderStory(){
  $('storyNextMission').hidden=!['rest','rest2'].includes(state.node);
  text('storyNextMission',state.node==='rest2'?'제2장 시작 · 침묵의 설원역':'다음 이야기 시작 · 지워진 기록 회수');
  $('storyRecruitPanel').hidden=!recruit;
+ const patientVisible=['recruitHub','rest3'].includes(state.node)&&state.recruited.includes('vela');
+ $('storyPatientMission').hidden=!patientVisible||state.patientRescued;
+ $('storyPatientMission').onclick=()=>{TG.audio.unlock();if(TG.story.beginVelaPatient())renderStory();else{renderStory();notify(status()||'벨라의 환자 구조 임무를 시작할 수 없습니다.');}};
+ $('storyPatientCabin').hidden=!patientVisible||!state.patientRescued;
+ if(state.patientRescued)text('storyPatientText','환자 체력 '+(state.patientCare?.hp||0)+' · 벨라 처치 '+(state.patientCare?.treatments||0)+'회 · 마레 보호 '+(state.patientCare?.mareBlocks||0)+'회. 벨라가 객차에서 회복을 돕고 있습니다.');
  if(recruit){
   text('storyRecruitCount',state.recruited.length+' / 3명 정식 영입');
   for(const id of ['aster','noa','vela']){
@@ -63,7 +68,7 @@ function renderStory(){
  text('storyErosion',TG.story.summary(state));
  const bonded=Object.entries(state.bonds||{}).filter(([,value])=>value>0).map(([id,value])=>(TG.PARTY.find(a=>a.id===id)?.name||id)+' 유대 +'+value);
  text('storyBonds',bonded.length?bonded.join(' · '):'동료와의 유대는 이야기를 통해 쌓입니다.');
- text('storyBoundaryNote',recruit?'동료 두 명 이상을 정식 영입하고 출전 셋을 편성하세요. 누구를 데려가느냐에 따라 설원역 장치 회수 시간·적 출현·회복 지원이 달라집니다.':choice?'기록의 진실을 확인했습니다. 결정은 저장되며 다시 고를 수 없습니다.':node.kind==='battle'?'전투에 실패하면 이 전투 시작점에서 재도전합니다. 생존 탐험의 조각·기록은 변경되지 않습니다.':'읽은 대사와 선택은 자동 저장됩니다. 재접속해도 이어집니다.');
+ text('storyBoundaryNote',state.node==='velaEscort'?'환자를 안정화하고 함께 객차 문까지 돌아오면 즉시 승리합니다. 벨라 온기 처치와 마레의 방패는 환자에게도 영향을 줍니다.':recruit?'동료 두 명 이상을 정식 영입하고 출전 셋을 편성하세요. 누구를 데려가느냐에 따라 설원역 장치 회수 시간·적 출현·회복 지원이 달라집니다.':choice?'기록의 진실을 확인했습니다. 결정은 저장되며 다시 고를 수 없습니다.':node.kind==='battle'?'전투에 실패하면 이 전투 시작점에서 재도전합니다. 생존 탐험의 조각·기록은 변경되지 않습니다.':'읽은 대사와 선택은 자동 저장됩니다. 재접속해도 이어집니다.');
  text('storyAction',node.kind==='dialogue'?(state.line+1<node.lines.length?'다음':state.node==='meeting'?'마레와 함께 출발':'이어서'):node.kind==='battle'?'임무 시작 · '+battle.duration+'초':'열차로 돌아가기');
  const expectedNode=state.node,expectedLine=state.line;
  $('storyAction').onclick=()=>{
@@ -91,9 +96,14 @@ function renderStory(){
 function renderStoryResult(g){
  if(g.storyTraining){renderTrainingResult(g);return;}
  const battle=TG.STORY.battles[g.storyBattle];text('resultSaveStatus',status());$('newGoalNote').hidden=true;text('newGoalNote','');$('resultJournal').hidden=true;$('retryBtn').hidden=g.won;
- text('backBtn',g.won&&!g.storySaved?'진행 저장 다시 시도':g.won?'이야기 계속':'이야기로 돌아가기');text('retryBtn','현재 전투 다시 도전');text('endOrnament',g.won?'✦':'◷');text('endOverline',g.storyBattle==='snowMission'?'이야기 · 침묵의 설원역':'이야기 · 거울 유리역');
- text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:g.storyBattle==='snowMission'&&g.reason==='signal'?'설원역 목표 장치를 모두 회수하지 못했습니다. 동료를 다시 편성해 도전해 보세요.':g.storyBattle==='archive'&&g.reason==='record'?'시간이 끝날 때까지 기록장치를 회수하지 못했습니다. 임무 시작 지점에서 다시 도전하세요.':'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
- text('resultProgress',(g.mare?'일행 · 리제 + 마레 / 보호 '+g.mare.protected+'회':'일행 · 리제 / 안내 회선 복구')+' · 지휘 '+(g.commands?.casts||0)+'회');text('resultAdvice',g.won?(g.storySaved?'다음 대화에서 이번 만남을 이어가세요.':'설정에서 백업을 확인하거나 저장을 다시 시도하세요. 아직 다음 장면으로 진행하지 않았습니다.'):g.mare?'마레의 보호가 소모되면 12초의 준비 시간이 필요합니다. 공격 예고는 이동과 대시로 피하세요.':'공격은 자동입니다. 적이 남긴 경험치를 모으고 위험할 때 대시로 벗어나세요.');
+ text('backBtn',g.won&&!g.storySaved?'진행 저장 다시 시도':g.won?'이야기 계속':'이야기로 돌아가기');text('retryBtn','현재 전투 다시 도전');text('endOrnament',g.won?'✦':'◷');text('endOverline',['snowMission','velaEscort'].includes(g.storyBattle)?'이야기 · 침묵의 설원역':'이야기 · 거울 유리역');
+ text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:g.storyBattle==='velaEscort'?'환자를 객차까지 데려가지 못했습니다. 구조 직전 상황부터 다시 도전할 수 있습니다.':g.storyBattle==='snowMission'&&g.reason==='signal'?'설원역 목표 장치를 모두 회수하지 못했습니다. 동료를 다시 편성해 도전해 보세요.':g.storyBattle==='archive'&&g.reason==='record'?'시간이 끝날 때까지 기록장치를 회수하지 못했습니다. 임무 시작 지점에서 다시 도전하세요.':'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
+ const currentParty='리제'+(g.party?.length?' + '+g.party.map(id=>commandOwner[id]||id).join(' · '):'');
+ const impact=g.storyBattle==='velaEscort'&&g.patient?' · 벨라의 처치 '+g.patient.treatments+'회 · 환자 보호 '+g.patient.mareBlocks+'회 · 환자 HP '+Math.ceil(g.patient.hp):'';
+ text('resultProgress','일행 · '+currentParty+' / 보호 '+(g.mare?.protected||0)+'회 · 지휘 '+(g.commands?.casts||0)+'회'+impact);text('resultAdvice',g.won?(g.storySaved?'다음 대화에서 이번 만남을 이어가세요.':'설정에서 백업을 확인하거나 저장을 다시 시도하세요. 아직 다음 장면으로 진행하지 않았습니다.'):g.mare?'마레의 보호가 소모되면 12초의 준비 시간이 필요합니다. 공격 예고는 이동과 대시로 피하세요.':'공격은 자동입니다. 적이 남긴 경험치를 모으고 위험할 때 대시로 벗어나세요.');
+ if(g.storyBattle==='velaEscort'){
+  text('resultAdvice',g.won?'환자가 마지막 객차에 올라탔습니다. 출전 동료들이 어떤 역할을 했는지 기록으로 확인하세요.':'벨라의 치료와 마레의 보호를 환자 가까이에서 활용하세요. 경고가 뜨면 환자 곁을 지키세요.');
+ }
  text('resultGrowth','이야기는 전투 시작과 완료 경계에서 저장합니다. 전투 중 얻은 기억 강화는 성공했을 때 다음 장면으로 이어집니다.');text('resultTime',fmt(g.totalTime));text('resultKills',g.kills);text('resultShards','0');text('resultNote','이야기 시범은 생존 조각·도전·첫 장 완주 기록을 정산하지 않습니다. 기존 생존 진행은 그대로 보관됩니다.');
 }
 const commandOwner={rize:'리제',mare:'마레',shared:'공용',...Object.fromEntries(TG.PARTY.map(x=>[x.id,x.name]))};
@@ -143,9 +153,14 @@ function renderDeck(){
 }
 function renderCommands(){
  const g=G.g;if(!g?.commands)return;const c=g.commands;const remaining=Math.max(0,Math.ceil(g.duration-g.time));text('commandPower','지휘력 '+c.energy+' / 3'+(c.energy<3?' · 전투 '+Math.ceil(12-c.regen)+'초 후 +1':''));text('commandCombo',[g.commandEffects.guardWindow>0?'보호 연계 준비 · 파동·절단 위력 50% 증가 또는 반격 사용':g.mare?'마레나 보호막이 피해를 막으면 4초 동안 보호 연계 가능':'마레 합류 후 보호 연계를 사용할 수 있습니다.',g.commandEffects.ward>0?'보호 장막 '+g.commandEffects.ward.toFixed(1)+'초':''].filter(Boolean).join(' · '));text('commandPiles','손패 '+c.hand.length+' · 뽑기 '+c.draw.length+' · 버림 '+c.discard.length);text('commandObjective',G.objective().title+' · 남은 시간 '+fmt(remaining));text('commandStatus',status());
- const list=clear('commandList'),token=c.token;
+ const list=clear('commandList'),token=c.token,details=clear('commandDetailsList');
  for(const id of c.hand){const info=G.commandInfo(id),card=info.card;if(!card)continue;const b=button('',()=>{TG.audio.unlock();if(!G.castCommand(id,token))renderCommands();},'upgrade commandCard '+card.owner);b.disabled=!info.enabled;
-  const cost=document.createElement('span'),body=document.createElement('span'),owner=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span');cost.className='commandCost';cost.textContent=card.cost;owner.className='commandOwner';owner.textContent=commandOwner[card.owner];title.className='cardtitle';title.textContent=card.name;desc.className='carddesc';desc.textContent=card.desc;const art=document.createElement('span');art.className='commandArt character-'+card.owner;art.setAttribute('aria-hidden','true');body.append(art,owner,title,desc);if(!info.enabled){const reason=document.createElement('span');reason.className='commandReason';reason.textContent=info.reason;body.appendChild(reason);}b.append(cost,body);b.setAttribute('aria-label',card.name+' · 지휘력 '+card.cost+' · '+card.desc+(!info.enabled?' · '+info.reason:''));list.appendChild(b);
+  const cost=document.createElement('span'),body=document.createElement('span'),owner=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span');cost.className='commandCost';cost.textContent=card.cost;owner.className='commandOwner';owner.textContent=commandOwner[card.owner];title.className='cardtitle';title.textContent=card.name;desc.className='carddesc';desc.textContent=card.desc;const art=document.createElement('span');art.className='commandArt character-'+card.owner;art.setAttribute('aria-hidden','true');body.append(art,owner,title,desc);
+  const nearPatient=g.storyBattle==='velaEscort'&&g.patient&&g.patient.phase!=='boarded'&&Math.hypot(g.p.x-g.patient.x,g.p.y-g.patient.y)<155;
+  if(nearPatient&&(['vela_heal','vela_guard','mare_guard'].includes(card.id))){const target=document.createElement('span');target.className='commandTarget';target.textContent='대상 · 환자';body.appendChild(target);b.classList.add('patientTarget');}
+  const more=document.createElement('p');more.textContent=commandOwner[card.owner]+' · 지휘력 '+card.cost+' · '+card.desc+(nearPatient&&['vela_heal','mare_guard'].includes(card.id)?' · 환자에게도 적용 가능':'');
+  details.appendChild(more);
+  if(!info.enabled){const reason=document.createElement('span');reason.className='commandReason';reason.textContent=info.reason;body.appendChild(reason);}b.append(cost,body);b.setAttribute('aria-label',card.name+' · 지휘력 '+card.cost+' · '+card.desc+(!info.enabled?' · '+info.reason:''));list.appendChild(b);
  }
 }
 function startTraining(){TG.audio.unlock();if(G.g&&G.g.status!=='ended')return;G.g=null;if(!G.startCommandTraining()){text('storySaveStatus',status()||'마레 합류 후 지휘 연습을 시작할 수 있습니다.');}}
@@ -243,7 +258,7 @@ $('enterHub').onclick=()=>{TG.audio.unlock();U.show('hub')};$('chapterStart').on
 for(const [id,key]of [['bgmVolume','bgm'],['sfxVolume','sfx']])$(id).oninput=()=>{S.data.settings[key]=Number($(id).value)/100;TG.audio.unlock();TG.audio.sync();text(key+'Value',$(id).value+'%');S.save()};$('reduceFX').onchange=()=>{S.data.settings.reduceFX=$('reduceFX').checked;S.save()};$('quality').onchange=()=>{S.data.settings.quality=$('quality').value;S.save();TG.view.resize()};
 $('exportSave').onclick=()=>{const data=S.export();$('backupText').value=data;$('backupText').hidden=false;const blob=new Blob([data],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='terminus-girl-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),10000);text('backupNote','파일을 저장하기 어렵다면 위 백업 내용을 길게 눌러 복사해 보관하세요.')};
 $('importFile').onchange=async()=>{const file=$('importFile').files?.[0];if(!file)return;if(file.size>256000){text('importNote','256KB보다 작은 게임 백업만 불러올 수 있습니다.');return}try{const content=await file.text(),preview=S.preview(content);confirm('백업으로 기록을 복원할까요?',`기억 조각 ${preview.wallet}개 · 탐험 ${preview.stats.runs}회 · 기억 ${preview.memories.length}개\n현재 기록과 진행 중 탐험이 이 백업으로 바뀝니다. 먼저 현재 백업을 내보내는 것을 권장합니다.`,()=>{try{S.import(content)}catch(e){renderSettings();text('importNote',e.message);return;}G.g=null;U.returnTo='hub';TG.audio.sync();renderSettings();text('importNote',S.status!=='ready'?'백업을 불러왔지만 기기에 저장하지 못했습니다. 백업 파일을 보관하고 저장소 설정을 확인해 주세요.':'백업을 복원했습니다. 열차에서 확인해 주세요.');TG.view.resize()})}catch(e){text('importNote',e.message)}finally{$('importFile').value=''}};
-function hud(){const g=G.g;if(!g||U.screen!=='playing')return;const p=g.p;const remaining=Math.max(0,Math.ceil(g.duration-g.time));text('timer',`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`);text('timerCaption',g.storyTraining?'연습 종료까지':g.mode==='story'?'임무 완료까지':'역 소거까지');text('stageLabel',g.storyTraining?'거울역 · 합동 지휘 연습':g.mode==='story'?TG.STORY.battles[g.storyBattle].title:TG.STAGES[g.stage].name+' — 리제');$('partyHud').hidden=!(g.mare||g.allies?.length);
+function hud(){const g=G.g;if(!g||U.screen!=='playing')return;const p=g.p;const remaining=Math.max(0,Math.ceil(g.duration-g.time));text('timer',`${Math.floor(remaining/60)}:${String(remaining%60).padStart(2,'0')}`);text('timerCaption',g.storyTraining?'연습 종료까지':g.storyBattle==='velaEscort'?'구조 제한시간':g.mode==='story'?'임무 완료까지':'역 소거까지');text('stageLabel',g.storyTraining?'거울역 · 합동 지휘 연습':g.mode==='story'?TG.STORY.battles[g.storyBattle].title:TG.STAGES[g.stage].name+' — 리제');$('partyHud').hidden=!(g.mare||g.allies?.length);
  if(g.mare||g.allies?.length){
   const ids=g.party||['mare'],minis=$('partyMiniList'),key=ids.join(',');
   if(minis.dataset.key!==key){
