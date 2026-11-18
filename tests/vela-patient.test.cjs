@@ -97,3 +97,15 @@ test('patient rescue remains accessible after the snow ending and old v4 backups
  assert.equal(persisted.A.state().completed,true);assert.equal(persisted.A.state().patientRescued,true);
  const check=boot(persisted.values);assert.equal(check.A.state().node,'rest3');assert.equal(check.A.state().patientRescued,true);
 });
+
+test('Vela and Mare patient cards are guaranteed across a hundred shuffled battle hands',()=>{
+ const b=ready(boot());mission(b);
+ for(let seed=0;seed<100;seed++){
+  b.G.g=null;b.S.data.story.commandSeed=seed;assert(b.S.save());
+  const g=b.G.startStory();assert(g);
+  assert(g.commands.hand.includes('vela_heal'),'missing Vela treatment at seed '+seed);
+  assert(g.commands.hand.includes('mare_guard'),'missing Mare protection at seed '+seed);
+  assert.equal(b.TG.commandDeck.validate(g.commands.deck,g.party),true);
+  assert.equal(b.S.data.story.commandDeck.includes('vela_heal'),false);
+ }
+});
