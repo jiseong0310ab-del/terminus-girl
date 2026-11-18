@@ -92,7 +92,15 @@ A.currentLine=function(state=A.state()){
   };
   return voices[['aster','noa','vela','mare'].find(id=>party.includes(id))||'mare'];
  }
- if(state.node==='rest2')return state.decision==='rescue'?
+ if(state.node==='trace'&&state.line===1&&!state.missionParty.includes('mare')){
+  const id=['noa','aster','vela'].find(id=>state.missionParty.includes(id))||'noa';
+  const voices={noa:{speaker:'노아',portrait:'noa',text:'기록 장치의 신호선을 제가 안정화할게요. 적은 지휘 카드로 견제해요.'},aster:{speaker:'아스터',portrait:'aster',text:'기록이 흔들리지 않게 시간을 맞출게요. 장치 앞에서 잠시 머물러야 해요.'},vela:{speaker:'벨라',portrait:'vela',text:'회수가 끝날 때까지 버텨요. 부상이 생기면 제가 돌볼게요.'}};
+  return voices[id];
+ }
+ if(state.node==='release'&&state.line===1&&!state.missionParty.includes('mare')){
+  return state.missionParty.includes('vela')?{speaker:'벨라',portrait:'vela',text:'구조 통로를 열어요. 리제, 잃어버리는 기억을 제가 기록할게요.'}:{speaker:'노아',portrait:'noa',text:'신호를 붙잡을게요. 리제는 제 목소리를 따라와요.'};
+ }
+  if(state.node==='rest2')return state.decision==='rescue'?
   {speaker:'마레',portrait:'mare',text:'신호는 열렸어. 하지만 리제의 기억도 흐려졌지. 다음 역에서는 더 안전한 방법을 찾자.'}:
   {speaker:'마레',portrait:'mare',text:'오늘은 봉인을 지켰어. 구조 기록은 남았으니 다음 역에서 되돌아올 방법을 찾자.'};
  return line;
@@ -125,8 +133,8 @@ A.advance=function(expectedNode,expectedLine){
 A.beginR3=function(){
  if(activeRun())return false;
  return transact(state=>{
-  if(state.node!=='rest'||!state.completed||!state.companions.includes('mare'))return false;
-  state.missionParty=[...state.companions];state.node='briefing';state.line=0;state.completed=false;
+  if(state.node!=='rest'||!state.completed||!state.companions.length)return false;
+  state.missionParty=[...state.companions];state.loadout.hp=Math.max(75,state.loadout.hp);state.node='briefing';state.line=0;state.completed=false;
  });
 };
 A.choose=function(id,expectedNode='decision'){
