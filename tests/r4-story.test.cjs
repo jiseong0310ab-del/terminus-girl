@@ -86,7 +86,7 @@ test('R3 release forces TWO rescue relays, active squad gives record and signal 
  assert.match(b.G.objective().title,/구조 신호/);assert.equal(b.G.objective().target,2);
  g.spawn=-1000;g.nextWave=Infinity;g.hazards=[];g.hostile=[];g.enemies=[];
  g.time=g.duration-.01;b.G.update(.04);
- assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'signal');
+ assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'timeout');
  assert.equal(b.A.state().node,'snowMission');assert.equal(b.S.export(),before);
  b.G.g=null;const retry=b.G.startStory();assert.equal(retry.id,spec.id);
  clearRun(b,retry);assert.equal(b.A.state().node,'snowDebrief');assert.equal(b.A.state().snowRecovered,true);
