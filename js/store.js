@@ -4,7 +4,7 @@ const KEY='terminusSaveV1',BACKUP='terminusSaveV1Backup',S=TG.store={status:'rea
 const integer=(v,max=1e7)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 const arr=(v,allowed,max=64)=>Array.isArray(v)?[...new Set(v.filter(x=>typeof x==='string'&&(!allowed||allowed.includes(x))))].slice(-max):[];
 const clone=o=>JSON.parse(JSON.stringify(o));
-function freshStory(){return{version:3,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false,erosion:0,decision:null,recordRecovered:false,bonds:Object.fromEntries(TG.PARTY.map(a=>[a.id,0])),missionParty:[]};}
+function freshStory(){return{version:3,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),erosion:0,decision:null,recordRecovered:false,bonds:Object.fromEntries(TG.PARTY.map(a=>[a.id,0])),missionParty:[],loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
 function normalStory(raw){
  if(raw===undefined)return freshStory();
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||![1,2,3].includes(raw.version))throw Error('지원하지 않는 이야기 저장 형식입니다.');
