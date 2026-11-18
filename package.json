@@ -1,1 +1,1 @@
-{"name":"terminus-girl","version":"0.23.0-mission1","private":true,"description":"Terminus Girl browser game","scripts":{"test":"node --test tests/*.test.cjs","qa:story":"node scripts/story-play-sim.cjs","qa:commands":"node scripts/command-play-sim.cjs"}}
+{"name":"terminus-girl","version":"0.24.0-balance1","private":true,"description":"Terminus Girl browser game","scripts":{"test":"node --test tests/*.test.cjs","qa:story":"node scripts/story-play-sim.cjs","qa:commands":"node scripts/command-play-sim.cjs"}}
