@@ -237,10 +237,22 @@ test('empty retreat gives a first-growth step instead of implying a shard payout
 });
 
 function storyToBattle(TG,$){let guard=0;while(TG.STORY.nodes[TG.story.state().node].kind==='dialogue'){assert(++guard<30);$('storyAction').onclick();}assert.equal(TG.ui.screen,'story');$('storyAction').onclick();assert.equal(TG.ui.screen,'playing');return TG.engine.g;}
-function storyWin(TG){const g=TG.engine.g;g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-100;g.nextWave=Infinity;g.time=g.duration-.01;TG.engine.update(.04);assert.equal(g.status,'ended');assert.equal(g.won,true);}
+function storyWin(TG){
+ const g=TG.engine.g;g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-100;g.nextWave=Infinity;
+ if(g.storyGate){
+  g.storyGate.defeated=[...g.storyGate.guardIds];
+  if(g.recordTarget)g.recordTarget.recovered=true;
+  g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
+  for(let n=0;n<34&&g.status==='playing';n++)TG.engine.update(.04);
+ }else if(g.signalTargets){
+  for(const t of g.signalTargets){t.recovered=true;t.charge=t.needed;}
+  TG.engine.update(.04);
+ }else{g.time=g.duration-.01;TG.engine.update(.04);}
+ assert.equal(g.status,'ended');assert.equal(g.won,true);
+}
 test('story UI plays prologue, solo encounter, Mare recruitment, protection and train dialogue',()=>{
  const {TG,$}=bootUI();$('menuStory').onclick();assert.equal(TG.ui.screen,'story');assert.match($('storyText').textContent,/열차를 가르쳐/);assert.match($('storyParty').textContent,/리제/);
- storyToBattle(TG,$);assert.equal($('timerCaption').textContent,'임무 완료까지');assert.match($('goalLabel').textContent,/생존/);assert.doesNotMatch($('phaseLabel').textContent,/연습/);assert.equal($('partyHud').hidden,true);
+ storyToBattle(TG,$);assert.equal($('timerCaption').textContent,'임무 제한시간');assert.match($('goalLabel').textContent,/안내 회선/);assert.doesNotMatch($('phaseLabel').textContent,/연습/);assert.equal($('partyHud').hidden,true);
  storyWin(TG);assert.equal($('resultJournal').hidden,true);assert.equal($('retryBtn').hidden,true);assert.match($('backBtn').textContent,/이야기 계속/);$('backBtn').onclick();assert.equal(TG.story.state().node,'meeting');
  const g=storyToBattle(TG,$);assert(g.mare);assert.equal($('partyHud').hidden,false);assert.match($('partyStatus').textContent,/보호 준비/);TG.engine.damage(20);TG.ui.refreshHud();assert.match($('partyStatus').textContent,/12.0초/);$('pauseBtn').onclick();assert.match($('pauseParty').textContent,/마레/);assert.match($('quitBtn').textContent,/이야기 중단/);assert.match($('pauseBoundaryNote').textContent,/현재 전투 시작/);assert.match($('pauseObjective').textContent,/임무 완료/);$('resumeBtn').onclick();
  storyWin(TG);assert.match($('resultProgress').textContent,/보호 1회/);$('backBtn').onclick();while(TG.story.state().node!=='rest')$('storyAction').onclick();assert.equal(TG.story.state().completed,true);assert.match($('storyPosition').textContent,/지휘 덱/);assert($('storyLog').children.length>10);$('storyAction').onclick();assert.equal(TG.ui.screen,'hub');assert.match($('hubStory').textContent,/후일담/);assert.equal(TG.store.data.stats.runs,0);assert.equal(TG.store.data.wallet,0);
@@ -366,7 +378,8 @@ test('R3 choice UI follows a recovered archive mission and shows persistent cons
  g.p.x=g.recordTarget.x;g.p.y=g.recordTarget.y;
  for(let k=0;k<32;k++)TG.engine.update(.04);
  assert.equal(g.recordTarget.recovered,true);
- g.time=g.duration-.01;TG.engine.update(.04);
+ g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
+ for(let k=0;k<21&&g.status==='playing';k++)TG.engine.update(.04);
  assert.equal(g.won,true);assert.equal(g.storySaved,true);
  $('backBtn').onclick();
  while(TG.story.state().node!=='decision')$('storyAction').onclick();
