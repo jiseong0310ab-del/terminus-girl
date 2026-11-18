@@ -16,7 +16,7 @@ test('one memory anchor appears after 45 seconds and stays at its world position
 });
 
 test('anchor charge requires staying inside its radius and decays outside',()=>{
- const b=setup(),{G}=b,g=G.g,anchor=appear(b);g.p.x=anchor.x+anchor.r;g.p.y=anchor.y;
+ const b=setup(),{G}=b,g=G.g,anchor=appear(b);g.p.x=anchor.x+anchor.r-.01;g.p.y=anchor.y;
  for(let i=0;i<10;i++)G.update(.04);close(anchor.charge,.4);
  g.p.x=anchor.x+anchor.r+.01;for(let i=0;i<5;i++)G.update(.04);close(anchor.charge,.3);
  for(let i=0;i<20;i++)G.update(.04);assert.equal(anchor.charge,0);assert(g.memoryAnchor);
