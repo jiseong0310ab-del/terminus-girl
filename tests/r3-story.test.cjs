@@ -46,7 +46,7 @@ test('archive objective requires in-world 1.25s retrieval and does not reward id
  retry.p.x=retry.recordTarget.x;retry.p.y=retry.recordTarget.y;
  for(let n=0;n<32;n++)b.G.update(.04);
  assert.equal(retry.recordTarget.recovered,true);
- assert.equal(b.G.objective().cleared,1);
+ assert.equal(b.G.objective().cleared,0);assert.match(b.G.objective().title,/열차 문/);
  retry.p.x=retry.storyGate.x;retry.p.y=retry.storyGate.y;
  for(let n=0;n<21;n++)b.G.update(.04);
  assert(retry.time<retry.duration);
