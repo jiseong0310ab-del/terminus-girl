@@ -26,7 +26,7 @@ function normalStory(raw){
  const bonds=Object.fromEntries(TG.PARTY.map(a=>[a.id,raw.version>=3?integer(raw.bonds?.[a.id],3):0]));
  const allowedSeen=order.filter(id=>TG.STORY?.nodes?.[id]?.kind==='dialogue'||TG.STORY?.nodes?.[id]?.kind==='choice');
  const recruited=raw.version===4&&index>=16?arr(raw.recruited,['aster','noa','vela'],3):[];
- const seen=raw.version>=3?arr(raw.seen,allowedSeen,28).filter(id=>(order.indexOf(id)<index||['recruitAster','recruitNoa','recruitVela'].includes(id)&&recruited.includes({recruitAster:'aster',recruitNoa:'noa',recruitVela:'vela'}[id]))&&(id!=='release'||choice==='rescue')&&(id!=='contain'||choice==='contain')):order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id));
+ const seen=raw.version>=3?arr(raw.seen,allowedSeen,28).filter(id=>(order.indexOf(id)<index||['recruitAster','recruitNoa','recruitVela'].includes(id)&&recruited.includes({recruitAster:'aster',recruitNoa:'noa',recruitVela:'vela'}[id])||['patientBrief','patientDebrief'].includes(id)&&raw.patientRescued===true)&&(id!=='release'||choice==='rescue')&&(id!=='contain'||choice==='contain')):order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id));
  const missionParty=raw.version>=3&&index>=7?arr(raw.missionParty,trial,3):[];
  const snowAllowed=['mare',...recruited];
  const fromPatient=['patientBrief','velaEscort','patientDebrief'].includes(raw.node);
@@ -40,7 +40,8 @@ function normalStory(raw){
  if(raw.version===4&&completedSnow&&!snowRecovered)throw Error('설원역 임무 완료 기록이 없습니다.');
  if(fromPatient&&(!patientReturn||!recruited.includes('vela')))throw Error('환자 구조 출발 기록이 올바르지 않습니다.');
  const patientRescued=raw.version===4&&raw.patientRescued===true;
- if(fromPatient&&patientRescued)throw Error('완료한 환자 구조 임무가 다시 진행 중입니다.');
+ if(fromPatient&&raw.node!=='patientDebrief'&&patientRescued)throw Error('완료한 환자 구조 임무가 다시 진행 중입니다.');
+ if(raw.node==='patientDebrief'&&!patientRescued)throw Error('환자 구조 성공 기록이 없습니다.');
  const patientCare={treatments:integer(raw.patientCare?.treatments,999),mareBlocks:integer(raw.patientCare?.mareBlocks,999),hp:integer(raw.patientCare?.hp,500)};
  const official=index>=16;
  const party=official?(saved.length?saved.filter(id=>snowAllowed.includes(id)):['mare']):companions;
