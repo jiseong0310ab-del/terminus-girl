@@ -353,3 +353,33 @@ test('party HUD portraits follow current active allies and preserve Mare support
  assert.match($('partyMiniList').children[1].className,/noa/);
  assert.match($('partyStatus').textContent,/지원 3\/3/);
 });
+
+test('R3 choice UI follows a recovered archive mission and shows persistent consequence',()=>{
+ const {TG,$}=bootUI();
+ $('menuStory').onclick();storyToBattle(TG,$);storyWin(TG);$('backBtn').onclick();
+ storyToBattle(TG,$);storyWin(TG);$('backBtn').onclick();
+ while(TG.story.state().node!=='rest')$('storyAction').onclick();
+ assert.equal($('storyNextMission').hidden,false);
+ $('storyNextMission').onclick();assert.equal(TG.story.state().node,'briefing');
+ const g=storyToBattle(TG,$);assert.equal(g.storyBattle,'archive');assert(g.recordTarget);
+ g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-100;g.nextWave=Infinity;
+ g.p.x=g.recordTarget.x;g.p.y=g.recordTarget.y;
+ for(let k=0;k<32;k++)TG.engine.update(.04);
+ assert.equal(g.recordTarget.recovered,true);
+ g.time=g.duration-.01;TG.engine.update(.04);
+ assert.equal(g.won,true);assert.equal(g.storySaved,true);
+ $('backBtn').onclick();
+ while(TG.story.state().node!=='decision')$('storyAction').onclick();
+ assert.equal($('storyChoicePanel').hidden,false);
+ assert.equal($('storyAction').hidden,true);
+ $('storyRescue').onclick();
+ assert.equal(TG.story.state().node,'release');
+ assert.equal(TG.story.state().erosion,18);
+ assert.equal($('storyConsequence').hidden,false);
+ assert.match($('storyErosion').textContent,/침식 18/);
+ assert.equal(TG.story.choose('contain'),false);
+ while(TG.story.state().node!=='rest2')$('storyAction').onclick();
+ assert.equal($('storyDeck').hidden,false);
+ assert.equal($('storyNextMission').hidden,true);
+ assert.match($('storyText').textContent,/기억/);
+});
