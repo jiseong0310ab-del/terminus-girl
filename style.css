@@ -156,3 +156,12 @@
 .commandCard:disabled{opacity:.65}.commandCard .cardtitle,.deckChoice .cardtitle{color:#fff0cb}.commandCard .carddesc,.deckChoice .carddesc{font-size:12px;line-height:1.55;overflow-wrap:anywhere}
 .commandCard .commandCost{border-radius:50%;background:#e0c78d;color:#1a2638}
 @media(max-width:430px){.partyRoster{gap:8px}.partyMember{padding:9px;gap:7px;min-height:105px}.partyAvatar{flex-basis:37px;height:46px}.partyMemberText strong{font-size:12px}.partyMemberText small{font-size:10px}.commandPanel #commandList{gap:8px}.commandCard .carddesc{font-size:11px}}
+
+/* v0.16.0-preview2: illustrated card watermarks and class-specific palette */
+.commandCard.rize::before{content:'';top:auto;bottom:0;right:0;width:76px;height:99px;background:url('assets/rize-sd-v03.webp') center bottom/contain no-repeat;opacity:.18}
+.commandCard.mare::before{content:'';top:auto;bottom:0;right:0;width:72px;height:88px;background:url('assets/mare-walk-v014.webp') left top/400% 300% no-repeat;opacity:.2}
+.commandCard.aster{border-color:#bdab7f}.commandCard.noa{border-color:#80afa5}.commandCard.vela{border-color:#bc93ae}
+.commandCard.iris{border-color:#9db7dd}.commandCard.crow{border-color:#b38c9e}
+.commandCard::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(#f3dc9f,#6f8595);opacity:.7}
+.deckChoice.selected{border-color:#e7c996;box-shadow:inset 0 0 0 1px #c9a66a99,0 7px 20px #040b1555}
+.commandCard:focus-visible,.deckChoice:focus-visible,.partyMember:focus-visible{outline:3px solid #f0d599;outline-offset:3px}
