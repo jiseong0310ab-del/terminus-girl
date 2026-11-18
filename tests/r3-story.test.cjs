@@ -89,3 +89,16 @@ test('chosen party earns relationship response and story snapshots migrate safel
  assert.deepEqual(plain(upgraded.bonds),{mare:0,aster:0,noa:0,vela:0,iris:0,crow:0});
  old.story.version=4;assert.throws(()=>b.S.normal(old),/이야기/);
 });
+
+test('R3 works for a three-person party without Mare and recovers health at train',()=>{
+ const b=firstRest(boot());
+ b.S.data.story.loadout.hp=12;assert(b.S.save());
+ assert(b.A.setParty(['aster','noa','vela']));
+ assert.equal(b.A.beginR3(),true);
+ assert.deepEqual(plain(b.A.state().missionParty),['aster','noa','vela']);
+ assert.equal(b.A.state().loadout.hp,75);
+ dialog(b.A);const state=b.A.state();assert.equal(state.node,'trace');
+ assert.equal(b.A.currentLine({...state,node:'trace',line:1}).speaker,'노아');
+ dialog(b.A);const spec=b.A.prepareBattle();
+ assert.deepEqual(plain(spec.companions),['aster','noa','vela']);assert.equal(spec.commandDeck.length,10);
+});
