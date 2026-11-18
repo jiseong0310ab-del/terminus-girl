@@ -59,11 +59,11 @@ test('normalization validates the story version and position, filters loadout an
  const b=boot();let data=b.S.fresh();data.story.node='departure';data.story.line=999;data.story.companions=['mare','foreign'];data.story.seen=['debrief'];data.story.completed=true;data.story.loadout={hp:999,level:999,xp:-2,kills:Infinity,totalTime:-20,levels:{blade:999,foreign:1},relics:['bell','bell','foreign']};
  let next=b.S.normal(data).story;assert.equal(next.line,3);assert.equal(next.loadout.hp,500);assert.equal(next.loadout.level,80);assert.equal(next.loadout.levels.blade,6);assert.equal(next.loadout.levels.foreign,undefined);assert.equal(next.loadout.xp,0);assert.equal(next.loadout.kills,0);assert.equal(next.loadout.totalTime,0);assert.deepEqual(plain(next.loadout.relics),['bell']);assert.deepEqual(plain(next.companions),[]);assert.deepEqual(plain(next.seen),[]);assert.equal(next.completed,false);
  data.story.node='escort';data.story.encounterId='story-normal';data.story.companions=[];next=b.S.normal(data).story;assert.deepEqual(plain(next.companions),['mare']);assert.equal(next.line,0);assert.equal(next.completed,false);
- for(const bad of [null,[],{version:3,node:'departure'},{version:1,node:'foreign'},{version:1,node:'approach',encounterId:'run-wrong'}]){data=b.S.fresh();data.story=bad;assert.throws(()=>b.S.normal(data),/이야기/);}
+ for(const bad of [null,[],{version:4,node:'departure'},{version:1,node:'foreign'},{version:1,node:'approach',encounterId:'run-wrong'}]){data=b.S.fresh();data.story=bad;assert.throws(()=>b.S.normal(data),/이야기/);}
 });
 
 test('a future story primary is preserved and blocked rather than silently reset',()=>{
- const b=boot(),data=b.S.fresh();data.story.version=3;const raw=b.S.encode(data),loaded=boot({[KEY]:raw});assert.equal(loaded.S.status,'corrupt');assert.equal(loaded.S.save(),false);assert.equal(loaded.values.get(KEY),raw);assert.equal(loaded.A.begin(),false);
+ const b=boot(),data=b.S.fresh();data.story.version=4;const raw=b.S.encode(data),loaded=boot({[KEY]:raw});assert.equal(loaded.S.status,'corrupt');assert.equal(loaded.S.save(),false);assert.equal(loaded.values.get(KEY),raw);assert.equal(loaded.A.begin(),false);
 });
 
 test('a stale tab cannot advance a scene over another tab or replace its legacy progress',()=>{

@@ -1,5 +1,5 @@
 'use strict';
-const CACHE='terminus-v0190-sdfix1';
+const CACHE='terminus-v0200-r3';
 const ROOT=new URL('./',self.location.href);
 const FILES=['index.html','style.css','manifest.webmanifest','js/data.js','js/commands.js','js/story.js','js/store.js','js/audio.js','js/game.js','js/render.js','js/input.js','js/ui.js','assets/rize-sd-v03.webp','assets/rize-walk-v09.webp','assets/mare-walk-v014.webp','assets/party-portraits-v017.webp','assets/companions-sd-v018.webp','assets/companions-sd-v019.avif','assets/enemies-v09.webp','assets/station-props-v010.webp','assets/memory-lantern-v013.webp','assets/platform-stone-v03.webp','assets/terminus-night-v03.webp','assets/icon-192.png','assets/icon-512.png','assets/icon-maskable-512.png'];
 self.addEventListener('install',event=>event.waitUntil((async()=>{

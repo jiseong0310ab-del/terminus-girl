@@ -24,26 +24,60 @@ function renderHub(){storyEntryLabels();text('walletLabel',`기억 조각 ${S.da
  e.className=done?'visited':current?'current':'';const name=document.createElement('strong'),state=document.createElement('small');name.textContent=`0${i+1} · ${s.name}`;state.textContent=cp?done?'이번 탐험 복원':current?cp.phase==='camp'?'다음 정차':'이어갈 역':'미도달':done?'복원했던 역':i===0?'출발':'앞으로 복원';e.append(name,state);route.appendChild(e)});
  text('mareText',S.data.memories.includes('ending')?'“기억이 아파도 괜찮아. 함께 타고 가면 되니까.” 랜턴 옆에 작은 불빛이 흔들린다.':S.data.memories.includes('bell')?'“네가 기억하는 한, 나는 여기 있어.” 안내 장치 너머로 익숙한 목소리가 흐른다.':S.data.memories.includes('mirror')?'“왕복표는 한 장 더 남겨 뒀어.” 지워진 이름이 마음속에서 천천히 선명해진다.':'“랜턴을 내려놓지 마.” 낡은 차내 방송에서 낯익은 목소리가 새어 나온다.');
  const list=clear('upgradeList');for(const u of TG.UPGRADES){const lv=S.data.upgrades[u.id],cost=u.base*(lv+1),row=document.createElement('div');row.className='upgradeBuy';const content=document.createElement('div'),title=document.createElement('b'),desc=document.createElement('small');title.textContent=`${u.name} · ${lv}/${u.cap}`;desc.textContent=u.desc;content.append(title,desc);const buy=button(lv>=u.cap?'정비 완료':`${cost}개 · 정비`,()=>{if(S.buy(u.id)){TG.audio.play('card');renderHub()}},'textbtn');buy.disabled=!!cp||lv>=u.cap||S.data.wallet<cost;row.append(content,buy);list.appendChild(row)}text('hubSaveStatus',status());const nextGoal=S.challengeProgress().find(goal=>!goal.complete);text('nextGoalText',nextGoal?'다음 도전 · '+nextGoal.name+' — '+nextGoal.desc+' ('+nextGoal.current+'/'+nextGoal.target+')':'여섯 개의 도전 기록을 모두 채웠습니다. 새로운 기억 조합으로 다음 여정을 시작해 보세요.');}
-function storyEntryLabels(){const state=TG.story.state(),label=state.completed?'이야기 시범 · 첫 동행 후일담':state.started?'이야기 이어가기 · '+TG.STORY.nodes[state.node].title:'이야기 시범 · 리제와 마레의 첫 동행';text('menuStory',label);text('hubStory',label);}
+function storyEntryLabels(){const state=TG.story.state(),label=state.node==='rest2'?'제1장 · 기록 회수 완료 · '+(state.decision==='rescue'?'구조 신호 개방':'봉인 유지'):state.node==='rest'?'첫 동행 후일담 · 다음 임무를 시작하세요':state.started?'이야기 이어가기 · '+TG.STORY.nodes[state.node].title:'이야기 · 리제와 마레의 첫 동행';text('menuStory',label);text('hubStory',label);}
 function openStory(){TG.audio.unlock();if(G.g&&G.g.status!=='ended')return;if(!TG.story.begin()){if(U.screen==='hub')renderHub();else renderMenu();notify(status()||'이야기를 저장하지 못했습니다.');return;}G.g=null;U.show('story');}
 function renderStory(){
- const state=TG.story.state(),node=TG.STORY.nodes[state.node],line=node.lines?.[state.line],battle=TG.STORY.battles[state.node];
- const boundary=['battle','rest'].includes(node.kind);$('storyDeck').hidden=!boundary;$('storyPartySelect').hidden=state.node!=='rest';$('storyTraining').hidden=!boundary||!state.companions.length;text('storyTraining',state.companions.length>=2?'출전 동료와 90초 전술 연습':'마레와 지휘 연습 · 90초');text('storyTitle',node.title);text('storySaveStatus',status());text('storySpeaker',line?.speaker||(battle?'현재 임무':'첫 동행'));
- text('storyText',line?.text||(battle?battle.detail:'거울역의 사건과 선택은 다음 여정으로 이어집니다.'));
- text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'전투 '+battle.duration+'초 · 공격 자동 · 이동과 대시':'첫 동행 완료 · 지휘 덱을 편성하고 연습할 수 있습니다');
- const portrait=line?.portrait||(state.companions.includes('mare')?'mare':'rize');$('storyPortrait').className='storyPortrait '+portrait;
- text('storyParty',state.companions.length?'출전 · 리제 + '+state.companions.map(id=>TG.PARTY.find(x=>x.id===id)?.name||id).join(' · '):state.node==='meeting'?'이 대화 후 마레 합류 · 체력 최대 40 회복':'일행 · 리제');
- text('storyBoundaryNote',node.kind==='battle'?'실패하거나 중단하면 이 전투 시작 상태에서 재도전합니다. 생존 탐험의 조각·기록은 바뀌지 않습니다.':'대사는 한 줄씩 저장됩니다. 다음에 돌아와 같은 곳에서 이어갈 수 있습니다.');
- text('storyAction',node.kind==='dialogue'?(state.line+1<node.lines.length?'다음':state.node==='meeting'?'마레와 함께 출발':'이어서'):node.kind==='battle'?'전투 시작 · '+battle.duration+'초':'열차로 돌아가기');
+ const state=TG.story.state(),node=TG.STORY.nodes[state.node],line=TG.story.currentLine(state),battle=TG.STORY.battles[state.node];
+ const boundary=['battle','rest'].includes(node.kind)||state.node==='rest2',atRest=['rest','rest2'].includes(state.node),choice=node.kind==='choice';
+ $('storyDeck').hidden=!boundary;
+ $('storyPartySelect').hidden=!atRest;
+ $('storyTraining').hidden=!boundary||!state.companions.length;
+ $('storyNextMission').hidden=state.node!=='rest';
+ $('storyChoicePanel').hidden=!choice;
+ $('storyAction').hidden=choice;
+ text('storyTraining',state.companions.length>=2?'출전 동료와 90초 전술 연습':'마레와 지휘 연습 · 90초');
+ text('storyTitle',node.title);text('storySaveStatus',status());
+ text('storySpeaker',line?.speaker||(battle?'현재 임무':'열차의 기록'));
+ text('storyText',line?.text||(battle?battle.detail:'열차의 창밖으로 다음 역의 불빛이 흔들린다.'));
+ text('storyPosition',node.kind==='dialogue'?(state.line+1)+' / '+node.lines.length:node.kind==='battle'?'기록 임무 · '+battle.duration+'초 · 이동과 대시':choice?'중요한 선택 · 기록에 영구 보존':state.node==='rest2'?'제1장 기록 확보 완료':'첫 동행 완료 · 지휘 덱 편성 및 다음 임무 출발 가능');
+ $('storyPortrait').className='storyPortrait '+(line?.portrait||(state.companions.includes('mare')?'mare':'rize'));
+ const names=state.companions.map(id=>TG.PARTY.find(x=>x.id===id)?.name||id);
+ text('storyParty',state.companions.length?'출전 · 리제 + '+names.join(' · '):state.node==='meeting'?'이 대화 후 마레 합류 · 체력 최대 40 회복':'일행 · 리제');
+ const hasOutcome=!!state.decision||state.erosion>0;
+ $('storyConsequence').hidden=!hasOutcome;
+ text('storyErosion',TG.story.summary(state));
+ const bonded=Object.entries(state.bonds||{}).filter(([,value])=>value>0).map(([id,value])=>(TG.PARTY.find(a=>a.id===id)?.name||id)+' 유대 +'+value);
+ text('storyBonds',bonded.length?bonded.join(' · '):'동료와의 유대는 이야기를 통해 쌓입니다.');
+ text('storyBoundaryNote',choice?'기록의 진실을 확인했습니다. 결정은 저장되며 다시 고를 수 없습니다.':node.kind==='battle'?'전투에 실패하면 이 전투 시작점에서 재도전합니다. 생존 탐험의 조각·기록은 변경되지 않습니다.':'읽은 대사와 선택은 자동 저장됩니다. 재접속해도 이어집니다.');
+ text('storyAction',node.kind==='dialogue'?(state.line+1<node.lines.length?'다음':state.node==='meeting'?'마레와 함께 출발':'이어서'):node.kind==='battle'?'임무 시작 · '+battle.duration+'초':'열차로 돌아가기');
  const expectedNode=state.node,expectedLine=state.line;
- $('storyAction').onclick=()=>{TG.audio.unlock();if(node.kind==='dialogue'){TG.story.advance(expectedNode,expectedLine);renderStory();}else if(node.kind==='battle'){if(G.g&&G.g.status!=='ended')return;G.g=null;if(!G.startStory())renderStory();}else{G.g=null;U.show('hub');}};
- const log=clear('storyLog');for(const id of state.seen){const scene=TG.STORY.nodes[id],title=document.createElement('h3');title.textContent=scene.title;log.appendChild(title);for(const l of scene.lines){const p=document.createElement('p');p.textContent=l.speaker+' · '+l.text;log.appendChild(p);}}if(!state.seen.length){const p=document.createElement('p');p.textContent='마친 대화는 여기에 남습니다.';log.appendChild(p);}
+ $('storyAction').onclick=()=>{
+  TG.audio.unlock();
+  if(node.kind==='dialogue'){TG.story.advance(expectedNode,expectedLine);renderStory();}
+  else if(node.kind==='battle'){if(G.g&&G.g.status!=='ended')return;G.g=null;if(!G.startStory())renderStory();}
+  else{G.g=null;U.show('hub');}
+ };
+ $('storyNextMission').onclick=()=>{TG.audio.unlock();if(TG.story.beginR3())renderStory();else{renderStory();notify(status()||'다음 임무를 시작할 수 없습니다.');}};
+ $('storyRescue').onclick=()=>{TG.audio.unlock();if(TG.story.choose('rescue',expectedNode))renderStory();else{renderStory();notify(status()||'이미 선택했거나 진행을 저장하지 못했습니다.');}};
+ $('storyContain').onclick=()=>{TG.audio.unlock();if(TG.story.choose('contain',expectedNode))renderStory();else{renderStory();notify(status()||'이미 선택했거나 진행을 저장하지 못했습니다.');}};
+ const log=clear('storyLog');
+ for(const id of state.seen){
+  const scene=TG.STORY.nodes[id];
+  if(!scene)continue;
+  const title=document.createElement('h3');title.textContent=scene.title;log.appendChild(title);
+  for(let n=0;n<(scene.lines||[]).length;n++){
+   const l=TG.story.currentLine({...state,node:id,line:n})||scene.lines[n],p=document.createElement('p');
+   p.textContent=l.speaker+' · '+l.text;log.appendChild(p);
+  }
+  if(id==='decision'){const p=document.createElement('p');p.textContent='선택 결과 · '+TG.story.summary(state);log.appendChild(p);}
+ }
+ if(!state.seen.length){const p=document.createElement('p');p.textContent='마친 대화는 여기에 남습니다.';log.appendChild(p);}
 }
 function renderStoryResult(g){
  if(g.storyTraining){renderTrainingResult(g);return;}
  const battle=TG.STORY.battles[g.storyBattle];text('resultSaveStatus',status());$('newGoalNote').hidden=true;text('newGoalNote','');$('resultJournal').hidden=true;$('retryBtn').hidden=g.won;
  text('backBtn',g.won&&!g.storySaved?'진행 저장 다시 시도':g.won?'이야기 계속':'이야기로 돌아가기');text('retryBtn','현재 전투 다시 도전');text('endOrnament',g.won?'✦':'◷');text('endOverline','이야기 시범 · 거울 유리역');
- text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
+ text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:g.storyBattle==='archive'&&g.reason==='record'?'시간이 끝날 때까지 기록장치를 회수하지 못했습니다. 임무 시작 지점에서 다시 도전하세요.':'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
  text('resultProgress',(g.mare?'일행 · 리제 + 마레 / 보호 '+g.mare.protected+'회':'일행 · 리제 / 안내 회선 복구')+' · 지휘 '+(g.commands?.casts||0)+'회');text('resultAdvice',g.won?(g.storySaved?'다음 대화에서 이번 만남을 이어가세요.':'설정에서 백업을 확인하거나 저장을 다시 시도하세요. 아직 다음 장면으로 진행하지 않았습니다.'):g.mare?'마레의 보호가 소모되면 12초의 준비 시간이 필요합니다. 공격 예고는 이동과 대시로 피하세요.':'공격은 자동입니다. 적이 남긴 경험치를 모으고 위험할 때 대시로 벗어나세요.');
  text('resultGrowth','이야기는 전투 시작과 완료 경계에서 저장합니다. 전투 중 얻은 기억 강화는 성공했을 때 다음 장면으로 이어집니다.');text('resultTime',fmt(g.totalTime));text('resultKills',g.kills);text('resultShards','0');text('resultNote','이야기 시범은 생존 조각·도전·첫 장 완주 기록을 정산하지 않습니다. 기존 생존 진행은 그대로 보관됩니다.');
 }
