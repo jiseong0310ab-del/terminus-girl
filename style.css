@@ -277,3 +277,20 @@
 #partyStatus{font-size:10px;line-height:1.35;color:#bbd7e5;overflow-wrap:anywhere}
 @media(max-width:375px){.partyMiniIcon{flex-basis:30px;width:30px;height:33px}.partyHudCopy strong{font-size:9px}#partyStatus{font-size:9px}}
 @media(max-height:620px){#partyHud{top:calc(env(safe-area-inset-top,0px) + 158px)}}
+
+/* R3 — story choices and irreversible consequence, mobile first */
+.storyChoices{display:grid;gap:11px;margin:14px 0 16px;text-align:left}
+.storyChoice{display:grid;gap:7px;width:100%;padding:16px 17px;background:linear-gradient(140deg,#26394b,#141f31);color:#f6ead1;border:1px solid #c8af7b9c;border-radius:14px;text-align:left;box-shadow:0 5px 20px #0006}
+.storyChoice strong{font-size:15px;line-height:1.5}
+.storyChoice span{font-size:12px;line-height:1.7;color:#c9d4dd}
+.storyChoice:active{transform:scale(.992);border-color:#e9c78d}
+.storyChoice:focus-visible{outline:3px solid #edd399;outline-offset:2px}
+.storyChoiceWarning{font-size:11px;text-align:center;color:#cbbba0;line-height:1.6;margin:0}
+.storyConsequence{display:grid;gap:6px;border:1px solid #b4a0787e;background:#1c2b3bd9;border-radius:12px;padding:11px 14px;margin:8px 0 13px;text-align:left}
+.storyConsequence strong{color:#e4c792;font-size:14px}
+.storyConsequence span{color:#b5d1d8;font-size:11px;line-height:1.7}
+.storyNextMission{border-color:#dcbf88;background:linear-gradient(110deg,#5a4a36,#28384b);margin-top:10px;line-height:1.6}
+.storyPortrait.aster,.storyPortrait.noa,.storyPortrait.vela{background-image:url('assets/party-portraits-v017.webp');background-size:300% 200%}
+.storyPortrait.aster{background-position:50% 0%}.storyPortrait.noa{background-position:100% 0%}.storyPortrait.vela{background-position:0% 100%}
+#storyChoicePanel[hidden],#storyConsequence[hidden],#storyNextMission[hidden]{display:none!important}
+@media(max-width:390px){.storyChoice{padding:13px 14px}.storyChoice strong{font-size:14px}.storyChoice span{font-size:11px}}
