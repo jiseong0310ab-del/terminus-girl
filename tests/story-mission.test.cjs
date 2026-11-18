@@ -14,7 +14,7 @@ function fakeBattle(A){const spec=A.prepareBattle();assert(spec);return{id:spec.
 function approach(b){assert(b.A.begin());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'approach');return b.G.startStory();}
 function escort(b){approach(b);const g=b.G.g;quiet(g);for(const id of [...g.storyGate.guardIds])b.G.hitEnemy(g.enemies.find(e=>e.id===id),10000);g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;for(let n=0;n<35&&g.status==='playing';n++)b.G.update(.04);assert.equal(g.won,true);
  advance(b.A);assert.equal(b.A.state().node,'escort');b.G.g=null;return b.G.startStory();}
-function archive(b){approach(b);assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);assert.equal(b.A.state().node,'escort');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);
+function archive(b){assert(b.A.begin());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'approach');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);assert.equal(b.A.state().node,'escort');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);
  assert.equal(b.A.state().node,'rest');assert(b.A.beginR3());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'archive');return b.G.startStory();}
 function forSnow(b,route){
  const s=b.S.data.story;Object.assign(s,{started:true,node:'snowMission',line:0,encounterId:'story-snow-mission-test',decision:route,recordRecovered:true,
