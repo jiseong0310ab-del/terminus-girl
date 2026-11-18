@@ -10,7 +10,16 @@ function boot(seed={},shared){
 const plain=value=>JSON.parse(JSON.stringify(value));
 function advanceToBattle(b){assert(b.A.begin());let guard=0;while(b.TG.STORY.nodes[b.A.state().node].kind==='dialogue'){const state=b.A.state();assert(b.A.advance(state.node,state.line));assert(++guard<30);}return b.A.state().node;}
 function quiet(g){g.spawn=-1e6;g.nextWave=Infinity;g.eliteCount=2;g.hazardClock=-1e6;g.enemies=[];g.hostile=[];}
-function finishBattle(b){quiet(b.G.g);let guard=0;while(b.G.g.status==='playing'){b.G.update(.04);assert(++guard<3000);}assert.equal(b.G.g.status,'ended');assert.equal(b.G.g.won,true);return b.G.g;}
+function finishBattle(b){
+ const g=b.G.g;quiet(g);
+ if(g.storyGate){
+  g.storyGate.defeated=[...g.storyGate.guardIds];
+  if(g.recordTarget)g.recordTarget.recovered=true;
+  g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
+ }
+ let guard=0;while(g.status==='playing'){b.G.update(.04);assert(++guard<3000);}
+ assert.equal(g.status,'ended');assert.equal(g.won,true);return g;
+}
 function atBattle(which='approach',b=boot()){
  assert.equal(advanceToBattle(b),'approach');assert(b.G.startStory());
  if(which==='escort'){finishBattle(b);assert.equal(advanceToBattle(b),'escort');b.G.g=null;assert(b.G.startStory());}
@@ -24,12 +33,12 @@ test('story entry uses the stored battle contract and refuses bypass or replacin
  for(const status of ['playing','paused','cards','camp']){g.status=status;assert.equal(G.startStory(),false);assert.equal(G.g,g);}
 });
 
-test('the first and companion encounters survive their real duration without manager spawn or legacy clear',()=>{
+test('the first and companion encounters finish upon reaching their objectives, with no manager spawn or legacy clear',()=>{
  const b=atBattle(),{G,S}=b;let g=G.g;const before=legacy(S);
  G.stageClear();assert.equal(g.status,'playing');assert.equal(g.clearedStages,0);
- let goal=G.objective();assert.equal(goal.kind,'survive');assert.match(goal.title,/안내 회선/);assert.doesNotMatch(goal.title,/관리자/);assert.equal(goal.remaining,45);assert.equal(goal.bossIn,0);assert.equal(goal.target,0);
- finishBattle(b);assert(g.time>=45&&g.time<45.05);assert.equal(g.bossSpawned,false);assert(!g.enemies.some(e=>e.type==='boss'));assert.equal(g.storySaved,true);assert.equal(g.reason,'story');assert.equal(g.practice,false);assert.equal(g.reward,0);assert.equal(G.objective().kind,'ended');assert.equal(legacy(S),before);assert.equal(b.A.state().node,'meeting');
- assert.equal(advanceToBattle(b),'escort');G.g=null;g=G.startStory();quiet(g);assert(g.mare);assert.equal(g.duration,75);goal=G.objective();assert.match(goal.title,/마레와 생존/);finishBattle(b);assert(g.time>=75&&g.time<75.05);assert.equal(g.bossSpawned,false);assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'debrief');assert.equal(legacy(S),before);
+ let goal=G.objective();assert.equal(goal.kind,'mission');assert.match(goal.title,/안내 회선/);assert.doesNotMatch(goal.title,/관리자/);assert.equal(goal.remaining,45);assert.equal(goal.bossIn,0);assert.equal(goal.target,1);
+ finishBattle(b);assert(g.time<45);assert.equal(g.bossSpawned,false);assert(!g.enemies.some(e=>e.type==='boss'));assert.equal(g.storySaved,true);assert.equal(g.reason,'objective');assert.equal(g.practice,false);assert.equal(g.reward,0);assert.equal(G.objective().kind,'ended');assert.equal(legacy(S),before);assert.equal(b.A.state().node,'meeting');
+ assert.equal(advanceToBattle(b),'escort');G.g=null;g=G.startStory();quiet(g);assert(g.mare);assert.equal(g.duration,75);goal=G.objective();assert.match(goal.title,/마레와 귀환/);finishBattle(b);assert(g.time<75);assert.equal(g.bossSpawned,false);assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'debrief');assert.equal(legacy(S),before);
 });
 
 test('Mare absorbs exactly one eligible hit, keeps existing shields and does not heal or hurt enemies',()=>{
@@ -74,7 +83,7 @@ test('death on the completion frame wins over survival and preserves the retry b
 });
 
 test('a failed success save stays on its boundary and can be saved once storage recovers',()=>{
- const b=atBattle(),{G,S,A,storage}=b,g=G.g,before=JSON.stringify(A.state()),old=legacy(S);storage.fail=true;g.time=g.duration-.01;G.update(.04);
+ const b=atBattle(),{G,S,A,storage}=b,g=G.g,before=JSON.stringify(A.state()),old=legacy(S);storage.fail=true;g.storyGate.defeated=[...g.storyGate.guardIds];g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;for(let n=0;n<32;n++)G.update(.04);
  assert.equal(g.status,'ended');assert.equal(g.won,true);assert.equal(g.storySaved,false);assert.equal(S.status,'memory');assert.equal(JSON.stringify(A.state()),before);assert.equal(legacy(S),old);assert.equal(G.saveStoryResult(),false);storage.fail=false;
  assert(G.saveStoryResult());assert.equal(g.storySaved,true);assert.equal(A.state().node,'meeting');const after=S.export();assert(G.saveStoryResult());assert.equal(S.export(),after);assert.equal(G.finish(true,'again'),false);assert.equal(S.export(),after);
 });
