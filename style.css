@@ -294,3 +294,22 @@
 .storyPortrait.aster{background-position:50% 0%}.storyPortrait.noa{background-position:100% 0%}.storyPortrait.vela{background-position:0% 100%}
 #storyChoicePanel[hidden],#storyConsequence[hidden],#storyNextMission[hidden]{display:none!important}
 @media(max-width:390px){.storyChoice{padding:13px 14px}.storyChoice strong{font-size:14px}.storyChoice span{font-size:11px}}
+
+/* R4 — recruitment stories with compact mobile cards */
+.storyRecruitPanel{margin:12px 0 18px;padding:13px;border-radius:15px;border:1px solid #7a99a279;background:linear-gradient(145deg,#1b2b3b,#111c2a)}
+.storyRecruitHeader{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:2px 0 11px;text-align:left}
+.storyRecruitHeader strong{font-size:13px;color:#f4deae}.storyRecruitHeader span{font-size:11px;color:#abc6cc}
+.storyRecruitList{display:grid;gap:8px}
+.storyRecruit{display:flex;align-items:center;gap:12px;width:100%;padding:7px 11px 7px 7px;border:1px solid #90a2a875;border-radius:12px;background:linear-gradient(105deg,#29394b,#152334);text-align:left;color:#f3ebe3;min-height:83px}
+.storyRecruit:active:not(:disabled){border-color:#eed59e;transform:scale(.995)}
+.storyRecruit:focus-visible{outline:3px solid #ead09a;outline-offset:2px}
+.storyRecruit.done{border-color:#d9c089a8;background:linear-gradient(100deg,#343e4b,#222f35);opacity:.75}
+.storyRecruitArt{display:block;flex:0 0 66px;width:66px;height:67px;border-radius:9px;background-image:url('assets/party-portraits-v017.webp');background-repeat:no-repeat;background-size:300% 200%;border:1px solid #bba77a55}
+.storyRecruitArt.aster{background-position:50% 0%}.storyRecruitArt.noa{background-position:100% 0%}.storyRecruitArt.vela{background-position:0% 100%}
+.storyRecruit>span:last-child{display:grid;gap:5px;min-width:0}
+.storyRecruit strong{font-size:14px;color:#f7ebd4;line-height:1.5}
+.storyRecruit small{font-size:11px;color:#b7ccd6;line-height:1.5}
+.storyRecruitNote{font-size:11px;color:#a9bac3;line-height:1.65;margin:11px 0 0;text-align:left}
+#storySnowLaunch{margin:12px 0 3px;border-color:#ecd195;background:linear-gradient(105deg,#635638,#253e4a)}
+#storyRecruitPanel[hidden],#storySnowLaunch[hidden]{display:none!important}
+@media(max-width:375px){.storyRecruit{gap:9px;min-height:74px}.storyRecruitArt{flex-basis:56px;width:56px;height:57px}.storyRecruit strong{font-size:13px}}
