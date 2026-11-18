@@ -36,7 +36,7 @@ test('story entry uses the stored battle contract and refuses bypass or replacin
 test('the first and companion encounters finish upon reaching their objectives, with no manager spawn or legacy clear',()=>{
  const b=atBattle(),{G,S}=b;let g=G.g;const before=legacy(S);
  G.stageClear();assert.equal(g.status,'playing');assert.equal(g.clearedStages,0);
- let goal=G.objective();assert.equal(goal.kind,'mission');assert.match(goal.title,/안내 회선/);assert.doesNotMatch(goal.title,/관리자/);assert.equal(goal.remaining,45);assert.equal(goal.bossIn,0);assert.equal(goal.target,1);
+ let goal=G.objective();assert.equal(goal.kind,'mission');assert.match(goal.title,/전원 복구/);assert.doesNotMatch(goal.title,/관리자/);assert.equal(goal.remaining,45);assert.equal(goal.bossIn,0);assert.equal(goal.target,1);
  finishBattle(b);assert(g.time<45);assert.equal(g.bossSpawned,false);assert(!g.enemies.some(e=>e.type==='boss'));assert.equal(g.storySaved,true);assert.equal(g.reason,'objective');assert.equal(g.practice,false);assert.equal(g.reward,0);assert.equal(G.objective().kind,'ended');assert.equal(legacy(S),before);assert.equal(b.A.state().node,'meeting');
  assert.equal(advanceToBattle(b),'escort');G.g=null;g=G.startStory();quiet(g);assert(g.mare);assert.equal(g.duration,75);goal=G.objective();assert.match(goal.title,/마레와 귀환/);finishBattle(b);assert(g.time<75);assert.equal(g.bossSpawned,false);assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'debrief');assert.equal(legacy(S),before);
 });
