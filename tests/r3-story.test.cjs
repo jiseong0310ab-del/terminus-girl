@@ -85,9 +85,9 @@ test('chosen party earns relationship response and story snapshots migrate safel
  assert.deepEqual(plain(loaded.A.state().missionParty),['mare','aster','vela']);
  assert.equal(loaded.A.state().bonds.vela,1);
  const old=b.S.fresh();old.story.version=2;old.story.node='rest';old.story.started=true;old.story.completed=true;old.story.companions=['mare'];
- const upgraded=b.S.normal(old).story;assert.equal(upgraded.version,3);assert.equal(upgraded.node,'rest');assert.equal(upgraded.erosion,0);
+ const upgraded=b.S.normal(old).story;assert.equal(upgraded.version,4);assert.equal(upgraded.node,'rest');assert.equal(upgraded.erosion,0);
  assert.deepEqual(plain(upgraded.bonds),{mare:0,aster:0,noa:0,vela:0,iris:0,crow:0});
- old.story.version=4;assert.throws(()=>b.S.normal(old),/이야기/);
+ old.story.version=5;assert.throws(()=>b.S.normal(old),/이야기/);
 });
 
 test('R3 works for a three-person party without Mare and recovers health at train',()=>{
