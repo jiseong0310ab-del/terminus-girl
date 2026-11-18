@@ -38,7 +38,7 @@ test('archive objective requires in-world 1.25s retrieval and does not reward id
  const checkpoint=plain(g.recordTarget);
  g.spawn=-1000;g.nextWave=Infinity;g.hazardClock=-1000;g.lastFire=-1000;
  g.time=g.duration-.01;b.G.update(.04);
- assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'record');
+ assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'timeout');
  assert.equal(b.A.state().node,'archive');assert.equal(b.A.state().recordRecovered,false);assert.equal(b.S.export(),initial);
  b.G.g=null;const retry=b.G.startStory();
  assert.equal(retry.id,spec.id);assert.deepEqual(plain(retry.recordTarget),checkpoint);
