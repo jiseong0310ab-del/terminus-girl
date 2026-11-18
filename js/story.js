@@ -147,7 +147,24 @@ A.currentLine=function(state=A.state()){
  if(state.node==='release'&&state.line===1&&!state.missionParty.includes('mare')){
   return state.missionParty.includes('vela')?{speaker:'벨라',portrait:'vela',text:'구조 통로를 열어요. 리제, 잃어버리는 기억을 제가 기록할게요.'}:{speaker:'노아',portrait:'noa',text:'신호를 붙잡을게요. 리제는 제 목소리를 따라와요.'};
  }
-  if(state.node==='rest2')return state.decision==='rescue'?
+  if(state.node==='snowArrival'&&state.line===0)return state.decision==='rescue'?
+ {speaker:'리제',portrait:'rize',text:'거울역에서 구조 신호를 열자 설원역의 종도 울리기 시작했어. 도움을 청하는 목소리와 위험 경보가 동시에 들려.'}:
+ {speaker:'리제',portrait:'rize',text:'거울역의 봉인은 유지했지만 확보한 기록에 설원역의 비밀 명부가 적혀 있어. 누가 지웠는지 찾아야 해.'};
+ if(state.node==='snowDeparture'&&state.line===1)return state.decision==='rescue'?
+ {speaker:'차내 기록',portrait:null,text:'구조 신호가 설원역에 번지고 있습니다. 서로 다른 두 중계기를 직접 안정화해 확산을 막으세요.'}:
+ {speaker:'차내 기록',portrait:null,text:'봉인된 원본 명부가 기록실에 있습니다. 중앙 보존 장치 하나를 충분히 안정화해 증거를 회수하세요.'};
+ if(state.node==='snowDeparture'&&state.line===2){
+   const id=['noa','aster','vela','mare'].find(x=>state.companions.includes(x))||'mare';
+   const lines={noa:{speaker:'노아',portrait:'noa',text:'제가 신호를 붙잡아 둘게요. 수신이 안정되면 적의 움직임도 덜 위험할 거예요.'},aster:{speaker:'아스터',portrait:'aster',text:'기록의 위치를 찾았어요. 제가 읽어 드릴 테니 회수 장치 가까이에 잠시 머물러 주세요.'},vela:{speaker:'벨라',portrait:'vela',text:'의료 물자를 실어 두었어요. 부상을 입기 전에 언제든 제 쪽으로 돌아와요.'},mare:{speaker:'마레',portrait:'mare',text:'내가 뒤를 지킬게. 누군가 놓치지 않도록 우리 함께 움직이자.'}};
+   return lines[id];
+ }
+ if(state.node==='snowDebrief'&&state.line===2)return state.decision==='rescue'?
+ {speaker:'동료 기록',portrait:null,text:'두 구조 중계기를 안정화했습니다. 더는 신호가 아무 곳으로나 번지지 않고, 돌아올 통로는 남았습니다.'}:
+ {speaker:'동료 기록',portrait:null,text:'격리 명부의 원본을 열차에 실었습니다. 누가 이름을 지웠는지 알려 줄 운행 명령서도 발견했습니다.'};
+ if(state.node==='rest3')return state.decision==='rescue'?
+ {speaker:'리제',portrait:'rize',text:'신호는 살아 있고 설원역의 사람들이 돌아올 통로도 생겼어. 침식은 남았지만 포기하지 않았어.'}:
+ {speaker:'리제',portrait:'rize',text:'설원역의 명부를 실었어. 서둘러 봉인을 열지 않았기에 지켜낸 것도 있어. 다음 역에서 이 진실을 밝혀야 해.'};
+ if(state.node==='rest2')return state.decision==='rescue'?
   {speaker:'마레',portrait:'mare',text:'신호는 열렸어. 하지만 리제의 기억도 흐려졌지. 다음 역에서는 더 안전한 방법을 찾자.'}:
   {speaker:'마레',portrait:'mare',text:'오늘은 봉인을 지켰어. 구조 기록은 남았으니 다음 역에서 되돌아올 방법을 찾자.'};
  return line;
@@ -171,10 +188,17 @@ A.advance=function(expectedNode,expectedLine){
   if(state.line+1<node.lines.length){state.line++;return;}
   if(!state.seen.includes(state.node))state.seen.push(state.node);
   if(state.node==='meeting'){state.companions=['mare'];state.loadout.hp=Math.min(500,state.loadout.hp+40);state.commandDeck=TG.commandDeck.preset('protect',state.companions);}
+  if(['recruitAster','recruitNoa','recruitVela'].includes(state.node)){
+   const id={recruitAster:'aster',recruitNoa:'noa',recruitVela:'vela'}[state.node];
+   if(state.recruited.includes(id))return false;
+   state.recruited.push(id);state.bonds[id]=Math.min(3,(state.bonds[id]||0)+1);
+   state.companions=['mare',...state.recruited.slice(0,2)];
+   state.commandDeck=TG.commandDeck.preset('protect',state.companions);
+  }
   state.node=node.next;state.line=0;
   state.encounterId=isBattle(state.node)?newEncounter():null;
   if(state.encounterId)state.commandSeed=TG.commandDeck.seedFor(state.encounterId);
-  state.completed=state.node==='rest'||state.node==='rest2';
+  state.completed=['rest','rest2','rest3'].includes(state.node);
  });
 };
 A.beginR3=function(){
@@ -195,10 +219,35 @@ A.choose=function(id,expectedNode='decision'){
   state.node=id==='rescue'?'release':'contain';state.line=0;state.completed=false;
  });
 };
+A.beginR4=function(){
+ if(activeRun())return false;
+ return transact(state=>{
+  if(state.node!=='rest2'||!state.completed||!state.decision||!state.recordRecovered)return false;
+  state.node='snowArrival';state.line=0;state.completed=false;state.recruited=[];state.snowParty=[];
+  state.companions=['mare'];state.commandDeck=TG.commandDeck.preset('protect',['mare']);
+  state.loadout.hp=Math.max(80,state.loadout.hp);
+ });
+};
+A.openRecruit=function(id){
+ if(activeRun()||!['aster','noa','vela'].includes(id))return false;
+ return transact(state=>{
+  if(state.node!=='recruitHub'||state.recruited.includes(id))return false;
+  state.node={aster:'recruitAster',noa:'recruitNoa',vela:'recruitVela'}[id];state.line=0;
+ });
+};
+A.departSnow=function(){
+ if(activeRun())return false;
+ return transact(state=>{
+  if(state.node!=='recruitHub'||state.recruited.length<2||state.companions.length!==3||state.companions.some(id=>id!=='mare'&&!state.recruited.includes(id)))return false;
+  state.snowParty=[...state.companions];state.node='snowDeparture';state.line=0;
+  state.loadout.hp=Math.max(80,state.loadout.hp);
+ });
+};
 A.setParty=function(ids){
  if(activeRun()||!Array.isArray(ids)||ids.length!==3||new Set(ids).size!==3||ids.some(id=>!TG.PARTY.some(x=>x.id===id&&x.trial)))return false;
  return transact(state=>{
-  if(!['rest','rest2'].includes(state.node))return false;
+  if(!['rest','rest2','recruitHub','rest3'].includes(state.node))return false;
+  if(['recruitHub','rest3'].includes(state.node)&&ids.some(id=>id!=='mare'&&!state.recruited.includes(id)))return false;
   state.companions=[...ids];
   state.commandDeck=TG.commandDeck.preset('protect',ids);
  });
@@ -206,27 +255,28 @@ A.setParty=function(ids){
 A.prepareBattle=function(){
  const S=TG.store,state=A.state();
  if(!state.started||!isBattle(state.node)||!S.canWrite()||!/^story-[\w-]{1,80}$/.test(state.encounterId||''))return null;
- return {id:state.encounterId,battleId:state.node,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed};
+ return {id:state.encounterId,battleId:state.node,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed,route:state.decision,snowParty:[...state.snowParty]};
 };
 A.setCommandDeck=function(ids){
  if(activeRun())return false;
  return transact(state=>{
-  if(!['battle','rest'].includes(TG.STORY.nodes[state.node]?.kind)||!TG.commandDeck.validate(ids,state.companions))return false;
+  if(!['battle','rest','recruit'].includes(TG.STORY.nodes[state.node]?.kind)||!TG.commandDeck.validate(ids,state.companions))return false;
   state.commandDeck=[...ids];
  });
 };
 A.prepareTraining=function(){
  const S=TG.store,state=A.state();
- if(!state.companions.length||activeRun()||!S.canWrite()||!['rest','rest2','approach','escort','archive'].includes(state.node))return null;
+ if(!state.companions.length||activeRun()||!S.canWrite()||!['rest','rest2','rest3','recruitHub','approach','escort','archive','snowMission'].includes(state.node))return null;
  return {id:'training-'+state.node+'-'+state.commandSeed.toString(36),battleId:'escort',duration:90,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed};
 };
 A.completeBattle=function(run){
  if(!run||run.mode!=='story'||run.storyTraining===true||run.won!==true||!Number.isFinite(run.p?.hp)||run.p.hp<=0)return false;
  return transact(state=>{
   const battle=TG.STORY.battles[state.node];
-  if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id||state.node==='archive'&&run.recordTarget?.recovered!==true)return false;
+  if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id||state.node==='archive'&&run.recordTarget?.recovered!==true||state.node==='snowMission'&&(!Array.isArray(run.signalTargets)||run.signalTargets.length!==(state.decision==='rescue'?2:1)||run.signalTargets.some(t=>t.recovered!==true)))return false;
   state.loadout=clone({hp:run.p.hp,levels:run.levels||{},level:run.level,xp:run.xp,kills:run.kills,totalTime:run.totalTime,relics:run.relics||[]});
   if(state.node==='archive')state.recordRecovered=true;
+  if(state.node==='snowMission')state.snowRecovered=true;
   state.node=battle.next;state.line=0;state.encounterId=null;
  });
 };
