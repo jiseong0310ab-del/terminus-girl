@@ -261,3 +261,19 @@
   .partyArt{inset:0 0 34px}
 }
 @media(prefers-reduced-motion:reduce){#partyScreen .partyMember{transition:none}}
+
+/* v0.18: compact squad support HUD */
+#partyHud{max-width:min(286px,calc(100vw - 30px));gap:8px;padding:5px 10px 5px 5px;min-height:49px;box-shadow:0 5px 18px #0008}
+.partyMiniList{display:flex;align-items:center;min-width:40px;padding-left:1px}
+.partyMiniIcon{display:block;flex:0 0 37px;width:37px;height:38px;margin-left:-6px;border:1px solid #c9b586;border-radius:8px;background-image:url('assets/party-portraits-v017.webp');background-size:300% 200%;background-repeat:no-repeat;box-shadow:0 2px 8px #000b}
+.partyMiniIcon:first-child{margin-left:0}
+.partyMiniIcon.char-mare{background-position:0% 0%}
+.partyMiniIcon.char-aster{background-position:50% 0%}
+.partyMiniIcon.char-noa{background-position:100% 0%}
+.partyMiniIcon.char-vela{background-position:0% 100%}
+.partyMiniIcon.char-iris{background-position:50% 100%}
+.partyMiniIcon.char-crow{background-position:100% 100%}
+.partyHudCopy{min-width:0}.partyHudCopy strong{font-size:10px;white-space:nowrap;color:#f8e9c9}
+#partyStatus{font-size:10px;line-height:1.35;color:#bbd7e5;overflow-wrap:anywhere}
+@media(max-width:375px){.partyMiniIcon{flex-basis:30px;width:30px;height:33px}.partyHudCopy strong{font-size:9px}#partyStatus{font-size:9px}}
+@media(max-height:620px){#partyHud{top:calc(env(safe-area-inset-top,0px) + 158px)}}
