@@ -47,7 +47,10 @@ test('archive objective requires in-world 1.25s retrieval and does not reward id
  for(let n=0;n<32;n++)b.G.update(.04);
  assert.equal(retry.recordTarget.recovered,true);
  assert.equal(b.G.objective().cleared,1);
- retry.time=retry.duration-.01;b.G.update(.04);
+ retry.p.x=retry.storyGate.x;retry.p.y=retry.storyGate.y;
+ for(let n=0;n<21;n++)b.G.update(.04);
+ assert(retry.time<retry.duration);
+ assert.equal(retry.storyGate.done,true);
  assert.equal(retry.status,'ended');assert.equal(retry.won,true);assert.equal(retry.storySaved,true);
  assert.equal(b.A.state().node,'evidence');assert.equal(b.A.state().recordRecovered,true);
  assert.equal(b.S.data.stats.runs,0);assert.equal(b.S.data.wallet,0);
