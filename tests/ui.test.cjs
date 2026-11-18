@@ -334,3 +334,22 @@ test('portrait-led party screen keeps selection logic and renders art for six co
  assert.equal(TG.commandDeck.size(TG.story.state().companions),10);
  assert.match($('deckList').children[0].children[0].className,/deckPortrait/);
 });
+
+test('party HUD portraits follow current active allies and preserve Mare support text',()=>{
+ const {TG,$}=bootUI(),g=TG.engine.start('quick');
+ g.mode='story';g.storyBattle='escort';g.party=['mare','aster','vela'];
+ g.mare={x:g.p.x,y:g.p.y,cooldown:0,pulse:0};
+ g.allies=[{id:'aster',cooldown:0,pulse:0},{id:'vela',cooldown:6,pulse:0}];
+ TG.ui.show('playing');
+ assert.equal($('partyHud').hidden,false);
+ assert.equal($('partyMiniList').children.length,3);
+ assert.match($('partyMiniList').children[1].className,/aster/);
+ assert.match($('partyStatus').textContent,/마레 보호 준비/);
+ assert.match($('partyStatus').textContent,/지원 1\/2/);
+ g.party=['aster','noa','vela'];
+ g.mare=null;g.allies=[{id:'aster',cooldown:0,pulse:0},{id:'noa',cooldown:0,pulse:0},{id:'vela',cooldown:0,pulse:0}];
+ TG.ui.refreshHud();
+ assert.equal($('partyMiniList').children.length,3);
+ assert.match($('partyMiniList').children[1].className,/noa/);
+ assert.match($('partyStatus').textContent,/지원 3\/3/);
+});
