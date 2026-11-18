@@ -118,7 +118,7 @@ g.recordTarget=!training&&spec.battleId==='archive'?{x:g.p.x+125,y:g.p.y-75,r:55
    const guards=mission==='approach'?[['ghost',142,-31]]:[['ghost',-148,72],['wolf',-185,132]];
    for(const [type,dx,dy] of guards){
     const enemy=G.enemy(type,g.p.x+dx,g.p.y+dy);
-    enemy.hp=Math.max(enemy.hp,mission==='approach'?68:76);enemy.maxHp=enemy.hp;
+    enemy.hp=Math.max(enemy.hp,mission==='approach'?105:120);enemy.maxHp=enemy.hp;
     g.storyGate.guardIds.push(enemy.id);
    }
   }
@@ -377,9 +377,9 @@ function snowTargetTick(dt){
   r.charge=clamp(r.charge+(near?dt:-dt*.55),0,r.needed);
   if(r.charge>=r.needed){
    r.recovered=true;ring(r.x,r.y,72,'#a1edf3');G.notify(r.name+' 회수 완료');G.onSound('card');
-    if(g.signalTargets.every(a=>a.recovered)){G.notify('설원역 목표 완료');G.finish(true,'objective');return;}
   }
  }
+ if(g.signalTargets.length&&g.signalTargets.every(a=>a.recovered)){G.notify('설원역 목표 완료');G.finish(true,'objective');}
 }
 function patientTick(dt){
  const g=G.g,pt=g.patient;
