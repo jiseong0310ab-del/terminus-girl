@@ -94,15 +94,24 @@ function startStoryBattle(spec,training=false){
  const g=initialize('story',battle.stage,{...spec.loadout,id:spec.id},false,true);
  if(training){g.p.hp=g.p.maxHp;g.kills=0;g.totalTime=0;g.shards=0;g.nextWave=12;}
  g.storyBattle=spec.battleId;g.duration=training?90:spec.battleId==='snowMission'&&spec.route==='contain'?95:battle.duration;g.storyTraining=training;g.storySaved=false;g.practice=false;g.reward=0;g.newGoals=[];
- g.commands=TG.commandDeck.create(TG.commandDeck.normalize(spec.commandDeck,spec.companions),spec.commandSeed??TG.commandDeck.seedFor(spec.id));
-  if(!training&&spec.battleId==='velaEscort'){
-   let slot=0;
-   for(const id of ['vela_heal','mare_guard']){
-    if(g.commands.hand.includes(id))continue;
-    const i=g.commands.draw.indexOf(id);
-    if(i>=0){const previous=g.commands.hand[slot];g.commands.hand[slot]=id;g.commands.draw[i]=previous;slot++;}
-   }
+ const missionDeck=TG.commandDeck.normalize(spec.commandDeck,spec.companions);
+ if(!training&&spec.battleId==='velaEscort'){
+  // Use role-compatible cards only in this mission's transient deck, not the saved deck.
+  for(const id of ['vela_heal','mare_guard']){
+   if(missionDeck.includes(id))continue;
+   const owner=id.split('_')[0],slot=missionDeck.findIndex(card=>card.startsWith(owner+'_'));
+   if(slot>=0)missionDeck[slot]=id;
   }
+ }
+ g.commands=TG.commandDeck.create(missionDeck,spec.commandSeed??TG.commandDeck.seedFor(spec.id));
+ if(!training&&spec.battleId==='velaEscort'){
+  const required=['vela_heal','mare_guard'];
+  for(const id of required){
+   if(g.commands.hand.includes(id))continue;
+   const i=g.commands.draw.indexOf(id),slot=g.commands.hand.findIndex(card=>!required.includes(card));
+   if(i>=0&&slot>=0){const previous=g.commands.hand[slot];g.commands.hand[slot]=id;g.commands.draw[i]=previous;}
+  }
+ }
  g.commandEffects={guardWindow:0,ward:0};
  if(spec.companions.includes('mare'))g.mare={x:g.p.x-45,y:g.p.y+30,cooldown:0,maxCooldown:12,pulse:0,protected:0,face:0,moving:false};
 g.party=[...spec.companions];
