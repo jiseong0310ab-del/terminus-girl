@@ -49,3 +49,21 @@ test('Mare atlas shows only for a joined story companion and protection remains 
 test('command ward remains readable in low/reduced mode and a zero-time paused scene stays frozen',()=>{
  const {TG,G,draws,arcs}=scene();const g=G.start('quick');g.commandEffects={ward:3,guardWindow:0};g.status='command';g.time=0;TG.store.data.settings.reduceFX=true;TG.store.data.settings.quality='low';TG.view.draw(1000);assert(arcs.some(a=>a[0]===0&&a[1]===-10&&a[2]===47));const first=draws.map(a=>a.slice(1));draws.length=0;TG.view.draw(5000);assert.deepEqual(draws.map(a=>a.slice(1)),first);
 });
+
+test('three new allies draw original SD animation atlas only in story, with idle and walking frames',()=>{
+ const {TG,G,draws}=scene(),g=G.start('quick');
+ g.mode='story';g.storyBattle='escort';g.party=['aster','noa','vela'];
+ g.allies=['aster','noa','vela'].map((id,i)=>({id,x:g.p.x+70+i*5,y:g.p.y+60+i*5,moving:false,face:0,pulse:0,cooldown:0}));
+ TG.view.draw(1000);
+ const art='assets/companions-sd-v018.webp',idle=draws.filter(x=>x[0].src===art);
+ assert.equal(idle.length,3);assert(idle.every(x=>x.slice(1).every(Number.isFinite)));
+ assert.equal(idle[0][1],0);assert.equal(idle[0][2],0);
+ assert(idle[1][2]>idle[0][2]);assert(idle[2][2]>idle[1][2]);
+ draws.length=0;g.allies.forEach(a=>a.moving=true);
+ TG.view.draw(200);
+ const walking=draws.filter(x=>x[0].src===art);
+ assert.equal(walking.length,3);
+ assert(walking.every(x=>x[1]>0));
+ draws.length=0;g.mode='quick';TG.view.draw(300);
+ assert.equal(draws.filter(x=>x[0].src===art).length,0);
+});
