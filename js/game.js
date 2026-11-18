@@ -146,7 +146,7 @@ g.recordTarget=!training&&spec.battleId==='archive'?{x:g.p.x+125,y:g.p.y-75,r:55
  // Only story missions use a readable, dodgeable stationary-pressure hazard.
  // Survival, command training and the patient escort keep their existing balance.
  g.storyPressure=!training&&['approach','escort','archive','snowMission'].includes(spec.battleId)?
-  {idle:0,x:g.p.x,y:g.p.y,r:66,warning:0,cooldown:0,pulses:0,hits:0}:null;
+  {idle:0,x:g.p.x,y:g.p.y,r:66,warning:0,cooldown:0,pulses:0,hits:0,dodges:0}:null;
  G.notify(training?'90초 합동 지휘 훈련 · 지휘 카드를 시험하세요':battle.objective);G.onChange('playing');G.onSound('start');G.checkLevel();return g;
 }
 G.startStory=function(){
@@ -415,6 +415,9 @@ function storyPressureTick(dt){
     const hp=g.p.hp,shield=g.p.shield,protectedCount=g.mare?.protected||0;
     G.damage(14);
     if(g.p.hp<hp||g.p.shield<shield||(g.mare?.protected||0)>protectedCount)q.hits++;
+   }else{
+    q.dodges++;
+    G.notify('침식 파동 회피 · 계속 이동하세요');
    }
    ring(q.x,q.y,q.r,'#d8a0af');q.cooldown=6;q.idle=0;
   }
