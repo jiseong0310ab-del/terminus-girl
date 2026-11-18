@@ -23,10 +23,10 @@ test('report deterministic eight-seed mission balance by simulated input policy 
   const rows=Array.from({length:8},(_,index)=>run(index+1,policy));
   const first=rows.map(r=>r.results.find(x=>x.id==='approach')).filter(Boolean);
   const wins=first.filter(x=>x.won);
-  const completed=rows.filter(r=>r.complete);
+  const completed=rows.filter(r=>r.complete),second=rows.map(r=>r.results.find(x=>x.id==='escort')).filter(Boolean);
   const mean=(items,key)=>items.length?Number((items.reduce((sum,x)=>sum+x[key],0)/items.length).toFixed(1)):null;
   benchmark[policy]={firstWins:wins.length,outOf:rows.length,firstWinSeconds:mean(wins,'time'),
-   firstWinHP:mean(wins,'hp'),twoChaptersCompleted:completed.length};
+   firstWinHP:mean(wins,'hp'),twoChaptersCompleted:completed.length,secondReached:second.length,secondAvgSeconds:mean(second,'time'),secondAvgHP:mean(second,'hp'),secondReasons:second.slice(0,3).map(x=>x.reason),secondKills:mean(second,'kills')};
   assert(rows.every(r=>r.wallet===0&&r.legacyRuns===0));
  }
  assert.equal(benchmark.idle.firstWins,0);
