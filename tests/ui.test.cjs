@@ -308,3 +308,29 @@ test('deck swapping allows a temporary ninth draft card and only saves a valid e
 test('training pause and exit explain the preserved story rather than promising battle-boundary progress',()=>{
  const {TG,$}=bootUI();joinedStoryUI(TG,$);const before=JSON.stringify(TG.store.data);$('storyTraining').onclick();$('pauseBtn').onclick();assert.match($('quitBtn').textContent,/연습 끝내기/);assert.match($('pauseObjective').textContent,/연습 종료까지/);assert.match($('pauseBoundaryNote').textContent,/이야기 진행과 보상을 변경하지/);assert.doesNotMatch($('pauseBoundaryNote').textContent,/전투 시작/);$('quitBtn').onclick();assert.match($('modalTitle').textContent,/지휘 연습/);assert.match($('modalText').textContent,/기억 조각은 그대로/);$('modalYes').onclick();$('backBtn').onclick();assert.equal(TG.ui.screen,'story');assert.equal(JSON.stringify(TG.store.data),before);
 });
+
+test('portrait-led party screen keeps selection logic and renders art for six companions',()=>{
+ const {TG,$}=bootUI();
+ joinedStoryUI(TG,$);$('storyAction').onclick();storyWin(TG);$('backBtn').onclick();
+ while(TG.story.state().node!=='rest')$('storyAction').onclick();
+ $('storyPartySelect').onclick();
+ assert.equal(TG.ui.screen,'party');
+ assert.equal($('partyList').children.length,6);
+ assert.equal($('partyCount').textContent,'1 / 3');
+ assert.equal($('partySave').disabled,true);
+ const cards=$('partyList').children;
+ assert.equal(cards[0].children[0].className,'partyArt char-mare');
+ assert.match(cards[0].className,/selected/);
+ assert.equal(cards[5].disabled,true);
+ assert.match(cards[5].children[3].textContent,/잠금/);
+ cards[1].onclick();cards[2].onclick();
+ assert.equal($('partyCount').textContent,'3 / 3');
+ assert.equal($('partySave').disabled,false);
+ $('partySave').onclick();
+ assert.equal(TG.ui.screen,'story');
+ assert.equal(TG.story.state().companions.length,3);
+ $('storyDeck').onclick();
+ assert.equal(TG.ui.screen,'deck');
+ assert.equal(TG.commandDeck.size(TG.story.state().companions),10);
+ assert.match($('deckList').children[0].children[0].className,/deckPortrait/);
+});
