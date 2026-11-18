@@ -12,7 +12,14 @@ G.objective=function(run=G.g){
  if(run.mode==='story'){
   const battle=TG.STORY?.battles?.[run.storyBattle],ended=run.status==='ended';
   if(run.storyTraining)return {kind:ended?'ended':'survive',stage,cleared:0,target:0,bossIn:0,remaining:Math.max(0,duration-time),title:ended?(run.won?'합동 훈련 완료':'열차에서 다시 준비'):'90초 합동 지휘 훈련',detail:ended?'이야기 진행과 보상은 변경되지 않습니다. 덱을 조정해 다시 연습할 수 있습니다.':'지휘를 열어 카드를 사용하세요. 마레가 피해를 막으면 파동·절단·반격을 연계할 수 있습니다.'};
-  if(run.storyBattle==='snowMission'){
+  if(run.storyBattle==='velaEscort'){
+    const pt=run.patient,remaining=Math.max(0,duration-time),atCar=pt?.phase==='boarded';
+    const phase=pt?.phase||'stabilize';
+    return {kind:ended?'ended':'patient',stage,cleared:atCar?1:0,target:1,bossIn:0,remaining,
+     title:ended?(run.won?'환자 탑승 · 구조 성공':'환자 구조 실패'):phase==='stabilize'?'환자에게 접근 · 안정화 '+Math.floor(Math.min(100,(pt?.charge||0)/(pt?.needed||3.2)*100))+'%':phase==='escort'?'객차까지 호위 · 환자 체력 '+Math.ceil(pt?.hp||0):'환자가 객차에 탑승했습니다',
+     detail:ended?'출전 동료의 구조 행동과 환자의 상태를 결과 화면에서 확인하세요.':phase==='stabilize'?'환자 가까이에서 기다리거나 벨라의 온기 처치를 사용하세요.':'금빛 객차 문으로 돌아가세요. 마레의 보호로 환자 공격을 막고 뒤처지지 않게 이동하세요.'};
+   }
+   if(run.storyBattle==='snowMission'){
     const nodes=run.signalTargets||[],done=nodes.filter(x=>x.recovered).length;
     const route=run.route==='rescue'?'구조 신호':'격리 명부',active=nodes.find(x=>!x.recovered);
     return {kind:ended?'ended':'record',stage,cleared:done,target:nodes.length,bossIn:0,remaining:Math.max(0,duration-time),
@@ -79,6 +86,14 @@ function startStoryBattle(spec,training=false){
  if(training){g.p.hp=g.p.maxHp;g.kills=0;g.totalTime=0;g.shards=0;g.nextWave=12;}
  g.storyBattle=spec.battleId;g.duration=training?90:spec.battleId==='snowMission'&&spec.route==='contain'?95:battle.duration;g.storyTraining=training;g.storySaved=false;g.practice=false;g.reward=0;g.newGoals=[];
  g.commands=TG.commandDeck.create(TG.commandDeck.normalize(spec.commandDeck,spec.companions),spec.commandSeed??TG.commandDeck.seedFor(spec.id));
+  if(!training&&spec.battleId==='velaEscort'){
+   let slot=0;
+   for(const id of ['vela_heal','mare_guard']){
+    if(g.commands.hand.includes(id))continue;
+    const i=g.commands.draw.indexOf(id);
+    if(i>=0){const previous=g.commands.hand[slot];g.commands.hand[slot]=id;g.commands.draw[i]=previous;slot++;}
+   }
+  }
  g.commandEffects={guardWindow:0,ward:0};
  if(spec.companions.includes('mare'))g.mare={x:g.p.x-45,y:g.p.y+30,cooldown:0,maxCooldown:12,pulse:0,protected:0,face:0,moving:false};
 g.party=[...spec.companions];
@@ -92,6 +107,9 @@ g.recordTarget=!training&&spec.battleId==='archive'?{x:g.p.x+125,y:g.p.y-75,r:55
    [{x:g.p.x+125,y:g.p.y-75,r:52,needed:aster?1.65:2.0,name:'봉인된 명부'}]).map(a=>({...a,charge:0,recovered:false})):[];
  if(vela)g.p.hp=Math.min(g.p.maxHp,g.p.hp+25);
  g.snowSignalHelp=noa;
+ g.patient=!training&&spec.battleId==='velaEscort'?{x:g.p.x+112,y:g.p.y-65,hp:66,maxHp:100,phase:'stabilize',charge:0,needed:3.2,shield:0,warning:0,threatClock:0,treatments:0,mareBlocks:0,saved:false,pose:0}:null;
+ g.trainExit=g.patient?{x:g.p.x-225,y:g.p.y+125,r:52}:null;
+ if(g.patient)g.p.hp=Math.max(80,g.p.hp);
  G.notify(training?'90초 합동 지휘 훈련 · 지휘 카드를 시험하세요':battle.objective);G.onChange('playing');G.onSound('start');G.checkLevel();return g;
 }
 G.startStory=function(){
@@ -124,7 +142,8 @@ if(!['rize','shared','mare'].includes(card.owner)&&!g.party?.includes(card.owner
  const enemies=radius=>g.enemies.some(enemy=>nearPlayer(enemy,radius)),hostile=radius=>g.hostile.some(bullet=>nearPlayer(bullet,radius));
  if(id==='rize_pulse'&&!enemies(155)||id==='rize_cut'&&!enemies(450)||id==='rize_frost'&&!enemies(180))return no('범위 안에 적이 없습니다.');
  if(id==='rize_flame'&&g.flames.filter(flame=>flame.life>0).length>=3)return no('등불은 동시에 3개까지 설치할 수 있습니다.');
- if(id==='mare_guard'&&g.p.shield>=3)return no('보호막이 이미 3개입니다.');
+ const patientNear=g.storyBattle==='velaEscort'&&g.patient&&g.patient.phase!=='boarded'&&len(g.p.x-g.patient.x,g.p.y-g.patient.y)<155;
+ if(id==='mare_guard'&&g.p.shield>=3&&!(patientNear&&g.patient.shield<2))return no('보호막이 이미 3개입니다.');
  if(id==='mare_shelter'&&g.commandEffects.ward>=4)return no('합동 보호가 이미 유지되고 있습니다.');
  if(id==='mare_counter'&&!(g.commandEffects.guardWindow>0))return no('마레나 보호막이 피해를 막은 직후 사용하세요.');
  if(id==='mare_counter'&&!enemies(180)&&!hostile(180))return no('반격 범위 안에 적이나 적탄이 없습니다.');
@@ -135,8 +154,8 @@ if(!['rize','shared','mare'].includes(card.owner)&&!g.party?.includes(card.owner
  if(id==='shared_dash'&&g.dash.cooldown<=0)return no('대시가 이미 준비되어 있습니다.');
 if(['strike','burst','freeze'].includes(card.action)&&!enemies(card.action==='strike'?450:180))return no('범위 안에 적이 없습니다.');
 if(card.action==='magnet'&&!g.drops.some(d=>nearPlayer(d,300)))return no('회수할 기억이 없습니다.');
-if(card.action==='heal'&&g.p.hp>=g.p.maxHp)return no('체력이 가득 찼습니다.');
-if(card.action==='guard'&&g.p.shield>=3)return no('보호막이 가득 찼습니다.');
+if(card.action==='heal'&&g.p.hp>=g.p.maxHp&&!patientNear)return no('체력이 가득 찼습니다.');
+if(card.action==='guard'&&g.p.shield>=3&&!(patientNear&&g.patient.shield<2))return no('보호막이 가득 찼습니다.');
 if(card.action==='ward'&&g.commandEffects.ward>=4)return no('보호 장막이 활성화되어 있습니다.');
 if(card.action==='push'&&!enemies(160)&&!hostile(110)||card.action==='clear'&&!hostile(180))return no('범위 안에 대상이 없습니다.');
 if(card.action==='dash'&&g.dash.cooldown<=0)return no('대시가 준비되어 있습니다.');
@@ -163,6 +182,7 @@ G.castCommand=function(id,token){
   color='#e9ac75';radius=95;g.flames.push({x:p.x,y:p.y,r:95,life:3});
  }else if(id==='mare_guard'){
   color='#a5e2ed';p.shield=Math.min(3,p.shield+1);g.lastShield=g.time;
+   if(g.patient&&g.patient.phase!=='boarded'&&len(p.x-g.patient.x,p.y-g.patient.y)<155){g.patient.shield=Math.min(2,g.patient.shield+1);ring(g.patient.x,g.patient.y,43,'#d7b27d');}
  }else if(id==='mare_shelter'){
   color='#a5e2ed';effects.ward=4;
  }else if(id==='mare_counter'){
@@ -184,8 +204,19 @@ G.castCommand=function(id,token){
   if(action==='burst'){radius=180;for(const target of enemies(180))G.hitEnemy(target,p.attack*1.3);}
   if(action==='freeze'){radius=180;for(const target of enemies(180))if(target.type==='boss')target.slow=Math.max(target.slow,.8);else target.frozen=Math.max(target.frozen,.7);}
   if(action==='magnet'){radius=300;const found=g.drops.filter(d=>nearPlayer(d,300));g.xp+=found.reduce((sum,d)=>sum+d.value*(1+.15*(g.levels.wisdom||0)),0);g.drops=g.drops.filter(d=>!nearPlayer(d,300));g.learned.collected=true;}
-  if(action==='heal')p.hp=Math.min(p.maxHp,p.hp+20);
-  if(action==='guard'){p.shield=Math.min(3,p.shield+1);g.lastShield=g.time;}
+  if(action==='heal'){
+    p.hp=Math.min(p.maxHp,p.hp+20);
+    const pt=g.patient;
+    if(info.card.owner==='vela'&&pt&&pt.phase!=='boarded'&&len(p.x-pt.x,p.y-pt.y)<155){
+     pt.hp=Math.min(pt.maxHp,pt.hp+24);pt.charge=Math.min(pt.needed,pt.charge+1.65);pt.treatments++;
+     const medic=g.allies.find(a=>a.id==='vela');if(medic){medic.x=pt.x+26;medic.y=pt.y+5;medic.pulse=1.2;medic.carePose=1.2;}
+     ring(pt.x,pt.y,50,'#9fdbb5');spark(pt.x,pt.y,'#d3f4d9',6);
+     if(pt.phase==='stabilize'&&pt.charge>=pt.needed){pt.phase='escort';G.notify('벨라의 처치 완료 · 환자가 일어섰습니다. 객차까지 호위하세요.');}
+    }
+   }
+  if(action==='guard'){p.shield=Math.min(3,p.shield+1);g.lastShield=g.time;
+    if(g.patient&&g.patient.phase!=='boarded'&&len(p.x-g.patient.x,p.y-g.patient.y)<155)g.patient.shield=Math.min(2,g.patient.shield+1);
+   }
   if(action==='ward')effects.ward=4;
   if(action==='push'){radius=160;for(const e of enemies(160)){const dx=e.x-p.x,dy=e.y-p.y,d=len(dx,dy)||1;e.x+=dx/d*90;e.y+=dy/d*90;}clearHostile(110);}
   if(action==='clear'){radius=180;clearHostile(180);}
@@ -307,6 +338,52 @@ function snowTargetTick(dt){
   }
  }
 }
+function patientTick(dt){
+ const g=G.g,pt=g.patient;
+ if(g.mode!=='story'||g.storyTraining||g.storyBattle!=='velaEscort'||!pt||g.status!=='playing')return;
+ const dx=g.p.x-pt.x,dy=g.p.y-pt.y,distance=len(dx,dy);
+ if(pt.phase==='stabilize'){
+  if(distance<85){
+   pt.charge=Math.min(pt.needed,pt.charge+dt);
+   const medic=g.allies.find(a=>a.id==='vela');
+   if(medic){medic.carePose=.4;medic.x=pt.x+24;medic.y=pt.y+5;}
+  }else pt.charge=Math.max(0,pt.charge-dt*.25);
+  if(pt.charge>=pt.needed){
+   pt.phase='escort';ring(pt.x,pt.y,55,'#99dab1');G.notify('환자가 스스로 일어섰습니다 · 객차까지 호위하세요');
+  }
+ }else if(pt.phase==='escort'){
+  if(distance<175&&distance>37){
+   const step=Math.min(135*dt,distance-37);
+   pt.x=advance(pt.x,dx/distance*step);pt.y=advance(pt.y,dy/distance*step);
+   pt.pose=.4;
+  }else pt.pose=0;
+  if(len(pt.x-g.trainExit.x,pt.y-g.trainExit.y)<g.trainExit.r&&len(g.p.x-g.trainExit.x,g.p.y-g.trainExit.y)<125){
+   pt.phase='boarded';pt.saved=true;ring(g.trainExit.x,g.trainExit.y,75,'#f2da97');
+   G.notify('구조 성공 · 환자가 객차에 탑승했습니다');
+   G.finish(true,'patient');return;
+  }
+ }
+ // A visible warning precedes every patient-directed attack. Protection has priority over damage.
+ if(pt.warning>0){
+  pt.warning=Math.max(0,pt.warning-dt);
+  if(pt.warning===0){
+   const m=g.mare;
+   if(pt.shield>0){pt.shield--;pt.mareBlocks++;ring(pt.x,pt.y,52,'#d9ba80');G.notify('마레의 방패 · 환자를 향한 공격 차단');}
+   else if(m&&m.cooldown<=0&&len(m.x-pt.x,m.y-pt.y)<160){
+    m.cooldown=m.maxCooldown;m.pulse=.8;m.protected++;m.x=pt.x-26;m.y=pt.y-8;
+    pt.mareBlocks++;ring(pt.x,pt.y,58,'#e8c48e');spark(pt.x-15,pt.y-10,'#f4d39b',8);
+    G.notify('마레가 몸으로 공격을 가로막았습니다');
+   }else{
+    pt.hp=Math.max(0,pt.hp-20);pt.pose=1;ring(pt.x,pt.y,38,'#d58f9b');
+    G.notify('환자가 공격당했습니다 · 벨라의 치료가 필요합니다');
+    if(pt.hp<=0){G.finish(false,'patient');return;}
+   }
+  }
+ }else{
+  pt.threatClock+=dt;
+  if(pt.threatClock>=4.2){pt.threatClock=0;pt.warning=1.6;G.notify('위험 · 환자를 향한 공격이 예고됩니다');}
+ }
+}
 function allyTick(dt){
  const g=G.g;if(g.mode!=='story'||!g.allies?.length)return;
  for(let i=0;i<g.allies.length;i++){
@@ -335,7 +412,7 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  if(g.mode==='story'&&g.commands){TG.commandDeck.tick(g.commands,dt);g.commandEffects.guardWindow=Math.max(0,g.commandEffects.guardWindow-dt);g.commandEffects.ward=Math.max(0,g.commandEffects.ward-dt);}
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
- mareTick(dt);allyTick(dt);recordTick(dt);snowTargetTick(dt);encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
+ mareTick(dt);allyTick(dt);recordTick(dt);snowTargetTick(dt);patientTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
  const bossBeforeFlames=g.bossDefeated;for(const flame of g.flames){const active=Math.min(dt,flame.life);flame.life-=dt;for(const e of [...g.enemies])if(len(e.x-flame.x,e.y-flame.y)<flame.r+e.r)G.hitEnemy(e,6*active);}g.flames=g.flames.filter(f=>f.life>0);if(g.mode!=='story'&&!bossBeforeFlames&&g.bossDefeated){G.stageClear();return;}
  waveTick(dt);g.spawn+=dt;const baseInterval=g.storyTraining?Math.max(.35,.8-g.time/g.duration*.45):Math.max(.42,1.3-g.time/g.duration*.7-g.stage*.09);
  const interval=g.storyBattle==='snowMission'&&g.snowSignalHelp?baseInterval*1.13:baseInterval;while(g.spawn>=interval){g.spawn-=interval;if(g.enemies.length<65&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
@@ -366,7 +443,8 @@ G.nextStage=function(){const g=G.g;if(!g||g.status!=='camp'||!g.eventDone||!g.bo
 G.saveStoryResult=function(){const g=G.g;if(!g||g.mode!=='story'||g.status!=='ended'||!g.won)return false;if(g.storyTraining){g.storySaved=true;return true;}if(g.storySaved)return true;g.storySaved=TG.story?.completeBattle?.(g)===true;return g.storySaved;};
 G.finish=function(won,reason){const g=G.g;if(!g||g.status==='ended')return false;if(g.mode==='chapter'&&!TG.store.canWrite()){G.pause();G.notify('기록 저장을 확인할 수 없어 멈췄습니다. 저장소 접근을 확인한 뒤 계속하거나 설정에서 백업하세요.');return false;}if(g.mode==='story'&&g.p.hp<=0){won=false;reason='death';}
 if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='archive'&&g.recordTarget?.recovered!==true&&won){won=false;reason='record';}
- if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='snowMission'&&g.signalTargets?.some(r=>!r.recovered)&&won){won=false;reason='signal';}g.memoryAnchor=null;g.status='ended';G.input.x=G.input.y=0;g.won=won;g.reason=reason;if(g.mode==='chapter'){g.reward=TG.store.settle(g,won);g.newGoals=[...(TG.store.lastUnlocked||[])];if(won){for(const m of TG.MEMORIES)TG.store.remember(m.id)}}else if(g.mode==='story'){g.reward=0;g.newGoals=[];g.practice=false;g.storySaved=false;if(won)G.saveStoryResult();}else{g.reward=0;g.practice=true;}G.onChange('ended');G.onSound(won?'clear':'hurt');return true;};
+ if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='snowMission'&&g.signalTargets?.some(r=>!r.recovered)&&won){won=false;reason='signal';}
+ if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='velaEscort'&&(!g.patient||g.patient.phase!=='boarded'||!g.patient.saved||g.patient.hp<=0)&&won){won=false;reason='patient';}g.memoryAnchor=null;g.status='ended';G.input.x=G.input.y=0;g.won=won;g.reason=reason;if(g.mode==='chapter'){g.reward=TG.store.settle(g,won);g.newGoals=[...(TG.store.lastUnlocked||[])];if(won){for(const m of TG.MEMORIES)TG.store.remember(m.id)}}else if(g.mode==='story'){g.reward=0;g.newGoals=[];g.practice=false;g.storySaved=false;if(won)G.saveStoryResult();}else{g.reward=0;g.practice=true;}G.onChange('ended');G.onSound(won?'clear':'hurt');return true;};
 G.abandon=function(){const g=G.g;if(g?.mode==='story')return g.status==='ended'?false:G.finish(false,'retreat');if(g&&g.status!=='ended')return G.finish(false,'retreat');const c=TG.store.data.checkpoint;if(c){if(!TG.store.canWrite())return false;TG.store.settle(c,false);G.g=null;G.onChange('hub');return true}return false;};
 G.hub=function(){if(G.g?.status==='playing')G.pause();G.onChange('hub');};
 G.particle=spark;G.kill=kill;G.initialize=initialize;

@@ -113,13 +113,28 @@ TG.STORY={nodes:{
  ],next:'rest3'},
  rest3:{kind:'rest',title:'열차 · 설원역의 승차권',lines:[
   {speaker:'리제',portrait:'rize',text:'다음 역으로 갈 준비를 해야겠어.'}
- ]}
+ ]},
+ patientBrief:{kind:'dialogue',title:'벨라의 부탁 · 마지막 체온',lines:[
+  {speaker:'벨라',portrait:'vela',text:'환자를 열차로 데려가겠다고 약속했죠. 하지만 돌아가는 복도에 망령들이 모였어요. 아직 걸을 힘도 없어요.'},
+  {speaker:'리제',portrait:'rize',text:'벨라가 곁에서 처치하는 동안 내가 통로를 열게. 마레, 방어를 맡아 줘.'},
+  {speaker:'마레',portrait:'mare',text:'내 방패로 환자에게 날아오는 공격을 막을 수 있어. 벨라가 안정시키면 환자가 스스로 걸을 수 있을 거야.'},
+  {speaker:'벨라',portrait:'vela',text:'먼저 환자 가까이 와 주세요. 제 “온기 처치” 카드를 쓰면 안정이 빨라져요. 그 다음은 함께 객차 문으로 돌아가요.'},
+  {speaker:'리제',portrait:'rize',text:'알겠어. 적을 얼마나 많이 쓰러뜨렸는지가 아니라, 이 사람을 열차에 태우는 순간에야 우리가 이기는 거야.'}
+ ],next:'velaEscort'},
+ velaEscort:{kind:'battle',title:'설원역 · 벨라와 환자 호위'},
+ patientDebrief:{kind:'dialogue',title:'구조 성공 · 다시 따뜻해지는 객차',lines:[
+  {speaker:'벨라',portrait:'vela',text:'환자가 이제 혼자 앉을 수 있어요. 그 손이 아직 따뜻하네요. 약속을 지켰어요.'},
+  {speaker:'환자',portrait:null,text:'...열차 소리가 들려요. 저를 두고 가지 않았군요.'},
+  {speaker:'리제',portrait:'rize',text:'우리가 해낸 거야. 환자가 걸을 수 있게 도운 사람도, 길을 지킨 사람도 여기 있어.'},
+  {speaker:'벨라',portrait:'vela',text:'앞으로도 누군가 기억을 잃어가면 함께 손을 잡아 주세요. 저는 이 열차에서 치료를 이어 갈게요.'}
+ ],next:'recruitHub'}
 
 },battles:{
  approach:{stage:0,duration:45,title:'안내 회선 복구',objective:'안내 회선이 복구될 때까지 생존',detail:'45초 동안 이동과 대시로 잔향을 피하세요. 경험치를 모아 기억을 강화할 수 있습니다.',successTitle:'안내 방송이 돌아왔다',successStory:'되풀이되던 도착 시각 사이로, 승강장에 남은 사람의 목소리가 들렸다.',next:'meeting'},
  escort:{stage:0,duration:75,title:'함께 여는 귀환로',objective:'귀환로가 열릴 때까지 마레와 생존',detail:'75초 동안 살아남으세요. 마레는 준비된 보호로 피격 한 번을 막으며, 그 뒤에는 다시 준비할 시간이 필요합니다.',successTitle:'함께 열차에 올랐다',successStory:'리제와 마레는 열린 귀환로를 지나 같은 객실에 들어섰다. 거울역의 진실은 아직 승강장에 남아 있다.',next:'debrief'},
  archive:{stage:0,duration:95,title:'기억 기록장치 회수',objective:'기록장치에 다가가 1.25초 회수한 뒤 제한시간까지 생존',detail:'파란빛 기록 장치 가까이에 서서 1.25초 머무르세요. 기록을 확보하지 못하면 임무는 실패합니다. 이후 95초까지 생존하세요.',successTitle:'지워진 이름의 기록 확보',successStory:'거울역 봉인 당시 남겨진 승객 명단과 구조 신호가 열차로 전송되었다.',next:'evidence'},
- snowMission:{stage:1,duration:105,title:'설원역 구조 신호 안정화',objective:'구조 중계기를 모두 안정화하고 살아남기',detail:'거울역에서 구조 신호를 열었다면 2개 중계기를, 봉인을 유지했다면 1개 명부 장치를 회수하세요.',successTitle:'설원역 기록 확보',successStory:'신호와 명부 중 선택에 맞는 기록을 열차로 회수했다.',next:'snowDebrief'}
+ snowMission:{stage:1,duration:105,title:'설원역 구조 신호 안정화',objective:'구조 중계기를 모두 안정화하고 살아남기',detail:'거울역에서 구조 신호를 열었다면 2개 중계기를, 봉인을 유지했다면 1개 명부 장치를 회수하세요.',successTitle:'설원역 기록 확보',successStory:'신호와 명부 중 선택에 맞는 기록을 열차로 회수했다.',next:'snowDebrief'},
+ velaEscort:{stage:1,duration:100,title:'벨라와 환자 · 객차까지 호위',objective:'환자를 안정화하고 객차로 데려가기',detail:'환자에게 접근하여 안정시키세요. 벨라의 온기 처치는 안정화를 돕고, 마레의 방패는 환자 공격을 막습니다. 환자가 객차 문 안에 들어와야 성공합니다.',successTitle:'환자가 마지막 객차에 탑승했다',successStory:'벨라의 치료로 환자가 일어났고, 출전 동료가 길을 지킨 사이 두 발로 객차에 올라탔다.',next:'patientDebrief'}
 }};
 const A=TG.story={};
 const isBattle=node=>TG.STORY.nodes[node]?.kind==='battle';
@@ -161,6 +176,10 @@ A.currentLine=function(state=A.state()){
  if(state.node==='snowDebrief'&&state.line===2)return state.decision==='rescue'?
  {speaker:'동료 기록',portrait:null,text:'두 구조 중계기를 안정화했습니다. 더는 신호가 아무 곳으로나 번지지 않고, 돌아올 통로는 남았습니다.'}:
  {speaker:'동료 기록',portrait:null,text:'격리 명부의 원본을 열차에 실었습니다. 누가 이름을 지웠는지 알려 줄 운행 명령서도 발견했습니다.'};
+ if(state.node==='patientDebrief'&&state.line===2){
+  const c=state.patientCare||{};
+  return {speaker:'리제',portrait:'rize',text:'벨라의 처치 '+(c.treatments||0)+'번, 마레의 보호 '+(c.mareBlocks||0)+'번. 실제로 이 사람을 살린 건 우리가 함께 한 행동들이었어.'};
+ }
  if(state.node==='rest3')return state.decision==='rescue'?
  {speaker:'리제',portrait:'rize',text:'신호는 살아 있고 설원역의 사람들이 돌아올 통로도 생겼어. 침식은 남았지만 포기하지 않았어.'}:
  {speaker:'리제',portrait:'rize',text:'설원역의 명부를 실었어. 서둘러 봉인을 열지 않았기에 지켜낸 것도 있어. 다음 역에서 이 진실을 밝혀야 해.'};
@@ -195,7 +214,7 @@ A.advance=function(expectedNode,expectedLine){
    state.companions=['mare',...state.recruited.slice(0,2)];
    state.commandDeck=TG.commandDeck.preset('protect',state.companions);
   }
-  state.node=node.next;state.line=0;
+  state.node=state.node==='patientDebrief'?(state.patientReturn==='rest3'?'rest3':'recruitHub'):node.next;state.line=0;
   state.encounterId=isBattle(state.node)?newEncounter():null;
   if(state.encounterId)state.commandSeed=TG.commandDeck.seedFor(state.encounterId);
   state.completed=['rest','rest2','rest3'].includes(state.node);
@@ -235,6 +254,14 @@ A.openRecruit=function(id){
   state.node={aster:'recruitAster',noa:'recruitNoa',vela:'recruitVela'}[id];state.line=0;
  });
 };
+A.beginVelaPatient=function(){
+ if(activeRun())return false;
+ return transact(state=>{
+  if(!['recruitHub','rest3'].includes(state.node)||!state.recruited.includes('vela')||state.patientRescued)return false;
+  state.patientReturn=state.node;state.node='patientBrief';state.line=0;state.completed=false;
+  state.loadout.hp=Math.max(80,state.loadout.hp);
+ });
+};
 A.departSnow=function(){
  if(activeRun())return false;
  return transact(state=>{
@@ -255,7 +282,9 @@ A.setParty=function(ids){
 A.prepareBattle=function(){
  const S=TG.store,state=A.state();
  if(!state.started||!isBattle(state.node)||!S.canWrite()||!/^story-[\w-]{1,80}$/.test(state.encounterId||''))return null;
- return {id:state.encounterId,battleId:state.node,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed,route:state.decision,snowParty:[...state.snowParty]};
+ const companions=state.node==='velaEscort'?['mare','vela',...state.recruited.filter(id=>id!=='vela').slice(0,1)]:[...state.companions];
+  const deck=state.node==='velaEscort'?TG.commandDeck.preset('protect',companions):[...state.commandDeck];
+  return {id:state.encounterId,battleId:state.node,loadout:clone(state.loadout),companions,commandDeck:deck,commandSeed:state.commandSeed,route:state.decision,snowParty:[...state.snowParty]};
 };
 A.setCommandDeck=function(ids){
  if(activeRun())return false;
@@ -273,10 +302,16 @@ A.completeBattle=function(run){
  if(!run||run.mode!=='story'||run.storyTraining===true||run.won!==true||!Number.isFinite(run.p?.hp)||run.p.hp<=0)return false;
  return transact(state=>{
   const battle=TG.STORY.battles[state.node];
-  if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id||state.node==='archive'&&run.recordTarget?.recovered!==true||state.node==='snowMission'&&(!Array.isArray(run.signalTargets)||run.signalTargets.length!==(state.decision==='rescue'?2:1)||run.signalTargets.some(t=>t.recovered!==true)))return false;
+  if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id||state.node==='archive'&&run.recordTarget?.recovered!==true||state.node==='snowMission'&&(!Array.isArray(run.signalTargets)||run.signalTargets.length!==(state.decision==='rescue'?2:1)||run.signalTargets.some(t=>t.recovered!==true))||state.node==='velaEscort'&&(!run.patient||run.patient.phase!=='boarded'||run.patient.hp<=0||run.patient.saved!==true))return false;
   state.loadout=clone({hp:run.p.hp,levels:run.levels||{},level:run.level,xp:run.xp,kills:run.kills,totalTime:run.totalTime,relics:run.relics||[]});
   if(state.node==='archive')state.recordRecovered=true;
   if(state.node==='snowMission')state.snowRecovered=true;
+  if(state.node==='velaEscort'){
+   state.patientRescued=true;
+   state.patientCare={treatments:Math.min(999,run.patient.treatments||0),mareBlocks:Math.min(999,run.patient.mareBlocks||0),hp:Math.ceil(run.patient.hp)};
+   state.bonds.vela=Math.min(3,(state.bonds.vela||0)+1);
+   if(run.patient.mareBlocks>0)state.bonds.mare=Math.min(3,(state.bonds.mare||0)+1);
+  }
   state.node=battle.next;state.line=0;state.encounterId=null;
  });
 };

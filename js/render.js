@@ -158,6 +158,53 @@ function companion(g,t){
  if((g.party||[]).length<=1){ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#c8e5ee';ctx.fillText('마레',0,-h*.77-7);}ctx.restore();
  if(m.pulse>0){const px=V.width/2,py=V.height/2;ctx.save();ctx.lineWidth=2;ctx.strokeStyle='#c0ebff';ctx.beginPath();ctx.moveTo(x,y-12);ctx.lineTo(px,py-12);ctx.stroke();ctx.beginPath();ctx.ellipse(px,py-12,34,43,0,0,TAU);ctx.stroke();ctx.fillStyle='#e1f5ff';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('마레의 보호',px,py-63);ctx.restore();}
 }
+function patientScene(g,t){
+ const pt=g.patient,gate=g.trainExit;if(g.storyBattle!=='velaEscort'||!pt||!gate)return;
+ const drawAt=pos=>({x:pos.x-g.p.x+V.width/2,y:pos.y-g.p.y+V.height/2});
+ const door=drawAt(gate);ctx.save();ctx.translate(door.x,door.y);
+ if(door.x>-100&&door.x<V.width+100&&door.y>-100&&door.y<V.height+100){
+  circle(0,0,gate.r,'#bca67718','#e5c690');
+  ctx.fillStyle='#111f2d';ctx.fillRect(-31,-61,62,76);
+  ctx.fillStyle='#9a8056';ctx.fillRect(-34,-66,68,7);
+  ctx.strokeStyle='#e8d4a3';ctx.lineWidth=3;ctx.strokeRect(-31,-61,62,76);
+  ctx.fillStyle='#273c49';ctx.fillRect(-22,-52,18,57);ctx.fillRect(5,-52,17,57);
+  ctx.fillStyle='#efdaaf';ctx.fillRect(-4,-48,7,35);
+  ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillStyle='#fff1cf';ctx.fillText('객차 문',0,-76);
+ }ctx.restore();
+ const p=drawAt(pt);if(p.x< -95||p.x>V.width+95||p.y< -110||p.y>V.height+95)return;
+ ctx.save();ctx.translate(p.x,p.y);
+ ctx.fillStyle='#030a1588';ctx.beginPath();ctx.ellipse(0,18,16,5,0,0,TAU);ctx.fill();
+ if(pt.phase==='stabilize'){
+  ctx.save();ctx.rotate(-.28);
+  ctx.fillStyle='#ded2c3';ctx.beginPath();ctx.ellipse(0,-5,23,12,0,0,TAU);ctx.fill();
+  circle(-14,-12,11,'#e2bfae','#e3d8d5');
+  ctx.fillStyle='#59616f';ctx.beginPath();ctx.arc(-14,-18,11,Math.PI,TAU);ctx.fill();
+  ctx.strokeStyle='#3d4355';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-18,-12);ctx.lineTo(-15,-12);ctx.stroke();ctx.restore();
+ }else{
+  ctx.fillStyle='#abb4c8';ctx.beginPath();ctx.moveTo(-13,13);ctx.lineTo(-15,-11);ctx.lineTo(12,-11);ctx.lineTo(15,13);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#e9d4c2';ctx.fillRect(-8,-17,16,11);
+  circle(0,-28,13,'#e0b9a4','#e6d5c4');
+  ctx.fillStyle='#5f6878';ctx.beginPath();ctx.arc(0,-34,13,Math.PI,TAU);ctx.fill();
+  ctx.fillStyle='#f3e6ce';ctx.fillRect(-7,1,14,4);
+  if(pt.pose>0&&pt.phase==='escort'){ctx.fillStyle='#f6e4ce';ctx.fillRect(-7,12,4,5);ctx.fillRect(4,12,4,5);}
+ }
+ if(pt.shield>0){ctx.strokeStyle='#e9cb89';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,-13,29,39,0,0,TAU);ctx.stroke();}
+ const hp=clamp(pt.hp/pt.maxHp,0,1);
+ ctx.fillStyle='#141e30';ctx.fillRect(-26,-67,52,7);ctx.fillStyle=hp>.45?'#9dd0ba':'#e59a9f';ctx.fillRect(-25,-66,50*hp,5);
+ ctx.textAlign='center';ctx.font='bold 11px sans-serif';ctx.fillStyle='#faf0d8';ctx.fillText(pt.phase==='stabilize'?'구조 대상 · 처치 중':'구조 대상 · 호위 중',0,-77);
+ ctx.restore();
+}
+function patientWarning(g,t){
+ const pt=g.patient;if(g.storyBattle!=='velaEscort'||!pt||pt.warning<=0)return;
+ const x=pt.x-g.p.x+V.width/2,y=pt.y-g.p.y+V.height/2,progress=1-pt.warning/1.6;
+ ctx.save();ctx.lineWidth=3;
+ ctx.strokeStyle='#efb4a3';ctx.setLineDash([8,5]);
+ ctx.beginPath();ctx.moveTo(x-155,y-92);ctx.lineTo(x,y-14);ctx.stroke();ctx.setLineDash([]);
+ ctx.strokeStyle='#f8d6a7';ctx.beginPath();ctx.arc(x,y-15,40,-Math.PI/2,-Math.PI/2+TAU*progress);ctx.stroke();
+ ctx.fillStyle='#fbe2c2';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+ ctx.fillText('위험! 환자를 노리는 공격',x,y-105);
+ ctx.restore();
+}
 function otherCompanions(g,t){
  if(g.mode!=='story')return;
  const spriteRows={aster:0,noa:1,vela:2};
@@ -177,6 +224,7 @@ function otherCompanions(g,t){
    const cw=images.allies.naturalWidth/3,ch=images.allies.naturalHeight/3;
    ctx.save();
    if(a.face===3){ctx.scale(-1,1);}
+   if(a.id==='vela'&&a.carePose>0){ctx.translate(0,9);ctx.scale(1,.82);}
    ctx.drawImage(images.allies,frame*cw,spriteRows[a.id]*ch,cw,ch,-37,-62+bob,74,83);
    ctx.restore();
   }else if(ready(images.portraits)){
@@ -211,7 +259,7 @@ function hero(g,t){const x=V.width/2,y=V.height/2;ctx.save();ctx.translate(x,y);
   if(g.commandEffects?.ward>0){ctx.lineWidth=2;circle(0,-10,47,'#83c4e919','#91d9ef');ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#c9edff';ctx.fillText('지휘 장막',0,-62);}
   if(g.p.shield){ctx.strokeStyle='#afd8f0';ctx.beginPath();ctx.ellipse(0,-12,33,44,0,0,TAU);ctx.stroke()}
  for(let i=0;i<g.p.orbit;i++){const a=t*2.4+i*TAU/g.p.orbit;ctx.save();ctx.translate(Math.cos(a)*65,Math.sin(a)*65);ctx.rotate(a);ctx.fillStyle=g.synergies.frostOrbit?'#aee5fb':'#e8d1a1';ctx.fillRect(-3,-10,6,20);ctx.restore()}ctx.restore();}
-V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?g.time:now/1000,cx=g?.p.x||0,cy=g?.p.y||0,W=V.width,H=V.height;ctx.save();if(g&&g.shake&&!TG.store.data.settings.reduceFX)ctx.translate(Math.sin(t*130)*g.shake*.5,Math.cos(t*190)*g.shake*.5);background(g,t,cx,cy);if(g){memoryAnchor(g,t);recordBeacon(g,t);snowBeacons(g,t);const sx=x=>x-cx+W/2,sy=y=>y-cy+H/2;for(const h of g.hazards){ctx.lineWidth=1.5;const warning=h.age<h.warning;ctx.setLineDash(warning?[6,5]:[]);circle(sx(h.x),sy(h.y),h.r,warning?'#ae769422':'#23102a99',warning?'#dd9cba':'#ce7aa2');ctx.setLineDash([]);if(warning){ctx.fillStyle='#f4c7dc';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('소거 예고',sx(h.x),sy(h.y)+3)}}
+V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?g.time:now/1000,cx=g?.p.x||0,cy=g?.p.y||0,W=V.width,H=V.height;ctx.save();if(g&&g.shake&&!TG.store.data.settings.reduceFX)ctx.translate(Math.sin(t*130)*g.shake*.5,Math.cos(t*190)*g.shake*.5);background(g,t,cx,cy);if(g){memoryAnchor(g,t);recordBeacon(g,t);snowBeacons(g,t);patientScene(g,t);const sx=x=>x-cx+W/2,sy=y=>y-cy+H/2;for(const h of g.hazards){ctx.lineWidth=1.5;const warning=h.age<h.warning;ctx.setLineDash(warning?[6,5]:[]);circle(sx(h.x),sy(h.y),h.r,warning?'#ae769422':'#23102a99',warning?'#dd9cba':'#ce7aa2');ctx.setLineDash([]);if(warning){ctx.fillStyle='#f4c7dc';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('소거 예고',sx(h.x),sy(h.y)+3)}}
  for(const shock of g.aftershocks||[]){
   const x=sx(shock.x),y=sy(shock.y);if(x+shock.r<0||x-shock.r>W||y+shock.r<0||y-shock.r>H)continue;
   const warning=shock.age<shock.warning;ctx.lineWidth=2;ctx.setLineDash(warning?[6,5]:[]);
@@ -232,6 +280,6 @@ V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?g.time:now/1000,cx=g
  for(const d of g.drops){const x=sx(d.x),y=sy(d.y);if(x<-10||x>W+10||y<-10||y>H+10)continue;ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillStyle=d.value>1?'#ebd19d':'#b2dfeb';ctx.fillRect(-3,-3,6,6);ctx.restore()}
  for(const link of g.links){ctx.strokeStyle='#d7e9ff';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sx(link.x1),sy(link.y1));ctx.lineTo(sx(link.x2),sy(link.y2));ctx.stroke();}
  for(const e of g.enemies)enemy(e,g,t);for(const b of g.bullets){ctx.strokeStyle=g.levels.ember?'#edd09a':'#c4ecfa';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(sx(b.x),sy(b.y));ctx.lineTo(sx(b.x)-b.vx*.023,sy(b.y)-b.vy*.023);ctx.stroke()}for(const b of g.hostile){circle(sx(b.x),sy(b.y),6,'#d98e98','#ffe0c3')}
- const low=TG.store.data.settings.quality==='low';if(!low)for(const p of g.particles){ctx.globalAlpha=p.life/p.max;ctx.fillStyle=p.color;ctx.fillRect(sx(p.x),sy(p.y),p.size,p.size)}ctx.globalAlpha=1;for(const r of g.rings){ctx.globalAlpha=r.life/r.max;circle(sx(r.x),sy(r.y),r.r*(1.5-r.life/r.max*.5),null,r.color)}ctx.globalAlpha=1;companion(g,t);otherCompanions(g,t);hero(g,t);
+ const low=TG.store.data.settings.quality==='low';if(!low)for(const p of g.particles){ctx.globalAlpha=p.life/p.max;ctx.fillStyle=p.color;ctx.fillRect(sx(p.x),sy(p.y),p.size,p.size)}ctx.globalAlpha=1;for(const r of g.rings){ctx.globalAlpha=r.life/r.max;circle(sx(r.x),sy(r.y),r.r*(1.5-r.life/r.max*.5),null,r.color)}ctx.globalAlpha=1;companion(g,t);otherCompanions(g,t);hero(g,t);patientWarning(g,t);
  if(g.flash&&!TG.store.data.settings.reduceFX){ctx.fillStyle=`rgba(180,57,95,${g.flash*.4})`;ctx.fillRect(0,0,W,H)}}ctx.restore();};
 })();

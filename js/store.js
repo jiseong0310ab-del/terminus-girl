@@ -4,13 +4,13 @@ const KEY='terminusSaveV1',BACKUP='terminusSaveV1Backup',S=TG.store={status:'rea
 const integer=(v,max=1e7)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 const arr=(v,allowed,max=64)=>Array.isArray(v)?[...new Set(v.filter(x=>typeof x==='string'&&(!allowed||allowed.includes(x))))].slice(-max):[];
 const clone=o=>JSON.parse(JSON.stringify(o));
-function freshStory(){return{version:4,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),erosion:0,decision:null,recordRecovered:false,bonds:Object.fromEntries(TG.PARTY.map(a=>[a.id,0])),missionParty:[],recruited:[],snowParty:[],snowRecovered:false,loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
+function freshStory(){return{version:4,started:false,node:'departure',line:0,companions:[],encounterId:null,commandDeck:TG.commandDeck.preset('solo',[]),commandSeed:TG.commandDeck.seedFor('departure'),erosion:0,decision:null,recordRecovered:false,bonds:Object.fromEntries(TG.PARTY.map(a=>[a.id,0])),missionParty:[],recruited:[],snowParty:[],snowRecovered:false,patientRescued:false,patientReturn:null,patientCare:{treatments:0,mareBlocks:0,hp:0},loadout:{hp:100,levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]},seen:[],completed:false};}
 function normalStory(raw){
  if(raw===undefined)return freshStory();
  if(!raw||typeof raw!=='object'||Array.isArray(raw)||![1,2,3,4].includes(raw.version))throw Error('지원하지 않는 이야기 저장 형식입니다.');
- const order=['departure','arrival','approach','meeting','escort','debrief','rest','briefing','trace','archive','evidence','decision','release','contain','rest2','snowArrival','recruitHub','recruitAster','recruitNoa','recruitVela','snowDeparture','snowMission','snowDebrief','rest3'],index=order.indexOf(raw.node);
+ const order=['departure','arrival','approach','meeting','escort','debrief','rest','briefing','trace','archive','evidence','decision','release','contain','rest2','snowArrival','recruitHub','recruitAster','recruitNoa','recruitVela','snowDeparture','snowMission','snowDebrief','rest3','patientBrief','velaEscort','patientDebrief'],index=order.indexOf(raw.node);
  if(index<0||raw.version<=2&&index>6||raw.version===3&&index>14)throw Error('이야기 진행 위치가 올바르지 않습니다.');
- const lengths={departure:4,arrival:2,meeting:4,debrief:4,briefing:5,trace:4,evidence:4,decision:1,release:4,contain:4,snowArrival:4,recruitAster:5,recruitNoa:5,recruitVela:5,snowDeparture:4,snowDebrief:4},battle=['approach','escort','archive','snowMission'].includes(raw.node);
+ const lengths={departure:4,arrival:2,meeting:4,debrief:4,briefing:5,trace:4,evidence:4,decision:1,release:4,contain:4,snowArrival:4,recruitAster:5,recruitNoa:5,recruitVela:5,snowDeparture:4,snowDebrief:4,patientBrief:5,patientDebrief:4},battle=['approach','escort','archive','snowMission','velaEscort'].includes(raw.node);
  // The fallback keeps store-only validation usable; the loaded script is the dialogue source of truth.
  for(const id of Object.keys(lengths)){const lines=TG.STORY?.nodes?.[id]?.lines;if(Array.isArray(lines)&&lines.length>0)lengths[id]=lines.length;}
  if(battle&&!/^story-[\w-]{1,80}$/.test(raw.encounterId||''))throw Error('이야기 전투 기록이 올바르지 않습니다.');
@@ -26,18 +26,27 @@ function normalStory(raw){
  const bonds=Object.fromEntries(TG.PARTY.map(a=>[a.id,raw.version>=3?integer(raw.bonds?.[a.id],3):0]));
  const allowedSeen=order.filter(id=>TG.STORY?.nodes?.[id]?.kind==='dialogue'||TG.STORY?.nodes?.[id]?.kind==='choice');
  const recruited=raw.version===4&&index>=16?arr(raw.recruited,['aster','noa','vela'],3):[];
- const seen=raw.version>=3?arr(raw.seen,allowedSeen,28).filter(id=>(order.indexOf(id)<index||['recruitAster','recruitNoa','recruitVela'].includes(id)&&recruited.includes({recruitAster:'aster',recruitNoa:'noa',recruitVela:'vela'}[id]))&&(id!=='release'||choice==='rescue')&&(id!=='contain'||choice==='contain')):order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id));
+ const seen=raw.version>=3?arr(raw.seen,allowedSeen,28).filter(id=>(order.indexOf(id)<index||['recruitAster','recruitNoa','recruitVela'].includes(id)&&recruited.includes({recruitAster:'aster',recruitNoa:'noa',recruitVela:'vela'}[id])||['patientBrief','patientDebrief'].includes(id)&&raw.patientRescued===true)&&(id!=='release'||choice==='rescue')&&(id!=='contain'||choice==='contain')):order.slice(0,index).filter(id=>Object.prototype.hasOwnProperty.call(lengths,id));
  const missionParty=raw.version>=3&&index>=7?arr(raw.missionParty,trial,3):[];
  const snowAllowed=['mare',...recruited];
- const snowParty=raw.version===4&&index>=20?arr(raw.snowParty,snowAllowed,3):[];
- const snowRecovered=raw.version===4&&index>=22&&raw.snowRecovered===true;
+ const fromPatient=['patientBrief','velaEscort','patientDebrief'].includes(raw.node);
+ const patientReturn=raw.patientReturn==='rest3'?'rest3':raw.patientReturn==='recruitHub'?'recruitHub':null;
+ const completedSnow=['snowDebrief','rest3'].includes(raw.node)||fromPatient&&patientReturn==='rest3';
+ const requiredSnow=['snowDeparture','snowMission','snowDebrief','rest3'].includes(raw.node)||fromPatient&&patientReturn==='rest3';
+ const snowParty=raw.version===4&&requiredSnow?arr(raw.snowParty,snowAllowed,3):[];
+ const snowRecovered=raw.version===4&&completedSnow&&raw.snowRecovered===true;
  if(raw.version===4&&index>=15&&!choice)throw Error('설원역의 이전 선택 기록이 없습니다.');
- if(raw.version===4&&index>=20&&(recruited.length<2||snowParty.length!==3))throw Error('설원역 동료 편성과 진행이 올바르지 않습니다.');
- if(raw.version===4&&index>=22&&!snowRecovered)throw Error('설원역 임무 완료 기록이 없습니다.');
+ if(raw.version===4&&requiredSnow&&(recruited.length<2||snowParty.length!==3))throw Error('설원역 동료 편성과 진행이 올바르지 않습니다.');
+ if(raw.version===4&&completedSnow&&!snowRecovered)throw Error('설원역 임무 완료 기록이 없습니다.');
+ if(fromPatient&&(!patientReturn||!recruited.includes('vela')))throw Error('환자 구조 출발 기록이 올바르지 않습니다.');
+ const patientRescued=raw.version===4&&raw.patientRescued===true;
+ if(fromPatient&&raw.node!=='patientDebrief'&&patientRescued)throw Error('완료한 환자 구조 임무가 다시 진행 중입니다.');
+ if(raw.node==='patientDebrief'&&!patientRescued)throw Error('환자 구조 성공 기록이 없습니다.');
+ const patientCare={treatments:integer(raw.patientCare?.treatments,999),mareBlocks:integer(raw.patientCare?.mareBlocks,999),hp:integer(raw.patientCare?.hp,500)};
  const official=index>=16;
  const party=official?(saved.length?saved.filter(id=>snowAllowed.includes(id)):['mare']):companions;
  if(official&&!party.length)party.push('mare');
- return {version:4,started:raw.started===true||index>0||line>0,node:raw.node,line,companions:party,encounterId:battle?raw.encounterId:null,commandDeck:TG.commandDeck.normalize(raw.commandDeck,party),commandSeed,erosion:raw.version>=3?integer(raw.erosion,100):0,decision:choice,recordRecovered:recovered,bonds,missionParty,recruited,snowParty,snowRecovered,
+ return {version:4,started:raw.started===true||index>0||line>0,node:raw.node,line,companions:party,encounterId:battle?raw.encounterId:null,commandDeck:TG.commandDeck.normalize(raw.commandDeck,party),commandSeed,erosion:raw.version>=3?integer(raw.erosion,100):0,decision:choice,recordRecovered:recovered,bonds,missionParty,recruited,snowParty,snowRecovered,patientRescued,patientReturn,patientCare,
   loadout:{hp:Number.isFinite(load.hp)?Math.max(.01,Math.min(500,load.hp)):100,levels,level:Math.max(1,integer(load.level,80)),xp:Number.isFinite(load.xp)?Math.max(0,Math.min(1e5,load.xp)):0,kills:integer(load.kills,1e5),totalTime:Number.isFinite(load.totalTime)?Math.max(0,Math.min(1e6,load.totalTime)):0,relics:arr(load.relics,TG.RELICS.map(r=>r.id),6)},
   seen,completed:['rest','rest2','rest3'].includes(raw.node)};
 }
