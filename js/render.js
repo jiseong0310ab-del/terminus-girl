@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const V=TG.view={width:390,height:844};let canvas,ctx;const images={};const TAU=Math.PI*2;const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',mare:'assets/mare-walk-v014.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
+V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',mare:'assets/mare-walk-v014.webp',portraits:'assets/party-portraits-v017.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
 V.resize=function(){
  if(!ctx)return;
  V.width=canvas.clientWidth>0?canvas.clientWidth:innerWidth;
@@ -125,7 +125,12 @@ function otherCompanions(g,t){
   ctx.fillStyle='#02040c88';ctx.beginPath();ctx.ellipse(0,17,16,5,0,0,TAU);ctx.fill();
   ctx.fillStyle='#17253b';ctx.strokeStyle=color;ctx.lineWidth=2;
   ctx.beginPath();ctx.moveTo(0,-32+bob);ctx.lineTo(18,12+bob);ctx.lineTo(-18,12+bob);ctx.closePath();ctx.fill();ctx.stroke();
-  circle(0,-26+bob,11,color,'#e4e9ef');ctx.fillStyle='#132337';ctx.fillRect(-8,-37+bob,16,5);
+  if(ready(images.portraits)){
+   const order=['mare','aster','noa','vela','iris','crow'],idx=order.indexOf(a.id),w=images.portraits.naturalWidth/3,h=images.portraits.naturalHeight/2;
+   ctx.save();ctx.beginPath();ctx.arc(0,-23+bob,17,0,TAU);ctx.clip();
+   ctx.drawImage(images.portraits,(idx%3)*w,Math.floor(idx/3)*h,w,h,-17,-40+bob,34,34);ctx.restore();
+   circle(0,-23+bob,17,null,color);
+  }else{circle(0,-26+bob,11,color,'#e4e9ef');ctx.fillStyle='#132337';ctx.fillRect(-8,-37+bob,16,5);}
   circle(0,0,22,a.pulse>0?color+'33':null,color+'88');
   ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#f1e7d3';ctx.fillText(def?.name||a.id,0,-52);ctx.restore();
  }
