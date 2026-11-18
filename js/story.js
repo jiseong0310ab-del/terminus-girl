@@ -28,16 +28,78 @@ TG.STORY={nodes:{
  ],next:'rest'},
  rest:{kind:'rest',title:'이야기 시범 · 첫 동행',lines:[
   {speaker:'마레',portrait:'mare',text:'랜턴은 네가 들어. 네가 앞으로 나아갈 동안, 뒤는 내가 살필게.'}
+ ]},
+
+ briefing:{kind:'dialogue',title:'제1장 · 돌아오지 않는 구조 신호',lines:[
+  {speaker:'리제',portrait:'rize',text:'거울역이 비어 있는데 구조 신호가 잡혀. 누군가 계속 기다리고 있어.'},
+  {speaker:'마레',portrait:'mare',text:'격리된 이유가 있을 거야. 문을 열기 전에 먼저 원본 기록을 확인하자.'},
+  {speaker:'동료',portrait:'mare',text:'장치를 찾아 기록을 확보하면 그 이유를 알 수 있어요.'},
+  {speaker:'리제',portrait:'rize',text:'기록 장치를 되찾고, 사람들을 어떻게 구할지 결정하겠어.'},
+  {speaker:'차내 안내 방송',portrait:null,text:'미승인 회송 기록 발견. 거울역 중앙 보존 장치에서 수동 회수가 가능합니다.'}
+ ],next:'trace'},
+ trace:{kind:'dialogue',title:'거울 유리역 · 잔향의 보관실',lines:[
+  {speaker:'리제',portrait:'rize',text:'안내판의 글씨가 거꾸로 흐르고 있어. 역 안쪽의 시간만 멈춘 것 같아.'},
+  {speaker:'마레',portrait:'mare',text:'장치 근처에서 잠시 머물러야 기록을 읽을 수 있대. 적들이 모이면 내가 막을게.'},
+  {speaker:'통신 기록',portrait:null,text:'경고. 구조 신호는 실재합니다. 봉인을 풀면 잔향이 인근 지역에 전파될 수 있습니다.'},
+  {speaker:'리제',portrait:'rize',text:'기록부터 확보하자. 추측만으로 기다리는 사람을 포기할 순 없어.'}
+ ],next:'archive'},
+ archive:{kind:'battle',title:'거울 유리역 · 기억 기록장치 회수'},
+ evidence:{kind:'dialogue',title:'회수 기록 · 지워진 사람들의 이름',lines:[
+  {speaker:'기록 장치',portrait:null,text:'격리 첫날, 승강장에 남겨진 승객 열일곱 명. 구조 신호 송신 중.'},
+  {speaker:'기록 장치',portrait:null,text:'관리 보고: 잔향이 역을 넘어가면 인근 지역에도 위험. 봉인 해제 전 안정화가 필요.'},
+  {speaker:'마레',portrait:'mare',text:'살아 있을 가능성이 있어. 하지만 밖의 사람들까지 위험하게 해서는 안 돼.'},
+  {speaker:'리제',portrait:'rize',text:'누군가 이들의 이름을 지운 건 분명해. 이제 우리가 선택해야 해.'}
+ ],next:'decision'},
+ decision:{kind:'choice',title:'거울 유리역 · 열리지 않은 문',lines:[
+  {speaker:'리제',portrait:'rize',text:'지금 구조 신호를 열면 내 기억이 침식될 수 있어. 봉인을 유지하면 구조 요청이 언제 끊길지 몰라. 어떤 길을 택하지?'}
+ ]},
+ release:{kind:'dialogue',title:'선택 · 구조 신호를 열다',lines:[
+  {speaker:'리제',portrait:'rize',text:'봉인을 열겠어. 돌아올 길이 있다면 포기하지 않을 거야.'},
+  {speaker:'마레',portrait:'mare',text:'통로는 내가 지킬게. 리제, 기억이 흐려져도 내 이름은 잊지 마.'},
+  {speaker:'구조 방송',portrait:null,text:'잠겨 있던 신호가 되살아난다. 누군가 자기 이름을 말한다. 통로가 완전히 안전한지는 아직 모른다.'},
+  {speaker:'리제',portrait:'rize',text:'열차의 불빛은 누군가에게 닿았다. 대신 내가 떠올리던 얼굴 하나가 희미해졌다.'}
+ ],next:'rest2'},
+ contain:{kind:'dialogue',title:'선택 · 역의 봉인을 유지하다',lines:[
+  {speaker:'리제',portrait:'rize',text:'증거를 먼저 가져가자. 다른 역까지 위험하게 만들 수는 없어. 구조 신호는 끊지 마.'},
+  {speaker:'마레',portrait:'mare',text:'쉬운 결정은 아니야. 기록 속 이름들은 이제 우리 손에 있어. 다음에는 안전한 방법을 찾자.'},
+  {speaker:'차내 기록 장치',portrait:null,text:'봉인은 유지되었다. 열일곱 명의 구조 기록과 격리 지침이 열차에 보존되었다.'},
+  {speaker:'리제',portrait:'rize',text:'당장 문은 열지 못했다. 하지만 돌아올 사람들의 이름을 되찾았고, 다음 역에 갈 이유도 생겼어.'}
+ ],next:'rest2'},
+ rest2:{kind:'rest',title:'열차 · 지워진 이름의 무게',lines:[
+  {speaker:'마레',portrait:'mare',text:'오늘의 선택은 끝이 아니야. 다음 역에서 무슨 일이 벌어질지도 달라졌으니까.'}
  ]}
+
 },battles:{
  approach:{stage:0,duration:45,title:'안내 회선 복구',objective:'안내 회선이 복구될 때까지 생존',detail:'45초 동안 이동과 대시로 잔향을 피하세요. 경험치를 모아 기억을 강화할 수 있습니다.',successTitle:'안내 방송이 돌아왔다',successStory:'되풀이되던 도착 시각 사이로, 승강장에 남은 사람의 목소리가 들렸다.',next:'meeting'},
- escort:{stage:0,duration:75,title:'함께 여는 귀환로',objective:'귀환로가 열릴 때까지 마레와 생존',detail:'75초 동안 살아남으세요. 마레는 준비된 보호로 피격 한 번을 막으며, 그 뒤에는 다시 준비할 시간이 필요합니다.',successTitle:'함께 열차에 올랐다',successStory:'리제와 마레는 열린 귀환로를 지나 같은 객실에 들어섰다. 거울역의 진실은 아직 승강장에 남아 있다.',next:'debrief'}
+ escort:{stage:0,duration:75,title:'함께 여는 귀환로',objective:'귀환로가 열릴 때까지 마레와 생존',detail:'75초 동안 살아남으세요. 마레는 준비된 보호로 피격 한 번을 막으며, 그 뒤에는 다시 준비할 시간이 필요합니다.',successTitle:'함께 열차에 올랐다',successStory:'리제와 마레는 열린 귀환로를 지나 같은 객실에 들어섰다. 거울역의 진실은 아직 승강장에 남아 있다.',next:'debrief'},
+ archive:{stage:0,duration:95,title:'기억 기록장치 회수',objective:'기록장치에 다가가 1.25초 회수한 뒤 제한시간까지 생존',detail:'파란빛 기록 장치 가까이에 서서 1.25초 머무르세요. 기록을 확보하지 못하면 임무는 실패합니다. 이후 95초까지 생존하세요.',successTitle:'지워진 이름의 기록 확보',successStory:'거울역 봉인 당시 남겨진 승객 명단과 구조 신호가 열차로 전송되었다.',next:'evidence'}
 }};
 const A=TG.story={};
 const isBattle=node=>TG.STORY.nodes[node]?.kind==='battle';
 const activeRun=()=>!!TG.engine?.g&&TG.engine.g.status!=='ended';
 const newEncounter=()=> 'story-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
 A.state=()=>TG.store.data.story;
+A.currentLine=function(state=A.state()){
+ const line=TG.STORY.nodes[state.node]?.lines?.[state.line];
+ if(!line)return null;
+ if(state.node==='briefing'&&state.line===2){
+  const party=state.missionParty||state.companions;
+  const voices={
+   aster:{speaker:'아스터',portrait:'aster',text:'기록이 없어진 게 아니라 누군가 가린 것 같아요. 보존 장치의 원본을 확인하죠.'},
+   noa:{speaker:'노아',portrait:'noa',text:'신호선을 열 수 있어요. 하지만 역의 봉인을 건드리지 않고 기록만 가져오는 게 먼저예요.'},
+   vela:{speaker:'벨라',portrait:'vela',text:'구조를 기다리는 사람이 있다면 시간이 많지 않겠죠. 그래도 모두의 안전을 확인해요.'},
+   mare:{speaker:'마레',portrait:'mare',text:'그 신호를 보낸 사람도, 역 밖의 사람도 지켜야 해. 기록부터 확인하자.'}
+  };
+  return voices[['aster','noa','vela','mare'].find(id=>party.includes(id))||'mare'];
+ }
+ if(state.node==='rest2')return state.decision==='rescue'?
+  {speaker:'마레',portrait:'mare',text:'신호는 열렸어. 하지만 리제의 기억도 흐려졌지. 다음 역에서는 더 안전한 방법을 찾자.'}:
+  {speaker:'마레',portrait:'mare',text:'오늘은 봉인을 지켰어. 구조 기록은 남았으니 다음 역에서 되돌아올 방법을 찾자.'};
+ return line;
+};
+A.summary=function(state=A.state()){
+ return state.decision?(state.decision==='rescue'?'구조 신호 개방':'격리 유지 · 증거 확보')+' · 침식 '+state.erosion+' / 100':'선택 대기 · 침식 '+state.erosion+' / 100';
+};
 function transact(change){
  const S=TG.store;if(!S?.canWrite())return false;
  const before=clone(S.data.story),next=clone(before);
@@ -57,13 +119,31 @@ A.advance=function(expectedNode,expectedLine){
   state.node=node.next;state.line=0;
   state.encounterId=isBattle(state.node)?newEncounter():null;
   if(state.encounterId)state.commandSeed=TG.commandDeck.seedFor(state.encounterId);
-  state.completed=state.node==='rest';
+  state.completed=state.node==='rest'||state.node==='rest2';
+ });
+};
+A.beginR3=function(){
+ if(activeRun())return false;
+ return transact(state=>{
+  if(state.node!=='rest'||!state.completed||!state.companions.includes('mare'))return false;
+  state.missionParty=[...state.companions];state.node='briefing';state.line=0;state.completed=false;
+ });
+};
+A.choose=function(id,expectedNode='decision'){
+ if(activeRun()||!['rescue','contain'].includes(id))return false;
+ return transact(state=>{
+  if(state.node!=='decision'||expectedNode!==state.node||!state.recordRecovered||state.decision)return false;
+  state.decision=id;state.erosion=Math.min(100,state.erosion+(id==='rescue'?18:5));
+  const party=state.missionParty||state.companions;
+  for(const ally of (id==='rescue'?['mare','vela']:['aster','noa']))if(party.includes(ally))state.bonds[ally]=Math.min(3,(state.bonds[ally]||0)+1);
+  if(!state.seen.includes('decision'))state.seen.push('decision');
+  state.node=id==='rescue'?'release':'contain';state.line=0;state.completed=false;
  });
 };
 A.setParty=function(ids){
  if(activeRun()||!Array.isArray(ids)||ids.length!==3||new Set(ids).size!==3||ids.some(id=>!TG.PARTY.some(x=>x.id===id&&x.trial)))return false;
  return transact(state=>{
-  if(state.node!=='rest')return false;
+  if(!['rest','rest2'].includes(state.node))return false;
   state.companions=[...ids];
   state.commandDeck=TG.commandDeck.preset('protect',ids);
  });
@@ -82,15 +162,16 @@ A.setCommandDeck=function(ids){
 };
 A.prepareTraining=function(){
  const S=TG.store,state=A.state();
- if(!state.companions.length||activeRun()||!S.canWrite())return null;
+ if(!state.companions.length||activeRun()||!S.canWrite()||!['rest','rest2','approach','escort','archive'].includes(state.node))return null;
  return {id:'training-'+state.node+'-'+state.commandSeed.toString(36),battleId:'escort',duration:90,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed};
 };
 A.completeBattle=function(run){
  if(!run||run.mode!=='story'||run.storyTraining===true||run.won!==true||!Number.isFinite(run.p?.hp)||run.p.hp<=0)return false;
  return transact(state=>{
   const battle=TG.STORY.battles[state.node];
-  if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id)return false;
+  if(!state.started||!battle||state.node!==run.storyBattle||state.encounterId!==run.id||state.node==='archive'&&run.recordTarget?.recovered!==true)return false;
   state.loadout=clone({hp:run.p.hp,levels:run.levels||{},level:run.level,xp:run.xp,kills:run.kills,totalTime:run.totalTime,relics:run.relics||[]});
+  if(state.node==='archive')state.recordRecovered=true;
   state.node=battle.next;state.line=0;state.encounterId=null;
  });
 };
