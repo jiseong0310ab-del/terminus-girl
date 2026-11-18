@@ -338,6 +338,52 @@ function snowTargetTick(dt){
   }
  }
 }
+function patientTick(dt){
+ const g=G.g,pt=g.patient;
+ if(g.mode!=='story'||g.storyTraining||g.storyBattle!=='velaEscort'||!pt||g.status!=='playing')return;
+ const dx=g.p.x-pt.x,dy=g.p.y-pt.y,distance=len(dx,dy);
+ if(pt.phase==='stabilize'){
+  if(distance<85){
+   pt.charge=Math.min(pt.needed,pt.charge+dt);
+   const medic=g.allies.find(a=>a.id==='vela');
+   if(medic){medic.carePose=.4;medic.x=pt.x+24;medic.y=pt.y+5;}
+  }else pt.charge=Math.max(0,pt.charge-dt*.25);
+  if(pt.charge>=pt.needed){
+   pt.phase='escort';ring(pt.x,pt.y,55,'#99dab1');G.notify('환자가 스스로 일어섰습니다 · 객차까지 호위하세요');
+  }
+ }else if(pt.phase==='escort'){
+  if(distance<175&&distance>37){
+   const step=Math.min(135*dt,distance-37);
+   pt.x=advance(pt.x,dx/distance*step);pt.y=advance(pt.y,dy/distance*step);
+   pt.pose=.4;
+  }else pt.pose=0;
+  if(len(pt.x-g.trainExit.x,pt.y-g.trainExit.y)<g.trainExit.r&&len(g.p.x-g.trainExit.x,g.p.y-g.trainExit.y)<125){
+   pt.phase='boarded';pt.saved=true;ring(g.trainExit.x,g.trainExit.y,75,'#f2da97');
+   G.notify('구조 성공 · 환자가 객차에 탑승했습니다');
+   G.finish(true,'patient');return;
+  }
+ }
+ // A visible warning precedes every patient-directed attack. Protection has priority over damage.
+ if(pt.warning>0){
+  pt.warning=Math.max(0,pt.warning-dt);
+  if(pt.warning===0){
+   const m=g.mare;
+   if(pt.shield>0){pt.shield--;pt.mareBlocks++;ring(pt.x,pt.y,52,'#d9ba80');G.notify('마레의 방패 · 환자를 향한 공격 차단');}
+   else if(m&&m.cooldown<=0&&len(m.x-pt.x,m.y-pt.y)<160){
+    m.cooldown=m.maxCooldown;m.pulse=.8;m.protected++;m.x=pt.x-26;m.y=pt.y-8;
+    pt.mareBlocks++;ring(pt.x,pt.y,58,'#e8c48e');spark(pt.x-15,pt.y-10,'#f4d39b',8);
+    G.notify('마레가 몸으로 공격을 가로막았습니다');
+   }else{
+    pt.hp=Math.max(0,pt.hp-20);pt.pose=1;ring(pt.x,pt.y,38,'#d58f9b');
+    G.notify('환자가 공격당했습니다 · 벨라의 치료가 필요합니다');
+    if(pt.hp<=0){G.finish(false,'patient');return;}
+   }
+  }
+ }else{
+  pt.threatClock+=dt;
+  if(pt.threatClock>=4.2){pt.threatClock=0;pt.warning=1.6;G.notify('위험 · 환자를 향한 공격이 예고됩니다');}
+ }
+}
 function allyTick(dt){
  const g=G.g;if(g.mode!=='story'||!g.allies?.length)return;
  for(let i=0;i<g.allies.length;i++){
@@ -366,7 +412,7 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  if(g.mode==='story'&&g.commands){TG.commandDeck.tick(g.commands,dt);g.commandEffects.guardWindow=Math.max(0,g.commandEffects.guardWindow-dt);g.commandEffects.ward=Math.max(0,g.commandEffects.ward-dt);}
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
- mareTick(dt);allyTick(dt);recordTick(dt);snowTargetTick(dt);encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
+ mareTick(dt);allyTick(dt);recordTick(dt);snowTargetTick(dt);patientTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
  const bossBeforeFlames=g.bossDefeated;for(const flame of g.flames){const active=Math.min(dt,flame.life);flame.life-=dt;for(const e of [...g.enemies])if(len(e.x-flame.x,e.y-flame.y)<flame.r+e.r)G.hitEnemy(e,6*active);}g.flames=g.flames.filter(f=>f.life>0);if(g.mode!=='story'&&!bossBeforeFlames&&g.bossDefeated){G.stageClear();return;}
  waveTick(dt);g.spawn+=dt;const baseInterval=g.storyTraining?Math.max(.35,.8-g.time/g.duration*.45):Math.max(.42,1.3-g.time/g.duration*.7-g.stage*.09);
  const interval=g.storyBattle==='snowMission'&&g.snowSignalHelp?baseInterval*1.13:baseInterval;while(g.spawn>=interval){g.spawn-=interval;if(g.enemies.length<65&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
@@ -397,7 +443,8 @@ G.nextStage=function(){const g=G.g;if(!g||g.status!=='camp'||!g.eventDone||!g.bo
 G.saveStoryResult=function(){const g=G.g;if(!g||g.mode!=='story'||g.status!=='ended'||!g.won)return false;if(g.storyTraining){g.storySaved=true;return true;}if(g.storySaved)return true;g.storySaved=TG.story?.completeBattle?.(g)===true;return g.storySaved;};
 G.finish=function(won,reason){const g=G.g;if(!g||g.status==='ended')return false;if(g.mode==='chapter'&&!TG.store.canWrite()){G.pause();G.notify('기록 저장을 확인할 수 없어 멈췄습니다. 저장소 접근을 확인한 뒤 계속하거나 설정에서 백업하세요.');return false;}if(g.mode==='story'&&g.p.hp<=0){won=false;reason='death';}
 if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='archive'&&g.recordTarget?.recovered!==true&&won){won=false;reason='record';}
- if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='snowMission'&&g.signalTargets?.some(r=>!r.recovered)&&won){won=false;reason='signal';}g.memoryAnchor=null;g.status='ended';G.input.x=G.input.y=0;g.won=won;g.reason=reason;if(g.mode==='chapter'){g.reward=TG.store.settle(g,won);g.newGoals=[...(TG.store.lastUnlocked||[])];if(won){for(const m of TG.MEMORIES)TG.store.remember(m.id)}}else if(g.mode==='story'){g.reward=0;g.newGoals=[];g.practice=false;g.storySaved=false;if(won)G.saveStoryResult();}else{g.reward=0;g.practice=true;}G.onChange('ended');G.onSound(won?'clear':'hurt');return true;};
+ if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='snowMission'&&g.signalTargets?.some(r=>!r.recovered)&&won){won=false;reason='signal';}
+ if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='velaEscort'&&(!g.patient||g.patient.phase!=='boarded'||!g.patient.saved||g.patient.hp<=0)&&won){won=false;reason='patient';}g.memoryAnchor=null;g.status='ended';G.input.x=G.input.y=0;g.won=won;g.reason=reason;if(g.mode==='chapter'){g.reward=TG.store.settle(g,won);g.newGoals=[...(TG.store.lastUnlocked||[])];if(won){for(const m of TG.MEMORIES)TG.store.remember(m.id)}}else if(g.mode==='story'){g.reward=0;g.newGoals=[];g.practice=false;g.storySaved=false;if(won)G.saveStoryResult();}else{g.reward=0;g.practice=true;}G.onChange('ended');G.onSound(won?'clear':'hurt');return true;};
 G.abandon=function(){const g=G.g;if(g?.mode==='story')return g.status==='ended'?false:G.finish(false,'retreat');if(g&&g.status!=='ended')return G.finish(false,'retreat');const c=TG.store.data.checkpoint;if(c){if(!TG.store.canWrite())return false;TG.store.settle(c,false);G.g=null;G.onChange('hub');return true}return false;};
 G.hub=function(){if(G.g?.status==='playing')G.pause();G.onChange('hub');};
 G.particle=spark;G.kill=kill;G.initialize=initialize;
