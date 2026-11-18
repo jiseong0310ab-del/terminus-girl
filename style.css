@@ -165,3 +165,99 @@
 .commandCard::after{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(#f3dc9f,#6f8595);opacity:.7}
 .deckChoice.selected{border-color:#e7c996;box-shadow:inset 0 0 0 1px #c9a66a99,0 7px 20px #040b1555}
 .commandCard:focus-visible,.deckChoice:focus-visible,.partyMember:focus-visible{outline:3px solid #f0d599;outline-offset:3px}
+
+/* v0.17 — illustrated winter-railway party selection, portrait cards */
+#partyScreen{
+  background:
+    linear-gradient(180deg,rgba(6,11,23,.66) 0%,rgba(6,11,22,.91) 35%,#080d19 85%),
+    url('assets/terminus-night-v03.webp') center 28%/cover no-repeat;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 12px);
+  align-items:flex-start;justify-content:flex-start;
+  scrollbar-width:thin;scrollbar-color:#8c815e77 transparent;
+}
+#partyScreen .partyPanel{max-width:440px;margin:0 auto;text-align:left;padding:0 0 8px}
+.partyTop{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.partyEyebrow{font-size:10px;letter-spacing:1.7px;font-weight:700;color:#d1b789}
+.partyEyebrow span{color:#61758a;padding:0 3px}
+.partyBack{flex-shrink:0;min-height:38px;border:1px solid #b4a07b66;border-radius:11px;padding:4px 10px;background:#111b2bd9;color:#e8dfcf;font-size:22px;display:flex;align-items:center;gap:6px;box-shadow:0 3px 12px #03060c88}
+.partyBack span{font-size:11px}
+.partyHeading{display:flex;align-items:end;justify-content:space-between;gap:12px;margin:8px 0 13px}
+.partyChapter{color:#d8b982;font-size:10px;margin:0 0 6px;letter-spacing:1.2px}
+#partyScreen h2{color:#fff1d8;font-family:Georgia,"Apple SD Gothic Neo",serif;font-size:clamp(23px,6.1vw,30px);letter-spacing:-.8px;line-height:1.28;margin:0 0 5px;text-shadow:0 2px 10px #02060d}
+.partySubtitle{font-size:12px;line-height:1.4;color:#b8c8d4;margin:0}
+.partyCounter{min-width:73px;display:grid;justify-items:center;gap:2px;padding:8px 10px;border:1px solid #99886577;border-radius:11px;background:#101b2adb}
+.partyCounter b{font-size:19px;line-height:1.1;font-variant-numeric:tabular-nums;color:#f2d8a0;white-space:nowrap}
+.partyCounter span{font-size:9px;color:#9caab7;white-space:nowrap}
+.partyLeader{position:relative;overflow:hidden;display:flex;align-items:center;min-height:76px;margin:0 0 16px;border:1px solid #c7a9769a;border-radius:12px;background:linear-gradient(105deg,#293a4add,#1d283bdc 48%,#111928eb);box-shadow:inset 0 1px #ffffff24,0 8px 26px #0007}
+.partyLeader::after{content:'';position:absolute;left:0;bottom:0;width:100%;height:2px;background:linear-gradient(90deg,#e6c98d,transparent)}
+.partyLeaderPortrait{width:86px;align-self:stretch;flex-shrink:0;background:linear-gradient(90deg,#35516b33,transparent),url('assets/rize-sd-v03.webp') center 20%/auto 93% no-repeat;filter:drop-shadow(0 4px 5px #0006)}
+.partyLeaderCopy{display:grid;gap:2px;padding:8px 0 8px 2px}
+.partyLeaderTag{color:#e5c68e;font-size:9px;letter-spacing:1px;font-weight:750}
+.partyLeaderCopy strong{font-size:17px;color:#f6f2e9;line-height:1.4}
+.partyLeaderCopy small{font-size:11px;color:#b8c8d5}
+.partyLeaderSign{font-size:22px;color:#d9bf89;margin-left:auto;margin-right:15px;text-shadow:0 0 10px #eed6a855}
+.partyRosterHead{display:flex;align-items:center;justify-content:space-between;margin:0 1px 9px;gap:8px}
+.partyRosterHead>span:first-child{font-size:10px;letter-spacing:1.8px;color:#d5be98;font-weight:750}
+.partyRosterHead i{font-style:normal;color:#9aa8ba;margin-left:5px;letter-spacing:0}
+.partyRosterHead>span:last-child{font-size:10px;color:#9cadbd}
+#partyScreen .partyRoster{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:0 0 8px}
+#partyScreen .partyMember{position:relative;overflow:hidden;display:block;width:100%;min-width:0;min-height:0;aspect-ratio:.74;padding:0;margin:0;border-radius:11px;border:1px solid #7e91a26b;text-align:left;background:#1b2739;color:#f0f0eb;isolation:isolate;box-shadow:0 6px 14px #01050e65;transition:transform .13s,border-color .13s,box-shadow .13s}
+#partyScreen .partyMember:active:not(:disabled){transform:scale(.97)}
+#partyScreen .partyMember.selected{border:2px solid #f0d18c;background:#28394c;box-shadow:0 0 0 1px #b59a63aa,0 0 17px #dfbc8140}
+#partyScreen .partyMember.locked{opacity:1;cursor:default;filter:none}
+.partyArt{position:absolute;inset:0 0 30px;background:url('assets/party-portraits-v017.webp') 0 0/300% 200% no-repeat;filter:saturate(.84) contrast(1.04);pointer-events:none}
+.partyArt.char-mare,.character-mare{background-position:0% 0%}
+.partyArt.char-aster,.character-aster{background-position:50% 0%}
+.partyArt.char-noa,.character-noa{background-position:100% 0%}
+.partyArt.char-vela,.character-vela{background-position:0% 100%}
+.partyArt.char-iris,.character-iris{background-position:50% 100%}
+.partyArt.char-crow,.character-crow{background-position:100% 100%}
+.partyMember.locked .partyArt{filter:grayscale(1) brightness(.58);opacity:.85}
+.partyFade{position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 38%,#0b132038 58%,#0b1525 80%,#101a2b 100%)}
+.partyMember.locked .partyFade{background:linear-gradient(180deg,#0b12218a,#0b1321b8)}
+#partyScreen .partyMemberText{position:absolute;z-index:2;left:7px;right:5px;bottom:7px;display:grid;gap:2px;min-width:0}
+#partyScreen .partyMemberText strong{font-size:13px;letter-spacing:-.3px;color:#fff5e8;line-height:1.28;text-shadow:0 2px 3px #02040b}
+#partyScreen .partyMemberText small{font-size:9px;line-height:1.3;color:#c3cbd4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.partyFlag{position:absolute;z-index:3;right:5px;top:5px;display:grid;place-items:center;min-width:23px;height:23px;padding:0 4px;border-radius:7px;border:1px solid #dae0e37a;background:#081322c0;color:#ecf1f8;font-size:14px;font-weight:800;pointer-events:none}
+.partyMember.selected .partyFlag{color:#15202e;background:#f2d59c;border-color:#fff0c8}
+.partyMember.locked .partyFlag{background:#111a25ce;border-color:#65778c;color:#a6adb7;font-size:10px}
+.partySelection{font-size:11px;min-height:25px;padding:4px 1px 0;color:#c7b48f;line-height:1.5}
+.partyFooter{position:sticky;bottom:-12px;z-index:4;padding:10px 0 calc(env(safe-area-inset-bottom,0px) + 8px);margin-top:2px;background:linear-gradient(180deg,#0b142100,#0b1421 20%,#0b1421 100%)}
+.partyFooter p{font-size:10px;color:#8c9eae;line-height:1.55;text-align:center;margin:0 0 7px}
+#partyScreen .partySave{margin:0;min-height:48px;padding:10px 15px;border:1px solid #f0ce8f;border-radius:12px;background:linear-gradient(115deg,#8e7148,#574934 70%,#352c2d);color:#fff5dc;font-size:14px;letter-spacing:.3px;box-shadow:inset 0 1px #f8e5b655,0 5px 20px #0008}
+#partyScreen .partySave span{float:right;font-size:24px;line-height:15px}
+#partyScreen .partySave:disabled{opacity:.48;filter:grayscale(.4)}
+/* Artwork is shared by roster, deck cards, and in-combat tactical cards. */
+.deckChoice{position:relative;min-height:109px;padding-right:106px;isolation:isolate}
+.deckPortrait{position:absolute;z-index:0;right:4px;top:8px;width:94px;height:94px;border-radius:9px;background-image:url('assets/party-portraits-v017.webp');background-size:300% 200%;background-repeat:no-repeat;opacity:.7;mask-image:linear-gradient(90deg,transparent,#000 32%);pointer-events:none}
+.deckPortrait.character-rize{background:url('assets/rize-sd-v03.webp') center/contain no-repeat}
+.deckPortrait.character-shared{background:radial-gradient(circle,#cda8645a,transparent 70%)}
+.deckChoice .deckText{position:relative;z-index:1;min-width:0}
+.deckCost{position:absolute;z-index:2;right:9px;bottom:9px;display:grid;place-items:center;width:27px;height:27px;border-radius:50%;border:1px solid #f5d9a6;background:#403b39;color:#ffe4a8;font-size:14px;font-weight:800}
+.commandCard{isolation:isolate}
+.commandCard .commandArt{position:absolute;z-index:0;right:0;top:7px;width:85px;height:85px;background:url('assets/party-portraits-v017.webp') no-repeat;background-size:300% 200%;opacity:.26;mask-image:linear-gradient(90deg,transparent,#000 40%);pointer-events:none}
+.commandCard .commandArt.character-rize{background:url('assets/rize-sd-v03.webp') center/contain no-repeat}
+.commandCard .commandArt.character-shared{background:radial-gradient(circle,#dfbf8260,transparent 70%)}
+.commandCard .commandOwner,.commandCard .cardtitle,.commandCard .carddesc,.commandCard .commandReason{position:relative;z-index:1}
+.commandCard::before,.deckChoice::before{content:none}
+@media(max-width:375px){
+  #partyScreen{padding-left:12px;padding-right:12px}
+  #partyScreen .partyRoster{gap:7px}
+  #partyScreen .partyMemberText{left:6px;right:4px;bottom:5px}
+  #partyScreen .partyMemberText strong{font-size:12px}
+  #partyScreen .partyMemberText small{font-size:9px}
+  .partyLeader{min-height:70px}
+  .partyHeading{margin-bottom:10px}
+}
+@media(max-height:670px){
+  #partyScreen .partyMember{aspect-ratio:.88}
+  .partyLeader{min-height:65px;margin-bottom:10px}
+  .partyRosterHead{margin-bottom:6px}
+  .partyFooter p{display:none}
+  .partyFooter{padding-top:6px}
+}
+@media(min-width:650px){
+  #partyScreen .partyMember{aspect-ratio:.84}
+  .partyArt{inset:0 0 34px}
+}
+@media(prefers-reduced-motion:reduce){#partyScreen .partyMember{transition:none}}
