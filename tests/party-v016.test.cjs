@@ -23,7 +23,7 @@ test('six companion roles, four available in first trial, three active with vali
  assert.equal(A.setParty(['mare','iris','noa']),false);
  assert(A.setParty(['mare','aster','noa']));
  assert.deepEqual(plain(A.state().companions),['mare','aster','noa']);
- assert.equal(A.state().version,2);
+ assert.equal(A.state().version,3);
  assert.equal(A.state().commandDeck.length,10);
  const saved=boot(new Map(values));assert.deepEqual(plain(saved.A.state().companions),['mare','aster','noa']);
  const g=G.startCommandTraining();
