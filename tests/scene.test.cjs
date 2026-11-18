@@ -55,7 +55,7 @@ test('three new allies draw original SD animation atlas only in story, with idle
  g.mode='story';g.storyBattle='escort';g.party=['aster','noa','vela'];
  g.allies=['aster','noa','vela'].map((id,i)=>({id,x:g.p.x+70+i*5,y:g.p.y+60+i*5,moving:false,face:0,pulse:0,cooldown:0}));
  TG.view.draw(1000);
- const art='assets/companions-sd-v018.webp',idle=draws.filter(x=>x[0].src===art);
+ const art='assets/companions-sd-v019.avif',idle=draws.filter(x=>x[0].src===art);
  assert.equal(idle.length,3);assert(idle.every(x=>x.slice(1).every(Number.isFinite)));
  assert.equal(idle[0][1],0);assert.equal(idle[0][2],0);
  assert(idle[1][2]>idle[0][2]);assert(idle[2][2]>idle[1][2]);
@@ -66,4 +66,13 @@ test('three new allies draw original SD animation atlas only in story, with idle
  assert(walking.every(x=>x[1]>0));
  draws.length=0;g.mode='quick';TG.view.draw(300);
  assert.equal(draws.filter(x=>x[0].src===art).length,0);
+});
+
+test('high-resolution ally AVIF asset has valid image container and is larger than previous 64px atlas',()=>{
+ const old=fs.readFileSync(path.join(__dirname,'../assets/companions-sd-v018.webp'));
+ const current=fs.readFileSync(path.join(__dirname,'../assets/companions-sd-v019.avif'));
+ assert.equal(current.subarray(4,8).toString('ascii'),'ftyp');
+ assert.equal(current.subarray(8,12).toString('ascii'),'avif');
+ assert(current.byteLength>old.byteLength);
+ assert.equal(current.byteLength,23020);
 });
