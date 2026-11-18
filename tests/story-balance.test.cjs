@@ -15,8 +15,8 @@ function step(G,n){for(let i=0;i<n;i++){if(G.g.status!=='playing')break;G.update
 test('first battle gives accessible shorter exit but still requires guardian defeat',()=>{
  const b=boot(),g=first(b),gate=g.storyGate;
  assert.equal(gate.kind,'approach');assert.equal(gate.x-g.p.x,180);assert.equal(gate.y-g.p.y,-70);
- assert.equal(gate.guardIds.length,1);
- assert(gate.guardIds.every(id=>g.enemies.some(e=>e.id===id&&e.hp>=112)));
+ assert.equal(gate.guardIds.length,2);
+ assert(gate.guardIds.every(id=>g.enemies.some(e=>e.id===id&&e.hp>=94)));
  assert.equal(b.G.objective().kind,'mission');
  assert.equal(g.storyPressure.warning,0);
 });
