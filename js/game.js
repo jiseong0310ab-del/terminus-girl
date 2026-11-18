@@ -120,14 +120,14 @@ g.recordTarget=!training&&spec.battleId==='archive'?{x:g.p.x+125,y:g.p.y-75,r:55
  g.storyGate=null;
  if(!training&&['approach','escort','archive'].includes(spec.battleId)){
   const mission=spec.battleId;
-  g.storyGate={x:g.p.x+(mission==='approach'?218:-220),y:g.p.y+(mission==='approach'?-83:95),r:49,
+  g.storyGate={x:g.p.x+(mission==='approach'?180:mission==='escort'?-175:-195),y:g.p.y+(mission==='approach'?-70:mission==='escort'?80:90),r:51,
     needed:mission==='approach'?1.1:.7,charge:0,done:false,
     guardIds:[],defeated:[],kind:mission};
   if(mission!=='archive'){
-   const guards=mission==='approach'?[['ghost',142,-31]]:[['ghost',-148,72],['wolf',-185,132]];
+   const guards=mission==='approach'?[['ghost',132,-20],['passenger',-92,-124]]:[['ghost',-136,64],['wolf',-182,126]];
    for(const [type,dx,dy] of guards){
     const enemy=G.enemy(type,g.p.x+dx,g.p.y+dy);
-    enemy.hp=Math.max(enemy.hp,mission==='approach'?105:120);enemy.maxHp=enemy.hp;
+    enemy.hp=Math.max(enemy.hp,mission==='approach'?(type==='passenger'?94:112):132);enemy.maxHp=enemy.hp;
     g.storyGate.guardIds.push(enemy.id);
    }
   }
@@ -143,6 +143,10 @@ g.recordTarget=!training&&spec.battleId==='archive'?{x:g.p.x+125,y:g.p.y-75,r:55
  g.patient=!training&&spec.battleId==='velaEscort'?{x:g.p.x+112,y:g.p.y-65,hp:66,maxHp:100,phase:'stabilize',charge:0,needed:3.2,shield:0,warning:0,threatClock:0,treatments:0,mareBlocks:0,saved:false,pose:0}:null;
  g.trainExit=g.patient?{x:g.p.x-225,y:g.p.y+125,r:52}:null;
  if(g.patient)g.p.hp=Math.max(80,g.p.hp);
+ // Only story missions use a readable, dodgeable stationary-pressure hazard.
+ // Survival, command training and the patient escort keep their existing balance.
+ g.storyPressure=!training&&['approach','escort','archive','snowMission'].includes(spec.battleId)?
+  {idle:0,x:g.p.x,y:g.p.y,r:66,warning:0,cooldown:0,pulses:0,hits:0,dodges:0}:null;
  G.notify(training?'90초 합동 지휘 훈련 · 지휘 카드를 시험하세요':battle.objective);G.onChange('playing');G.onSound('start');G.checkLevel();return g;
 }
 G.startStory=function(){
@@ -287,7 +291,16 @@ G.choose=function(id,token){const g=G.g;if(!g||g.status!=='cards'||token!==g.off
 function spark(x,y,color,count=6){const g=G.g;for(let i=0;i<count&&g.particles.length<130;i++)g.particles.push({x,y,vx:rand(-80,80),vy:rand(-80,80),life:rand(.2,.5),max:.5,color,size:rand(1,3)})}
 function ring(x,y,r,color){G.g.rings.push({x,y,r,color,life:.5,max:.5})}
 G.enemy=function(type,x,y){const g=G.g;const b=type==='boss',def=b?{hp:[1000,1650,2400][g.stage],speed:42,r:27,art:[2,5,8][g.stage],behavior:'boss'}:TG.ENEMY_DEFS[type];if(!def)throw Error('Unknown enemy');const e={...def,type,id:++g.enemySeq,x,y,maxHp:def.hp,hp:def.hp,hit:0,slow:0,burn:0,burnPower:0,orbitHit:0,frozen:0,freezeCooldown:0,action:'approach',clock:0,wait:b?2:rand(.7,1.8),aimX:0,aimY:1,pulseRadius:[145,220,180][g.stage],phase:rand(0,TAU),bossPhase:1,attackPhase:1,attackCount:0,attackVariant:'axis'};if(g.storyTraining){e.hp*=1.4;e.maxHp=e.hp;}g.enemies.push(e);return e;};
-function spawn(){const g=G.g;const w=TG.view?.width||390,h=TG.view?.height||844,a=rand(0,TAU),radius=g.storyTraining?Math.max(220,Math.min(w,h)*.58):Math.hypot(w,h)*.52+50;const pool=g.storyTraining?(g.time<30?['ghost','lost']:g.time<60?['wolf','lost']:['conductor','lost']):TG.STAGES[g.stage].enemies;G.enemy(pool[Math.random()<.28?1:0],g.p.x+Math.cos(a)*radius,g.p.y+Math.sin(a)*radius)}
+function spawn(){
+ const g=G.g,w=TG.view?.width||390,h=TG.view?.height||844,a=rand(0,TAU);
+ const mission=g.mode==='story'&&!g.storyTraining&&g.storyBattle!=='velaEscort';
+ const radius=g.storyTraining?Math.max(220,Math.min(w,h)*.58):
+  mission?clamp(Math.min(w,h)*.72,245,310):Math.hypot(w,h)*.52+50;
+ const pool=g.storyTraining?(g.time<30?['ghost','lost']:g.time<60?['wolf','lost']:['conductor','lost']):TG.STAGES[g.stage].enemies;
+ const e=G.enemy(pool[Math.random()<.28?1:0],g.p.x+Math.cos(a)*radius,g.p.y+Math.sin(a)*radius);
+ if(mission){e.hp=Math.ceil(e.hp*1.12);e.maxHp=e.hp;}
+ return e;
+}
 function waveTick(dt){
  const g=G.g;if(g.bossSpawned||g.time>=(g.mode==='story'?g.duration-5:g.duration*.60)){g.wave=null;return;}
  if(g.wave){g.wave.remaining-=dt;if(g.wave.remaining>0)return;
@@ -326,7 +339,7 @@ function enemyTick(dt){const g=G.g,p=g.p;for(const e of [...g.enemies]){if(g.sta
  else if(e.action==='charge'){vx=e.aimX;vy=e.aimY;speed=e.elite?270:330;e.clock-=dt;if(e.clock<=0){e.action='recover';e.clock=.9;speed=0}}
  else if(e.action==='recover'){speed=0;e.clock-=dt;if(e.clock<=0){e.action='approach';e.wait=e.behavior==='boss'?(e.bossPhase===2?2.2:2.8):1.7}}
  else{if(e.behavior==='ranged'&&d<200)speed=-15;if(e.wait<=0&&((e.behavior==='charge'&&d<260)||(e.behavior==='ranged'&&d<350)||(e.behavior==='boss'&&d<250))){e.action='windup';if(e.type==='boss'){e.attackPhase=e.bossPhase;e.attackCount++;e.attackVariant=g.stage===1&&e.attackPhase===2&&e.attackCount%2?'diagonal':'axis';}e.clock=e.behavior==='boss'?[1.35,1.6,1.7][g.stage]:e.behavior==='charge'?.75:1;e.aimX=vx;e.aimY=vy;speed=0;}}
- const slow=e.slow>0?1-(p.slow||.35):1;e.x+=vx*speed*slow*dt;e.y+=vy*speed*slow*dt;if(len(p.x-e.x,p.y-e.y)<e.r+14)G.damage(e.type==='boss'?18:e.action==='charge'?14:9);if(g.status!=='playing')return;
+ const slow=e.slow>0?1-(p.slow||.35):1;e.x+=vx*speed*slow*dt;e.y+=vy*speed*slow*dt;if(len(p.x-e.x,p.y-e.y)<e.r+14)G.damage(e.type==='boss'?18:e.action==='charge'?14:g.mode==='story'&&!g.storyTraining&&g.storyBattle!=='velaEscort'?6:9);if(g.status!=='playing')return;
  if(p.orbit>0&&e.orbitHit<=0)for(let k=0;k<p.orbit;k++){const a=g.time*2.4+k*TAU/p.orbit;if(len(e.x-p.x-Math.cos(a)*65,e.y-p.y-Math.sin(a)*65)<e.r+14){G.hitEnemy(e,14*(g.synergies.frostOrbit&&e.slow>0?1.3:1));if(g.synergies.frostOrbit){e.slow=1.5;if(e.type!=='boss'&&e.freezeCooldown<=0){e.frozen=.45;e.freezeCooldown=3;ring(e.x,e.y,25,'#aee5fb');}}e.orbitHit=.4;break}}
  }}
 function fire(){const g=G.g,p=g.p;let e=null,best=650;for(const v of g.enemies){const d=len(v.x-p.x,v.y-p.y);if(d<best){best=d;e=v}}if(!e)return;const angle=Math.atan2(e.y-p.y,e.x-p.x);for(let i=0;i<p.projectiles&&g.bullets.length<100;i++){const a=angle+(i-Math.floor(p.projectiles/2))*.15;g.bullets.push({x:p.x,y:p.y,vx:Math.cos(a)*500,vy:Math.sin(a)*500,life:1.4,damage:p.attack*(i===Math.floor(p.projectiles/2)?1:.7)*(g.synergies.echoBlade&&i===Math.floor(p.projectiles/2)?1.3:1)*(Math.random()<p.crit?1.7:1),pierce:p.pierce,echo:g.synergies.echoBlade&&i===Math.floor(p.projectiles/2),echoSpent:false,hit:new Set()})}G.onSound('shot');}
@@ -389,6 +402,33 @@ function snowTargetTick(dt){
   }
  }
  if(g.signalTargets.length&&g.signalTargets.every(a=>a.recovered)){G.notify('설원역 목표 완료');G.finish(true,'objective');}
+}
+function storyPressureTick(dt){
+ const g=G.g,q=g.storyPressure;
+ if(g.mode!=='story'||g.storyTraining||!q||g.status!=='playing')return;
+ q.cooldown=Math.max(0,q.cooldown-dt);
+ if(q.warning>0){
+  q.warning=Math.max(0,q.warning-dt);
+  if(q.warning===0){
+   q.pulses++;
+   if(len(g.p.x-q.x,g.p.y-q.y)<q.r&&!g.dash.invulnerable){
+    const hp=g.p.hp,shield=g.p.shield,protectedCount=g.mare?.protected||0;
+    G.damage(14);
+    if(g.p.hp<hp||g.p.shield<shield||(g.mare?.protected||0)>protectedCount)q.hits++;
+   }else{
+    q.dodges++;
+    G.notify('침식 파동 회피 · 계속 이동하세요');
+   }
+   ring(q.x,q.y,q.r,'#d8a0af');q.cooldown=6;q.idle=0;
+  }
+  return;
+ }
+ if(g.moving||q.cooldown>0){q.idle=0;return;}
+ q.idle+=dt;
+ if(q.idle>=3.5){
+  q.x=g.p.x;q.y=g.p.y;q.idle=0;q.warning=1.4;
+  G.notify('침식 파동 예고 · 붉은 원 밖으로 이동하세요');
+ }
 }
 function patientTick(dt){
  const g=G.g,pt=g.patient;
@@ -464,10 +504,14 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  if(g.mode==='story'&&g.commands){TG.commandDeck.tick(g.commands,dt);g.commandEffects.guardWindow=Math.max(0,g.commandEffects.guardWindow-dt);g.commandEffects.ward=Math.max(0,g.commandEffects.ward-dt);}
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
- mareTick(dt);allyTick(dt);recordTick(dt);storyGateTick(dt);if(g.status!=='playing')return;snowTargetTick(dt);if(g.status!=='playing')return;patientTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
+ mareTick(dt);allyTick(dt);recordTick(dt);storyGateTick(dt);if(g.status!=='playing')return;snowTargetTick(dt);if(g.status!=='playing')return;patientTick(dt);if(g.status!=='playing')return;storyPressureTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
  const bossBeforeFlames=g.bossDefeated;for(const flame of g.flames){const active=Math.min(dt,flame.life);flame.life-=dt;for(const e of [...g.enemies])if(len(e.x-flame.x,e.y-flame.y)<flame.r+e.r)G.hitEnemy(e,6*active);}g.flames=g.flames.filter(f=>f.life>0);if(g.mode!=='story'&&!bossBeforeFlames&&g.bossDefeated){G.stageClear();return;}
- waveTick(dt);g.spawn+=dt;const baseInterval=g.storyTraining?Math.max(.35,.8-g.time/g.duration*.45):Math.max(.42,1.3-g.time/g.duration*.7-g.stage*.09);
- const interval=g.storyBattle==='snowMission'&&g.snowSignalHelp?baseInterval*1.13:baseInterval;while(g.spawn>=interval){g.spawn-=interval;if(g.enemies.length<65&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
+ waveTick(dt);g.spawn+=dt;
+  // Give new story players space to recognize guardian objectives before ambient packs converge.
+  // This applies only to the opening solo and Mare escort missions.
+  if(g.mode==='story'&&!g.storyTraining&&g.time<(g.storyBattle==='approach'?7:g.storyBattle==='escort'?10:0))g.spawn=Math.min(g.spawn,0);
+  const baseInterval=g.storyTraining?Math.max(.35,.8-g.time/g.duration*.45):Math.max(.42,1.3-g.time/g.duration*.7-g.stage*.09);
+ const interval=g.storyBattle==='snowMission'&&g.snowSignalHelp?baseInterval*1.13:baseInterval;while(g.spawn>=interval){g.spawn-=interval;if(g.enemies.length<(g.mode==='story'&&!g.storyTraining?20:65)&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
  if(g.mode!=='story'&&g.time>75+g.eliteCount*100&&g.eliteCount<2){G.enemy(g.eliteCount%2?'witch':'warden',p.x+250,p.y-350);g.eliteCount++}
  if(g.mode!=='story'&&!g.bossSpawned&&g.time>=g.duration*.67){g.bossSpawned=true;G.enemy('boss',p.x,p.y-310);G.notify(TG.STAGES[g.stage].boss+' · 공격 예고를 피하세요');G.onSound('boss')}
  g.lastFire+=dt;if(g.lastFire>=p.interval*(g.overcharge>0?.75:1)){g.lastFire=0;fire()}

@@ -23,10 +23,10 @@ function forSnow(b,route){
 }
 test('stationary solo battle cannot win, even when all guardians were eliminated',()=>{
  const b=boot(),g=approach(b);quiet(g);const gate=g.storyGate;
- assert.equal(b.G.objective().kind,'mission');assert.equal(gate.guardIds.length,1);
+ assert.equal(b.G.objective().kind,'mission');assert.equal(gate.guardIds.length,2);
  assert(Math.hypot(gate.x-g.p.x,gate.y-g.p.y)>gate.r);
  for(const id of [...gate.guardIds]){const e=g.enemies.find(e=>e.id===id);assert(e);b.G.hitEnemy(e,99999);}
- assert.equal(gate.defeated.length,1);g.enemies=[];
+ assert.equal(gate.defeated.length,2);g.enemies=[];
  for(let i=0;i<100;i++)b.G.update(.04);
  assert.equal(g.status,'playing');assert.equal(gate.charge,0);
  assert.equal(b.G.objective().cleared,0);
