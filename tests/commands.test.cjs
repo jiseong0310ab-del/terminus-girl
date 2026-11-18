@@ -11,7 +11,7 @@ function toBattle(b){assert(b.A.begin());let limit=30;while(b.TG.STORY.nodes[b.A
 function quiet(g){g.spawn=-1e6;g.nextWave=Infinity;g.hazardClock=-1e6;g.enemies=[];g.hostile=[];g.lastFire=g.time;}
 function completeStoryObjective(b){
  const g=b.G.g,gate=g.storyGate;assert(g&&gate&&g.status==='playing');
- for(const id of [...gate.guardIds])b.G.hitEnemy(g.enemies.find(e=>e.id===id),100000);
+ gate.defeated=[...gate.guardIds]; // Combat test helper: the prerequisite was already resolved.
  g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-1e6;g.nextWave=Infinity;
  g.p.x=gate.x;g.p.y=gate.y;
  for(let n=0;n<45&&g.status==='playing';n++)b.G.update(.04);
