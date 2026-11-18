@@ -38,7 +38,7 @@ test('archive objective requires in-world 1.25s retrieval and does not reward id
  const checkpoint=plain(g.recordTarget);
  g.spawn=-1000;g.nextWave=Infinity;g.hazardClock=-1000;g.lastFire=-1000;
  g.time=g.duration-.01;b.G.update(.04);
- assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'record');
+ assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'timeout');
  assert.equal(b.A.state().node,'archive');assert.equal(b.A.state().recordRecovered,false);assert.equal(b.S.export(),initial);
  b.G.g=null;const retry=b.G.startStory();
  assert.equal(retry.id,spec.id);assert.deepEqual(plain(retry.recordTarget),checkpoint);
@@ -46,8 +46,11 @@ test('archive objective requires in-world 1.25s retrieval and does not reward id
  retry.p.x=retry.recordTarget.x;retry.p.y=retry.recordTarget.y;
  for(let n=0;n<32;n++)b.G.update(.04);
  assert.equal(retry.recordTarget.recovered,true);
- assert.equal(b.G.objective().cleared,1);
- retry.time=retry.duration-.01;b.G.update(.04);
+ assert.equal(b.G.objective().cleared,0);assert.match(b.G.objective().title,/열차 문/);
+ retry.p.x=retry.storyGate.x;retry.p.y=retry.storyGate.y;
+ for(let n=0;n<21;n++)b.G.update(.04);
+ assert(retry.time<retry.duration);
+ assert.equal(retry.storyGate.done,true);
  assert.equal(retry.status,'ended');assert.equal(retry.won,true);assert.equal(retry.storySaved,true);
  assert.equal(b.A.state().node,'evidence');assert.equal(b.A.state().recordRecovered,true);
  assert.equal(b.S.data.stats.runs,0);assert.equal(b.S.data.wallet,0);

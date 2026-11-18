@@ -124,6 +124,35 @@ function recordBeacon(g,t){
  }
  ctx.restore();
 }
+function storyGateMarker(g,t){
+ const q=g.storyGate;
+ if(g.mode!=='story'||g.storyTraining||!q||q.done)return;
+ const ready=q.kind==='archive'?g.recordTarget?.recovered===true:q.guardIds.length>0&&q.defeated.length===q.guardIds.length;
+ const m=V.anchorMarker(q,g.p);ctx.save();ctx.translate(m.x,m.y);
+ if(m.edge){
+  circle(0,0,19,'#18243aee',ready?'#f8dfa1':'#929baf');ctx.rotate(m.angle);
+  ctx.fillStyle=ready?'#f7da9b':'#b4b9c6';ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-6,-8);ctx.lineTo(-6,8);ctx.closePath();ctx.fill();
+ }else{
+  if(!TG.store.data.settings.reduceFX&&ready){
+   const grad=ctx.createRadialGradient(0,0,5,0,0,71);
+   grad.addColorStop(0,'#e7cd7d66');grad.addColorStop(1,'#e7cd7d00');ctx.fillStyle=grad;ctx.fillRect(-74,-74,148,148);
+  }
+  circle(0,0,q.r,ready?'#dbb9762b':'#717b8c22',ready?'#ecd39a':'#77899c');
+  ctx.fillStyle='#19283a';ctx.fillRect(-23,-34,46,48);
+  ctx.strokeStyle=ready?'#e6c98d':'#748798';ctx.lineWidth=3;ctx.strokeRect(-23,-34,46,48);
+  if(q.kind==='approach'){
+   ctx.fillStyle=ready?'#ffdf9e':'#6b7280';ctx.fillRect(-13,-19,26,19);ctx.fillStyle='#142237';ctx.fillRect(-4,-13,8,7);
+  }else{
+   ctx.fillStyle=ready?'#efd39a':'#69798b';ctx.fillRect(-7,-29,14,38);
+   ctx.strokeStyle=ready?'#efdfa6':'#6f7d8d';ctx.beginPath();ctx.moveTo(-21,-9);ctx.lineTo(-12,-9);ctx.moveTo(12,-9);ctx.lineTo(21,-9);ctx.stroke();
+  }
+  if(ready){ctx.strokeStyle='#fcdea1';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,q.r,-Math.PI/2,-Math.PI/2+TAU*clamp(q.charge/q.needed,0,1));ctx.stroke();}
+  ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillStyle=ready?'#f7e7be':'#c1cddd';
+  ctx.fillText(q.kind==='approach'?'안내 스위치':q.kind==='escort'?'귀환로 · 열차 문':'기록 귀환 · 열차 문',0,-q.r-17);
+  ctx.font='10px sans-serif';ctx.fillText(ready?'원 안에 머물러 작동':q.kind==='archive'?'기록장치를 먼저 회수':'수호 잔향을 먼저 제거',0,q.r+16);
+ }
+ ctx.restore();
+}
 function snowBeacons(g,t){
  if(g.mode!=='story'||g.storyBattle!=='snowMission')return;
  const nodes=g.signalTargets||[];
@@ -259,7 +288,7 @@ function hero(g,t){const x=V.width/2,y=V.height/2;ctx.save();ctx.translate(x,y);
   if(g.commandEffects?.ward>0){ctx.lineWidth=2;circle(0,-10,47,'#83c4e919','#91d9ef');ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#c9edff';ctx.fillText('지휘 장막',0,-62);}
   if(g.p.shield){ctx.strokeStyle='#afd8f0';ctx.beginPath();ctx.ellipse(0,-12,33,44,0,0,TAU);ctx.stroke()}
  for(let i=0;i<g.p.orbit;i++){const a=t*2.4+i*TAU/g.p.orbit;ctx.save();ctx.translate(Math.cos(a)*65,Math.sin(a)*65);ctx.rotate(a);ctx.fillStyle=g.synergies.frostOrbit?'#aee5fb':'#e8d1a1';ctx.fillRect(-3,-10,6,20);ctx.restore()}ctx.restore();}
-V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?g.time:now/1000,cx=g?.p.x||0,cy=g?.p.y||0,W=V.width,H=V.height;ctx.save();if(g&&g.shake&&!TG.store.data.settings.reduceFX)ctx.translate(Math.sin(t*130)*g.shake*.5,Math.cos(t*190)*g.shake*.5);background(g,t,cx,cy);if(g){memoryAnchor(g,t);recordBeacon(g,t);snowBeacons(g,t);patientScene(g,t);const sx=x=>x-cx+W/2,sy=y=>y-cy+H/2;for(const h of g.hazards){ctx.lineWidth=1.5;const warning=h.age<h.warning;ctx.setLineDash(warning?[6,5]:[]);circle(sx(h.x),sy(h.y),h.r,warning?'#ae769422':'#23102a99',warning?'#dd9cba':'#ce7aa2');ctx.setLineDash([]);if(warning){ctx.fillStyle='#f4c7dc';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('소거 예고',sx(h.x),sy(h.y)+3)}}
+V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?g.time:now/1000,cx=g?.p.x||0,cy=g?.p.y||0,W=V.width,H=V.height;ctx.save();if(g&&g.shake&&!TG.store.data.settings.reduceFX)ctx.translate(Math.sin(t*130)*g.shake*.5,Math.cos(t*190)*g.shake*.5);background(g,t,cx,cy);if(g){memoryAnchor(g,t);recordBeacon(g,t);storyGateMarker(g,t);snowBeacons(g,t);patientScene(g,t);const sx=x=>x-cx+W/2,sy=y=>y-cy+H/2;for(const h of g.hazards){ctx.lineWidth=1.5;const warning=h.age<h.warning;ctx.setLineDash(warning?[6,5]:[]);circle(sx(h.x),sy(h.y),h.r,warning?'#ae769422':'#23102a99',warning?'#dd9cba':'#ce7aa2');ctx.setLineDash([]);if(warning){ctx.fillStyle='#f4c7dc';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('소거 예고',sx(h.x),sy(h.y)+3)}}
  for(const shock of g.aftershocks||[]){
   const x=sx(shock.x),y=sy(shock.y);if(x+shock.r<0||x-shock.r>W||y+shock.r<0||y-shock.r>H)continue;
   const warning=shock.age<shock.warning;ctx.lineWidth=2;ctx.setLineDash(warning?[6,5]:[]);
