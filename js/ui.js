@@ -50,14 +50,29 @@ function renderStoryResult(g){
 const commandOwner={rize:'리제',mare:'마레',shared:'공용',...Object.fromEntries(TG.PARTY.map(x=>[x.id,x.name]))};
 function openParty(){if(TG.story.state().node!=='rest'||G.g&&G.g.status!=='ended')return;U.partyDraft=[...TG.story.state().companions];U.show('party');}
 function renderParty(){
- const draft=U.partyDraft||[...TG.story.state().companions],list=clear('partyList');U.partyDraft=draft;
- text('partyCount','출전 '+draft.length+' / 3명 · 리제 고정');$('partySave').disabled=draft.length!==3||!S.canWrite();
+ const draft=U.partyDraft||[...TG.story.state().companions],list=clear('partyList');
+ U.partyDraft=draft;
+ text('partyCount',draft.length+' / 3');
+ text('partySelection',draft.length===3?'출전 준비 완료 · 다른 동료를 고르려면 기존 선택을 해제하세요.':'동료 '+(3-draft.length)+'명을 더 선택하세요.');
+ $('partySave').disabled=draft.length!==3||!S.canWrite();
  for(const ally of TG.PARTY){
-  const selected=draft.includes(ally.id),b=button('',()=>{if(!ally.trial)return;const idx=draft.indexOf(ally.id);if(idx>=0)draft.splice(idx,1);else if(draft.length<3)draft.push(ally.id);renderParty();},'partyMember'+(selected?' selected':'')+(!ally.trial?' locked':''));
-  b.disabled=!ally.trial;b.setAttribute('aria-pressed',String(selected));
-  const avatar=document.createElement('span'),body=document.createElement('span'),name=document.createElement('strong'),note=document.createElement('small');
-  avatar.className='partyAvatar';avatar.style.background=ally.color;avatar.textContent=ally.name.slice(0,1);
-  body.className='partyMemberText';name.textContent=ally.name+' · '+ally.role+(selected?' ✓':'');note.textContent=(ally.trial?'':'후속 지역 합류 예정 · ')+ally.desc;body.append(name,note);b.append(avatar,body);list.appendChild(b);
+  const selected=draft.includes(ally.id);
+  const b=button('',()=>{
+   if(!ally.trial)return;
+   const idx=draft.indexOf(ally.id);
+   if(idx>=0)draft.splice(idx,1);
+   else if(draft.length<3)draft.push(ally.id);
+   renderParty();
+  },'partyMember char-'+ally.id+(selected?' selected':'')+(!ally.trial?' locked':''));
+  b.disabled=!ally.trial;
+  b.setAttribute('aria-pressed',String(selected));
+  b.setAttribute('aria-label',ally.name+' · '+ally.role+' · '+ally.desc+(selected?' · 출전 중':ally.trial?' · 편성 가능':' · 아직 합류하지 않음'));
+  const art=document.createElement('span'),fade=document.createElement('span'),body=document.createElement('span'),name=document.createElement('strong'),role=document.createElement('small'),flag=document.createElement('span');
+  art.className='partyArt char-'+ally.id;art.setAttribute('aria-hidden','true');
+  fade.className='partyFade';fade.setAttribute('aria-hidden','true');
+  body.className='partyMemberText';name.textContent=ally.name;role.textContent=ally.role+' · '+(ally.trial?ally.desc.split(' · ')[0]:'미합류');
+  flag.className='partyFlag';flag.textContent=!ally.trial?'잠금':selected?'✓':'＋';
+  body.append(name,role);b.append(art,fade,body,flag);list.appendChild(b);
  }
 }
 function openDeck(){const s=TG.story.state();if(!['battle','rest'].includes(TG.STORY.nodes[s.node].kind)||G.g&&G.g.status!=='ended')return;U.deckDraft=[...s.commandDeck];$('deckOwnerFilter').value='all';U.show('deck');}
@@ -68,14 +83,20 @@ function renderDeck(){
  const visible=available.filter(c=>filter==='all'||c.owner===filter);if(!visible.length){const note=document.createElement('p');note.className='note';note.textContent='마레와 만난 뒤 전용 지휘를 편성할 수 있습니다.';list.appendChild(note);}
  for(const card of visible){
   const selected=draft.includes(card.id),b=button('',()=>{const at=U.deckDraft.indexOf(card.id);if(at>=0)U.deckDraft.splice(at,1);else U.deckDraft.push(card.id);renderDeck();},'upgrade deckChoice'+(selected?' selected':''));b.setAttribute('aria-pressed',String(selected));b.setAttribute('aria-label',(selected?'편성됨 · ':'')+card.name+' · '+commandOwner[card.owner]+' · 지휘력 '+card.cost);
-  const content=document.createElement('span'),tag=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span');tag.className='commandOwner';tag.textContent=commandOwner[card.owner]+' · 비용 '+card.cost;title.className='cardtitle';title.textContent=(selected?'✓ ':'')+card.name;desc.className='carddesc';desc.textContent=card.desc;content.append(tag,title,desc);b.appendChild(content);list.appendChild(b);
+  const content=document.createElement('span'),tag=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span'),art=document.createElement('span'),cost=document.createElement('span');
+  art.className='deckPortrait character-'+card.owner;art.setAttribute('aria-hidden','true');
+  cost.className='deckCost';cost.textContent=card.cost;
+  tag.className='commandOwner';tag.textContent=commandOwner[card.owner]+' · '+(card.action?'합동 지휘':'전술 지휘');
+  title.className='cardtitle';title.textContent=(selected?'✓ ':'')+card.name;
+  desc.className='carddesc';desc.textContent=card.desc;
+  content.className='deckText';content.append(tag,title,desc);b.append(art,cost,content);list.appendChild(b);
  }
 }
 function renderCommands(){
  const g=G.g;if(!g?.commands)return;const c=g.commands;const remaining=Math.max(0,Math.ceil(g.duration-g.time));text('commandPower','지휘력 '+c.energy+' / 3'+(c.energy<3?' · 전투 '+Math.ceil(12-c.regen)+'초 후 +1':''));text('commandCombo',[g.commandEffects.guardWindow>0?'보호 연계 준비 · 파동·절단 위력 50% 증가 또는 반격 사용':g.mare?'마레나 보호막이 피해를 막으면 4초 동안 보호 연계 가능':'마레 합류 후 보호 연계를 사용할 수 있습니다.',g.commandEffects.ward>0?'보호 장막 '+g.commandEffects.ward.toFixed(1)+'초':''].filter(Boolean).join(' · '));text('commandPiles','손패 '+c.hand.length+' · 뽑기 '+c.draw.length+' · 버림 '+c.discard.length);text('commandObjective',G.objective().title+' · 남은 시간 '+fmt(remaining));text('commandStatus',status());
  const list=clear('commandList'),token=c.token;
  for(const id of c.hand){const info=G.commandInfo(id),card=info.card;if(!card)continue;const b=button('',()=>{TG.audio.unlock();if(!G.castCommand(id,token))renderCommands();},'upgrade commandCard '+card.owner);b.disabled=!info.enabled;
-  const cost=document.createElement('span'),body=document.createElement('span'),owner=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span');cost.className='commandCost';cost.textContent=card.cost;owner.className='commandOwner';owner.textContent=commandOwner[card.owner];title.className='cardtitle';title.textContent=card.name;desc.className='carddesc';desc.textContent=card.desc;body.append(owner,title,desc);if(!info.enabled){const reason=document.createElement('span');reason.className='commandReason';reason.textContent=info.reason;body.appendChild(reason);}b.append(cost,body);b.setAttribute('aria-label',card.name+' · 지휘력 '+card.cost+' · '+card.desc+(!info.enabled?' · '+info.reason:''));list.appendChild(b);
+  const cost=document.createElement('span'),body=document.createElement('span'),owner=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span');cost.className='commandCost';cost.textContent=card.cost;owner.className='commandOwner';owner.textContent=commandOwner[card.owner];title.className='cardtitle';title.textContent=card.name;desc.className='carddesc';desc.textContent=card.desc;const art=document.createElement('span');art.className='commandArt character-'+card.owner;art.setAttribute('aria-hidden','true');body.append(art,owner,title,desc);if(!info.enabled){const reason=document.createElement('span');reason.className='commandReason';reason.textContent=info.reason;body.appendChild(reason);}b.append(cost,body);b.setAttribute('aria-label',card.name+' · 지휘력 '+card.cost+' · '+card.desc+(!info.enabled?' · '+info.reason:''));list.appendChild(b);
  }
 }
 function startTraining(){TG.audio.unlock();if(G.g&&G.g.status!=='ended')return;G.g=null;if(!G.startCommandTraining()){text('storySaveStatus',status()||'마레 합류 후 지휘 연습을 시작할 수 있습니다.');}}
