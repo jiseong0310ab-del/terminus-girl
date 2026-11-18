@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const V=TG.view={width:390,height:844};let canvas,ctx;const images={};const TAU=Math.PI*2;const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',mare:'assets/mare-walk-v014.webp',portraits:'assets/party-portraits-v017.webp',allies:'assets/companions-sd-v018.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
+V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',mare:'assets/mare-walk-v014.webp',portraits:'assets/party-portraits-v017.webp',allies:'assets/companions-sd-v019.avif',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();if(key==='allies')im.onerror=()=>{im.onerror=null;im.src='assets/companions-sd-v018.webp';};im.src=url;images[key]=im}V.resize()};
 V.resize=function(){
  if(!ctx)return;
  V.width=canvas.clientWidth>0?canvas.clientWidth:innerWidth;
@@ -113,7 +113,7 @@ function companion(g,t){
  const frame=m.moving?1+Math.floor(t*8)%2:0,face=clamp(m.face|0,0,3),w=80,h=80,bob=m.moving&&!TG.store.data.settings.reduceFX?Math.sin(t*16)*1:0;
  if(ready(images.mare)){const cw=images.mare.naturalWidth/4,ch=(images.mare.naturalHeight||images.mare.naturalWidth*.75)/3;ctx.drawImage(images.mare,face*cw,frame*ch,cw,ch,-w/2,-h*.77+bob,w,h);}else circle(0,-8,15,'#95bcd6','#e1e8ed');
  ctx.lineWidth=1.5;circle(0,0,21,null,m.cooldown<=0?'#a8dce6aa':'#7990a044');
- ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#c8e5ee';ctx.fillText('마레',0,-h*.77-7);ctx.restore();
+ if((g.party||[]).length<=1){ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#c8e5ee';ctx.fillText('마레',0,-h*.77-7);}ctx.restore();
  if(m.pulse>0){const px=V.width/2,py=V.height/2;ctx.save();ctx.lineWidth=2;ctx.strokeStyle='#c0ebff';ctx.beginPath();ctx.moveTo(x,y-12);ctx.lineTo(px,py-12);ctx.stroke();ctx.beginPath();ctx.ellipse(px,py-12,34,43,0,0,TAU);ctx.stroke();ctx.fillStyle='#e1f5ff';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('마레의 보호',px,py-63);ctx.restore();}
 }
 function otherCompanions(g,t){
@@ -127,6 +127,8 @@ function otherCompanions(g,t){
   const bob=moving&&!reduced?Math.sin(t*14)*1.3:0;
   ctx.save();ctx.translate(x,y);
   ctx.fillStyle='#02040c88';ctx.beginPath();ctx.ellipse(0,18,17,5,0,0,TAU);ctx.fill();
+  // Draw the support aura behind the sprite so it cannot wash out faces or outlines.
+  if(a.pulse>0){ctx.lineWidth=2;circle(0,-12,30,reduced?null:color+'16',color+'bb');}
   // Three original full-body chibi frames per ally; mirror for left-facing travel.
   if(ready(images.allies)&&spriteRows[a.id]!==undefined){
    const frame=moving?1+Math.floor(t*8)%2:0;
@@ -144,11 +146,12 @@ function otherCompanions(g,t){
     ctx.drawImage(images.portraits,(idx%3)*cw,Math.floor(idx/3)*ch,cw,ch,-18,-41+bob,36,36);ctx.restore();
    }
   }else{circle(0,-18+bob,15,color,'#e1e8ed');}
-  if(a.pulse>0){circle(0,-10,29,reduced?null:color+'25',color);if(!reduced){
+  if(a.pulse>0&&!reduced){
    const label={aster:'기록 표식',noa:'신호 차단',vela:'응급 회복',iris:'서리 추적',crow:'침식 공격'}[a.id]||'지원';
    ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#f9efd6';ctx.fillText(label,0,-79);
-  }}
-  ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e9eff6';ctx.fillText(def?.name||a.id,0,-65);
+  }
+  // With a full party, HUD portrait/name labels replace overlapping floating name tags.
+  if((g.party||[]).length<=1){ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e9eff6';ctx.fillText(def?.name||a.id,0,-65);}
   ctx.restore();
  }
 }
