@@ -67,12 +67,59 @@ TG.STORY={nodes:{
  ],next:'rest2'},
  rest2:{kind:'rest',title:'열차 · 지워진 이름의 무게',lines:[
   {speaker:'마레',portrait:'mare',text:'오늘의 선택은 끝이 아니야. 다음 역에서 무슨 일이 벌어질지도 달라졌으니까.'}
+ ]},
+ snowArrival:{kind:'dialogue',title:'제2장 · 침묵의 설원역',lines:[
+  {speaker:'리제',portrait:'rize',text:'거울역의 기록이 가리킨 다음 역. 눈 속에 사람의 발자국이 아직 남아 있어.'},
+  {speaker:'마레',portrait:'mare',text:'그동안 임시로 도왔던 세 사람도 여기서 제 일을 하고 있어. 함께 여행할 사람인지 직접 만나 보자.'},
+  {speaker:'차내 방송',portrait:null,text:'침묵의 설원역. 기록실, 신호탑, 구호실에서 긴급 지원 요청이 들어왔습니다.'},
+  {speaker:'리제',portrait:'rize',text:'동료들의 이유를 듣고 함께 갈 길을 정하겠어.'}
+ ],next:'recruitHub'},
+ recruitHub:{kind:'recruit',title:'설원역 · 세 개의 요청',lines:[
+  {speaker:'차내 단말기',portrait:null,text:'기록실·신호탑·구호실 가운데 지원할 현장을 고르세요. 정식 동료 두 명 이상과 함께 설원역 임무를 시작할 수 있습니다.'}
+ ]},
+ recruitAster:{kind:'dialogue',title:'아스터 · 이름이 잘린 명부',lines:[
+  {speaker:'아스터',portrait:'aster',text:'장부의 마지막 장이 찢어졌어요. 사람은 있는데 이름만 지워졌죠. 기록실은 그래서 문을 열지 않아요.'},
+  {speaker:'리제',portrait:'rize',text:'함께 원본을 읽자. 누가 이름을 잘랐는지 알 수 있겠지?'},
+  {speaker:'아스터',portrait:'aster',text:'그냥 가져가면 명부도 사라져요. 제가 원본을 복사할 동안, 밖의 감시 기록을 대신 살펴 주세요.'},
+  {speaker:'리제',portrait:'rize',text:'그렇게 하자. 이제 혼자 기록을 지키지 않아도 돼. 우리 열차에 타 줄래?'},
+  {speaker:'아스터',portrait:'aster',text:'좋아요. 누군가 기억해 주는 한, 기록은 사라지지 않으니까요. 함께 가겠습니다.'}
+ ],next:'recruitHub'},
+ recruitNoa:{kind:'dialogue',title:'노아 · 울리지 않는 신호탑',lines:[
+  {speaker:'노아',portrait:'noa',text:'신호탑이 한 번 더 울리면 승강장이 무너져요. 하지만 완전히 끊으면 여기 있는 사람의 목소리도 사라져요.'},
+  {speaker:'리제',portrait:'rize',text:'신호를 끊지 말고 돌아갈 길을 만들자. 랜턴으로 회선 위치를 밝혀 줄게.'},
+  {speaker:'노아',portrait:'noa',text:'이 회선은 돌아오는 열차만 통과시킬 수 있어요. 망가진 신호를 고치려면 직접 운행을 이어가야 해요.'},
+  {speaker:'리제',portrait:'rize',text:'내가 열차를 몰게. 노아, 우리와 함께 길을 만들어 줄래?'},
+  {speaker:'노아',portrait:'noa',text:'좋아요. 신호는 받는 사람이 있을 때 의미가 있으니까요. 제가 길을 맡을게요.'}
+ ],next:'recruitHub'},
+ recruitVela:{kind:'dialogue',title:'벨라 · 빈 병실의 체온',lines:[
+  {speaker:'벨라',portrait:'vela',text:'기억을 잃은 환자가 있어요. 자신의 이름은 모르지만 누군가를 기다린다는 말만 반복해요.'},
+  {speaker:'리제',portrait:'rize',text:'나도 기억이 흐려지고 있어. 그 사람의 이름을 같이 찾아 보자.'},
+  {speaker:'벨라',portrait:'vela',text:'환자를 옮겨야 하지만 제가 떠나면 의무실이 비어요. 아무도 두고 갈 수는 없어요.'},
+  {speaker:'리제',portrait:'rize',text:'열차의 빈 침상과 의료 도구를 내줄게. 함께 옮기자. 앞으로도 우리를 도와줄래?'},
+  {speaker:'벨라',portrait:'vela',text:'그럼 저도 타겠습니다. 아픈 사람을 남겨 두지 않는 열차를 만들어요.'}
+ ],next:'recruitHub'},
+ snowDeparture:{kind:'dialogue',title:'설원역 · 갈라진 구조 경로',lines:[
+  {speaker:'리제',portrait:'rize',text:'이제 정식으로 함께 여행할 동료가 생겼어. 거울역에서 내린 결정이 여기에도 영향을 미친다는데.'},
+  {speaker:'차내 기록',portrait:null,text:'거울역에서 내린 선택에 따라 설원역의 구조 목표가 바뀝니다.'},
+  {speaker:'동료',portrait:null,text:'함께 준비했어요. 누가 출전하느냐에 따라 회수 속도와 방어가 달라질 거예요.'},
+  {speaker:'리제',portrait:'rize',text:'시작하자. 구조 신호든 명부든, 우리가 보고 결정할 거야.'}
+ ],next:'snowMission'},
+ snowMission:{kind:'battle',title:'설원역 · 구조 신호와 지워진 명부'},
+ snowDebrief:{kind:'dialogue',title:'열차 · 설원역의 귀환 기록',lines:[
+  {speaker:'마레',portrait:'mare',text:'돌아왔구나. 동료들이 이제 이 열차를 자기 집이라고 부르더라.'},
+  {speaker:'리제',portrait:'rize',text:'거울역에서 내린 선택이 설원역을 바꿨어. 내가 혼자였으면 감당하지 못했을 거야.'},
+  {speaker:'동료 기록',portrait:null,text:'설원역의 임무 결과가 열차에 보존되었습니다.'},
+  {speaker:'리제',portrait:'rize',text:'기억은 조금 흐려졌지만 함께 가는 사람들의 이름은 더 선명해졌어.'}
+ ],next:'rest3'},
+ rest3:{kind:'rest',title:'열차 · 설원역의 승차권',lines:[
+  {speaker:'리제',portrait:'rize',text:'다음 역으로 갈 준비를 해야겠어.'}
  ]}
 
 },battles:{
  approach:{stage:0,duration:45,title:'안내 회선 복구',objective:'안내 회선이 복구될 때까지 생존',detail:'45초 동안 이동과 대시로 잔향을 피하세요. 경험치를 모아 기억을 강화할 수 있습니다.',successTitle:'안내 방송이 돌아왔다',successStory:'되풀이되던 도착 시각 사이로, 승강장에 남은 사람의 목소리가 들렸다.',next:'meeting'},
  escort:{stage:0,duration:75,title:'함께 여는 귀환로',objective:'귀환로가 열릴 때까지 마레와 생존',detail:'75초 동안 살아남으세요. 마레는 준비된 보호로 피격 한 번을 막으며, 그 뒤에는 다시 준비할 시간이 필요합니다.',successTitle:'함께 열차에 올랐다',successStory:'리제와 마레는 열린 귀환로를 지나 같은 객실에 들어섰다. 거울역의 진실은 아직 승강장에 남아 있다.',next:'debrief'},
- archive:{stage:0,duration:95,title:'기억 기록장치 회수',objective:'기록장치에 다가가 1.25초 회수한 뒤 제한시간까지 생존',detail:'파란빛 기록 장치 가까이에 서서 1.25초 머무르세요. 기록을 확보하지 못하면 임무는 실패합니다. 이후 95초까지 생존하세요.',successTitle:'지워진 이름의 기록 확보',successStory:'거울역 봉인 당시 남겨진 승객 명단과 구조 신호가 열차로 전송되었다.',next:'evidence'}
+ archive:{stage:0,duration:95,title:'기억 기록장치 회수',objective:'기록장치에 다가가 1.25초 회수한 뒤 제한시간까지 생존',detail:'파란빛 기록 장치 가까이에 서서 1.25초 머무르세요. 기록을 확보하지 못하면 임무는 실패합니다. 이후 95초까지 생존하세요.',successTitle:'지워진 이름의 기록 확보',successStory:'거울역 봉인 당시 남겨진 승객 명단과 구조 신호가 열차로 전송되었다.',next:'evidence'},
+ snowMission:{stage:1,duration:105,title:'설원역 구조 신호 안정화',objective:'구조 중계기를 모두 안정화하고 살아남기',detail:'거울역에서 구조 신호를 열었다면 2개 중계기를, 봉인을 유지했다면 1개 명부 장치를 회수하세요.',successTitle:'설원역 기록 확보',successStory:'신호와 명부 중 선택에 맞는 기록을 열차로 회수했다.',next:'snowDebrief'}
 }};
 const A=TG.story={};
 const isBattle=node=>TG.STORY.nodes[node]?.kind==='battle';
