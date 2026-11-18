@@ -1,7 +1,7 @@
 'use strict';
 (()=>{
 const V=TG.view={width:390,height:844};let canvas,ctx;const images={};const TAU=Math.PI*2;const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',mare:'assets/mare-walk-v014.webp',portraits:'assets/party-portraits-v017.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
+V.init=function(el){canvas=el;ctx=canvas.getContext('2d',{alpha:false});for(const [key,url]of Object.entries({hero:'assets/rize-walk-v09.webp',mare:'assets/mare-walk-v014.webp',portraits:'assets/party-portraits-v017.webp',allies:'assets/companions-sd-v018.webp',enemy:'assets/enemies-v09.webp',floor:'assets/platform-stone-v03.webp',props:'assets/station-props-v010.webp',anchor:'assets/memory-lantern-v013.webp',fallback:'assets/rize-sd-v03.webp'})){const im=new Image();im.src=url;images[key]=im}V.resize()};
 V.resize=function(){
  if(!ctx)return;
  V.width=canvas.clientWidth>0?canvas.clientWidth:innerWidth;
@@ -118,21 +118,38 @@ function companion(g,t){
 }
 function otherCompanions(g,t){
  if(g.mode!=='story')return;
+ const spriteRows={aster:0,noa:1,vela:2};
+ const reduced=TG.store.data.settings.reduceFX;
  for(const a of g.allies||[]){
   const def=TG.PARTY.find(x=>x.id===a.id),x=a.x-g.p.x+V.width/2,y=a.y-g.p.y+V.height/2;
   if(x<-90||x>V.width+90||y<-90||y>V.height+90)continue;
-  ctx.save();ctx.translate(x,y);const color=def?.color||'#b5b8c7',bob=a.moving&&!TG.store.data.settings.reduceFX?Math.sin(t*10)*1.5:0;
-  ctx.fillStyle='#02040c88';ctx.beginPath();ctx.ellipse(0,17,16,5,0,0,TAU);ctx.fill();
-  ctx.fillStyle='#17253b';ctx.strokeStyle=color;ctx.lineWidth=2;
-  ctx.beginPath();ctx.moveTo(0,-32+bob);ctx.lineTo(18,12+bob);ctx.lineTo(-18,12+bob);ctx.closePath();ctx.fill();ctx.stroke();
-  if(ready(images.portraits)){
-   const order=['mare','aster','noa','vela','iris','crow'],idx=order.indexOf(a.id),w=images.portraits.naturalWidth/3,h=images.portraits.naturalHeight/2;
-   ctx.save();ctx.beginPath();ctx.arc(0,-23+bob,17,0,TAU);ctx.clip();
-   ctx.drawImage(images.portraits,(idx%3)*w,Math.floor(idx/3)*h,w,h,-17,-40+bob,34,34);ctx.restore();
-   circle(0,-23+bob,17,null,color);
-  }else{circle(0,-26+bob,11,color,'#e4e9ef');ctx.fillStyle='#132337';ctx.fillRect(-8,-37+bob,16,5);}
-  circle(0,0,22,a.pulse>0?color+'33':null,color+'88');
-  ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#f1e7d3';ctx.fillText(def?.name||a.id,0,-52);ctx.restore();
+  const color=def?.color||'#b5b8c7',moving=!!a.moving;
+  const bob=moving&&!reduced?Math.sin(t*14)*1.3:0;
+  ctx.save();ctx.translate(x,y);
+  ctx.fillStyle='#02040c88';ctx.beginPath();ctx.ellipse(0,18,17,5,0,0,TAU);ctx.fill();
+  // Three original full-body chibi frames per ally; mirror for left-facing travel.
+  if(ready(images.allies)&&spriteRows[a.id]!==undefined){
+   const frame=moving?1+Math.floor(t*8)%2:0;
+   const cw=images.allies.naturalWidth/3,ch=images.allies.naturalHeight/3;
+   ctx.save();
+   if(a.face===3){ctx.scale(-1,1);}
+   ctx.drawImage(images.allies,frame*cw,spriteRows[a.id]*ch,cw,ch,-37,-62+bob,74,83);
+   ctx.restore();
+  }else if(ready(images.portraits)){
+   const order=['mare','aster','noa','vela','iris','crow'],idx=order.indexOf(a.id);
+   if(idx>=0){
+    const cw=images.portraits.naturalWidth/3,ch=images.portraits.naturalHeight/2;
+    ctx.fillStyle='#16253d';ctx.beginPath();ctx.moveTo(0,-33+bob);ctx.lineTo(19,13+bob);ctx.lineTo(-19,13+bob);ctx.closePath();ctx.fill();
+    ctx.save();ctx.beginPath();ctx.arc(0,-23+bob,18,0,TAU);ctx.clip();
+    ctx.drawImage(images.portraits,(idx%3)*cw,Math.floor(idx/3)*ch,cw,ch,-18,-41+bob,36,36);ctx.restore();
+   }
+  }else{circle(0,-18+bob,15,color,'#e1e8ed');}
+  if(a.pulse>0){circle(0,-10,29,reduced?null:color+'25',color);if(!reduced){
+   const label={aster:'기록 표식',noa:'신호 차단',vela:'응급 회복',iris:'서리 추적',crow:'침식 공격'}[a.id]||'지원';
+   ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#f9efd6';ctx.fillText(label,0,-79);
+  }}
+  ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillStyle='#e9eff6';ctx.fillText(def?.name||a.id,0,-65);
+  ctx.restore();
  }
 }
 function hero(g,t){const x=V.width/2,y=V.height/2;ctx.save();ctx.translate(x,y);const grad=ctx.createRadialGradient(-17,14,0,-17,14,90);grad.addColorStop(0,'#f7bc7328');grad.addColorStop(1,'#f7bc7300');ctx.fillStyle=grad;ctx.fillRect(-107,-76,180,180);ctx.fillStyle='#02040c99';ctx.beginPath();ctx.ellipse(0,22,21,6,0,0,TAU);ctx.fill();ctx.strokeStyle='#c8bd9677';ctx.lineWidth=1;ctx.beginPath();ctx.arc(0,0,14,0,TAU);ctx.stroke();
