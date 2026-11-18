@@ -6,6 +6,22 @@ const H=Math.hypot;
 function choose(g){const priority={blade:100,echo:90,orbit:85,vital:g.p.hp<g.p.maxHp*.65?110:65,shield:80,speed:g.p.hp<g.p.maxHp*.75?95:55,magnet:70,mend:60,lantern:75,frost:50,ward:45,focus:40,ember:35,wisdom:30,pierce:25,clock:20,rest:0};return [...g.offered].sort((a,b)=>(priority[b]||0)-(priority[a]||0))[0];}
 function drive(TG,policy){const G=TG.engine,g=G.g,p=g.p,t=g.time;
  if(policy==='idle'){G.input.x=0;G.input.y=0;return;}
+ // Story QA must attempt the actual world objective; do not assume surviving the timer is success.
+ const gate=g.storyGate;
+ if(gate){
+  const ready=gate.kind==='archive'?g.recordTarget?.recovered===true:gate.guardIds.length>0&&gate.defeated.length===gate.guardIds.length;
+  const target=ready?gate:gate.kind==='archive'?g.recordTarget:g.enemies.find(e=>gate.guardIds.includes(e.id));
+  if(target){
+   const dx=target.x-p.x,dy=target.y-p.y,d=H(dx,dy)||1;
+   const stopping=ready?Math.min(14,gate.r*.22):gate.kind==='archive'?Math.min(17,target.r*.3):108;
+   if(d>stopping){G.input.x=dx/d;G.input.y=dy/d;}else{G.input.x=0;G.input.y=0;}
+   return;
+  }
+ }
+ if(g.storyBattle==='snowMission'&&g.signalTargets?.length){
+  const target=g.signalTargets.find(r=>!r.recovered);
+  if(target){const d=H(target.x-p.x,target.y-p.y)||1;if(d>15){G.input.x=(target.x-p.x)/d;G.input.y=(target.y-p.y)/d;}else{G.input.x=0;G.input.y=0;}return;}
+ }
  if(policy==='straight'){const length=Math.hypot(1,.2);G.input.x=1/length;G.input.y=.2/length;return;}
  const visible=g.enemies.filter(e=>Math.abs(e.x-p.x)<245&&Math.abs(e.y-p.y)<470),nearest=visible.slice().sort((a,b)=>H(a.x-p.x,a.y-p.y)-H(b.x-p.x,b.y-p.y))[0];
  let x=0,y=0;const nd=nearest?H(nearest.x-p.x,nearest.y-p.y):Infinity;
@@ -32,7 +48,7 @@ function run(seed,policy){const TG=boot(seed),G=TG.engine;dialogues(TG);const re
  for(const id of ['approach','escort']){
   G.g=null;const g=G.startStory();if(!g||g.storyBattle!==id)throw Error('bad flow');let frames=0,choices=0;const initialHits=totalHits,initialDamage=healthDamage,initialDashes=dashes,initialKills=g.kills;
   while(g.status!=='ended'&&++frames<5000){if(g.status==='cards'){G.choose(choose(g),g.offerToken);choices++;continue;}drive(TG,policy);G.update(.04);}
-  results.push({id,won:g.won===true,time:Number(g.time.toFixed(2)),hp:Number(g.p.hp.toFixed(1)),maxHp:g.p.maxHp,level:g.level,kills:g.kills-initialKills,totalKills:g.kills,cards:choices,hits:totalHits-initialHits,hpDamage:healthDamage-initialDamage,protected:g.mare?.protected||0,dashes:dashes-initialDashes,levels:g.levels});
+  results.push({id,won:g.won===true,reason:g.reason||'',objective:TG.engine.objective(g)?.title||'',time:Number(g.time.toFixed(2)),hp:Number(g.p.hp.toFixed(1)),maxHp:g.p.maxHp,level:g.level,kills:g.kills-initialKills,totalKills:g.kills,cards:choices,hits:totalHits-initialHits,hpDamage:healthDamage-initialDamage,protected:g.mare?.protected||0,dashes:dashes-initialDashes,levels:g.levels});
   if(!g.won)break;dialogues(TG);
  }
  return{seed,policy,complete:results.length===2&&results[1].won,results,wallet:TG.store.data.wallet,legacyRuns:TG.store.data.stats.runs,storyNode:TG.story.state().node};
