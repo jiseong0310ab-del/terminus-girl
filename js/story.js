@@ -82,7 +82,7 @@ A.setCommandDeck=function(ids){
 };
 A.prepareTraining=function(){
  const S=TG.store,state=A.state();
- if(!state.companions.includes('mare')||activeRun()||!S.canWrite())return null;
+ if(!state.companions.length||activeRun()||!S.canWrite())return null;
  return {id:'training-'+state.node+'-'+state.commandSeed.toString(36),battleId:'escort',duration:90,loadout:clone(state.loadout),companions:[...state.companions],commandDeck:[...state.commandDeck],commandSeed:state.commandSeed};
 };
 A.completeBattle=function(run){
