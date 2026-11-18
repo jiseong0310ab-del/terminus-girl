@@ -299,3 +299,12 @@ test('completed first-companion stories can train and retry with fresh counters 
 test('a waiting update cannot replace a command hand or its backup settings',async()=>{
  let posted=0;const registration={waiting:{postMessage(){posted++}},addEventListener(){}};const h=bootUI({navigator:{serviceWorker:{controller:{},register:async()=>registration,addEventListener(){}}}});await new Promise(setImmediate);joinedStoryUI(h.TG,h.$);h.$('storyAction').onclick();h.$('commandBtn').onclick();h.$('commandsSettings').onclick();assert.equal(h.$('applyUpdate').hidden,true);h.$('applyUpdate').onclick();assert.equal(posted,0);h.$('settingsBack').onclick();assert.equal(h.TG.ui.screen,'commands');
 });
+
+
+test('deck swapping allows a temporary ninth draft card and only saves a valid eight-card party',()=>{
+ const {TG,$}=bootUI();joinedStoryUI(TG,$);const before=JSON.stringify(TG.story.state());$('storyDeck').onclick();$('deckCounter').onclick();$('deckList').children.find(e=>/함께 선 자리/.test(e.attrs['aria-label'])).onclick();assert.equal(TG.ui.deckDraft.length,9);assert.match($('deckCount').textContent,/1장 줄여/);assert.equal($('deckSave').disabled,true);$('deckSave').onclick();assert.equal(TG.ui.screen,'deck');assert.equal(JSON.stringify(TG.story.state()),before);
+ $('deckList').children.find(e=>/복원의 파동/.test(e.attrs['aria-label'])).onclick();assert.equal(TG.ui.deckDraft.length,8);assert.equal($('deckSave').disabled,false);$('deckSave').onclick();assert.equal(TG.ui.screen,'story');assert(TG.story.state().commandDeck.includes('mare_shelter'));assert(!TG.story.state().commandDeck.includes('rize_pulse'));
+});
+test('training pause and exit explain the preserved story rather than promising battle-boundary progress',()=>{
+ const {TG,$}=bootUI();joinedStoryUI(TG,$);const before=JSON.stringify(TG.store.data);$('storyTraining').onclick();$('pauseBtn').onclick();assert.match($('quitBtn').textContent,/연습 끝내기/);assert.match($('pauseObjective').textContent,/연습 종료까지/);assert.match($('pauseBoundaryNote').textContent,/이야기 진행과 보상을 변경하지/);assert.doesNotMatch($('pauseBoundaryNote').textContent,/전투 시작/);$('quitBtn').onclick();assert.match($('modalTitle').textContent,/지휘 연습/);assert.match($('modalText').textContent,/기억 조각은 그대로/);$('modalYes').onclick();$('backBtn').onclick();assert.equal(TG.ui.screen,'story');assert.equal(JSON.stringify(TG.store.data),before);
+});
