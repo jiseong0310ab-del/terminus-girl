@@ -60,6 +60,14 @@ A.advance=function(expectedNode,expectedLine){
   state.completed=state.node==='rest';
  });
 };
+A.setParty=function(ids){
+ if(activeRun()||!Array.isArray(ids)||ids.length!==3||new Set(ids).size!==3||ids.some(id=>!TG.PARTY.some(x=>x.id===id&&x.trial)))return false;
+ return transact(state=>{
+  if(state.node!=='rest')return false;
+  state.companions=[...ids];
+  state.commandDeck=TG.commandDeck.preset('protect',ids);
+ });
+};
 A.prepareBattle=function(){
  const S=TG.store,state=A.state();
  if(!state.started||!isBattle(state.node)||!S.canWrite()||!/^story-[\w-]{1,80}$/.test(state.encounterId||''))return null;
