@@ -114,13 +114,15 @@ function startStoryBattle(spec,training=false){
  }
  // Ensure the opening hand contains at least one card from Rize and each deployed ally.
  // The order is seeded, and the user's saved deck is never replaced.
- if(!training&&spec.battleId!=='velaEscort'){
+ if(!training){
   const ownerOf=id=>TG.COMMANDS.find(card=>card.id===id)?.owner;
   const needed=['rize',...spec.companions];
   for(const owner of needed){
    if(g.commands.hand.some(id=>ownerOf(id)===owner))continue;
    const found=g.commands.draw.findIndex(id=>ownerOf(id)===owner);
    const victim=g.commands.hand.findIndex(id=>{
+    // A guaranteed patient-treatment card must never be exchanged for another ally.
+    if(spec.battleId==='velaEscort'&&['vela_heal','mare_guard'].includes(id))return false;
     const present=ownerOf(id);
     return !needed.includes(present)||g.commands.hand.filter(x=>ownerOf(x)===present).length>1;
    });
