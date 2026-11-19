@@ -294,7 +294,7 @@ test('solo deck cannot reveal usable Mare cards and explains the locked role wit
 test('command UI freezes combat, keeps the same hand across settings and return, and explains unusable cards',()=>{
  const {TG,$}=bootUI();joinedStoryUI(TG,$);$('storyAction').onclick();const g=TG.engine.g;g.enemies=[]; // Isolate the no-target card preview from the new nearby mission guardian.
  g.commands.hand=['rize_pulse','shared_heal','mare_counter'];g.commands.energy=2;g.commands.regen=5;g.mare.cooldown=9;g.commandEffects.ward=3;const before=JSON.stringify(g);
- $('commandBtn').onclick();assert.equal(TG.ui.screen,'commands');assert.equal($('commandBtn').hidden,true);assert.match($('commandPower').textContent,/전투 7초 후/);assert.match(childText($('commandList')),/체력이 가득/);assert.match(childText($('commandList')),/범위 안에 적/);assert.match(childText($('commandList')),/피해를 막은 직후/);assert.equal($('commandList').children.length,3);for(let i=0;i<20;i++)TG.engine.update(.04);assert.equal(g.time,0);assert.equal(g.commands.regen,5);assert.equal(g.mare.cooldown,9);assert.equal(g.commandEffects.ward,3);
+ $('commandBtn').onclick();assert.equal(TG.ui.screen,'commands');assert.equal($('commandBtn').hidden,true);assert.match($('commandPower').textContent,/전투 5초 후/);assert.match(childText($('commandList')),/체력이 가득/);assert.match(childText($('commandList')),/범위 안에 적/);assert.match(childText($('commandList')),/피해를 막은 직후/);assert.equal($('commandList').children.length,3);for(let i=0;i<20;i++)TG.engine.update(.04);assert.equal(g.time,0);assert.equal(g.commands.regen,5);assert.equal(g.mare.cooldown,9);assert.equal(g.commandEffects.ward,3);
  $('commandsSettings').onclick();assert.equal(TG.ui.returnTo,'commands');$('settingsBack').onclick();assert.equal(TG.ui.screen,'commands');$('commandsClose').onclick();assert.equal(TG.ui.screen,'playing');assert.equal(JSON.stringify(g),before);assert.equal($('commandBtn').hidden,false);
 });
 test('a real command card click spends energy once, heals, replaces its hand slot and rejects its stale click',()=>{
@@ -475,4 +475,22 @@ test('Vela patient sidequest shows target cards, actual party results and passen
  assert.equal($('storyPatientMission').hidden,true);
  assert.equal($('storyPatientCabin').hidden,false);
  assert.match($('storyPatientText').textContent,/벨라 처치 1회/);
+});
+
+test('tactical command UI visibly marks eligible cross-owner combo cards without consuming an action',()=>{
+ const {TG,$}=bootUI();joinedStoryUI(TG,$);$('storyAction').onclick();
+ const g=TG.engine.g;assert.equal(g.mode,'story');
+ g.commands.hand=['rize_flame','mare_guard','shared_heal'];
+ g.commands.energy=2;g.commands.regen=3;
+ g.teamwork.owner='rize';g.teamwork.window=5;g.teamwork.cooldown=0;
+ const before=JSON.stringify(g);
+ $('commandBtn').onclick();assert.equal(TG.ui.screen,'commands');
+ assert.match($('commandCombo').textContent,/다른 캐릭터 카드/);
+ assert.match($('commandPower').textContent,/6초 후/);
+ const cards=$('commandList').children;
+ const mare=cards.find(c=>c.attrs['aria-label']?.includes('마레의 방패'));
+ assert(mare);assert(mare.children[1].children.some(x=>x.className==='teamComboBadge'));
+ const rize=cards.find(c=>c.attrs['aria-label']?.includes('남겨진 등불'));
+ assert(rize);assert(!rize.children[1].children.some(x=>x.className==='teamComboBadge'));
+ $('commandsClose').onclick();assert.equal(JSON.stringify(g),before);
 });

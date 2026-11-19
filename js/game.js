@@ -112,6 +112,27 @@ function startStoryBattle(spec,training=false){
    if(i>=0&&slot>=0){const previous=g.commands.hand[slot];g.commands.hand[slot]=id;g.commands.draw[i]=previous;}
   }
  }
+ // Ensure the opening hand contains at least one card from Rize and each deployed ally.
+ // The order is seeded, and the user's saved deck is never replaced.
+ if(!training){
+  const ownerOf=id=>TG.COMMANDS.find(card=>card.id===id)?.owner;
+  const needed=['rize',...spec.companions];
+  for(const owner of needed){
+   if(g.commands.hand.some(id=>ownerOf(id)===owner))continue;
+   const found=g.commands.draw.findIndex(id=>ownerOf(id)===owner);
+   const victim=g.commands.hand.findIndex(id=>{
+    // A guaranteed patient-treatment card must never be exchanged for another ally.
+    if(spec.battleId==='velaEscort'&&['vela_heal','mare_guard'].includes(id))return false;
+    const present=ownerOf(id);
+    return !needed.includes(present)||g.commands.hand.filter(x=>ownerOf(x)===present).length>1;
+   });
+   if(found>=0&&victim>=0){
+    const old=g.commands.hand[victim];g.commands.hand[victim]=g.commands.draw[found];
+    g.commands.draw[found]=old;
+   }
+  }
+ }
+ g.teamwork={owner:null,window:0,cooldown:0,count:0,evades:0,evadeCooldown:0,lastPair:''};
  g.commandEffects={guardWindow:0,ward:0};
  if(spec.companions.includes('mare'))g.mare={x:g.p.x-45,y:g.p.y+30,cooldown:0,maxCooldown:12,pulse:0,protected:0,face:0,moving:false};
 g.party=[...spec.companions];
@@ -162,7 +183,26 @@ G.startCommandTraining=function(){
 G.continue=function(){const c=TG.store.data.checkpoint;if(!c||!TG.store.canWrite())return false;initialize(c.mode,c.stage,c,true);if(c.phase==='camp'){G.g.status='camp';G.g.event=c.event;G.g.eventDone=c.eventDone;G.onChange('camp')}TG.store.snapshot(G.g,c.phase);return true;};
 G.pause=function(){if(G.g?.status!=='playing')return;G.g.status='paused';G.input.x=G.input.y=0;G.onChange('paused');};
 G.resume=function(){if(G.g?.status!=='paused'||(['chapter','story'].includes(G.g.mode)&&!TG.store.canWrite()))return;if(G.g.p.hp<=0){G.finish(false,'death');return;}G.g.status='playing';G.onChange('playing');};
-G.dash=function(){const g=G.g;if(!g||g.status!=='playing'||g.dash.cooldown>0)return false;const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m}d.x=d.lastX;d.y=d.lastY;g.learned.dashed=true;d.active=.18;d.invulnerable=true;d.cooldown=d.maxCooldown;g.rings.push({x:g.p.x,y:g.p.y,r:25,life:.3,max:.3,color:'#ead8ae'});G.onSound('dash');return true;};
+G.dash=function(){
+ const g=G.g;if(!g||g.status!=='playing'||g.dash.cooldown>0)return false;
+ const d=g.dash,m=len(G.input.x,G.input.y),p=g.p,t=g.teamwork;
+ // Directed evasions during an attack warning restore one tactical resource.
+ const warned=g.storyPressure?.warning>0&&len(p.x-g.storyPressure.x,p.y-g.storyPressure.y)<g.storyPressure.r+32;
+ const danger=g.enemies.some(e=>e.action==='windup'&&len(p.x-e.x,p.y-e.y)<210)||
+   g.hostile.some(b=>len(p.x-b.x,p.y-b.y)<105);
+ const rewarded=g.mode==='story'&&t&&m>.1&&t.evadeCooldown<=0&&(warned||danger);
+ if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m}
+ d.x=d.lastX;d.y=d.lastY;g.learned.dashed=true;
+ d.active=.18;d.invulnerable=true;d.cooldown=d.maxCooldown;
+ g.rings.push({x:p.x,y:p.y,r:25,life:.3,max:.3,color:'#ead8ae'});
+ if(rewarded){
+  t.evades++;t.evadeCooldown=5;
+  g.commands.energy=Math.min(3,g.commands.energy+1);
+  ring(p.x,p.y,52,'#e9d494');
+  G.notify('위험 회피 성공 · 지휘력 +1');
+ }
+ G.onSound('dash');return true;
+};
 G.openCommands=function(){const g=G.g;if(!g||g.mode!=='story'||!g.commands||g.status!=='playing'||g.p.hp<=0||!TG.store.canWrite())return false;g.status='command';G.input.x=G.input.y=0;G.onChange('commands');return true;};
 G.closeCommands=function(){const g=G.g;if(!g||g.mode!=='story'||!g.commands||g.status!=='command'||g.p.hp<=0||!TG.store.canWrite())return false;g.status='playing';G.input.x=G.input.y=0;G.onChange('playing');G.checkLevel();return true;};
 function nearPlayer(item,radius){return len(item.x-G.g.p.x,item.y-G.g.p.y)<=radius;}
@@ -207,7 +247,7 @@ G.castCommand=function(id,token){
  // Commit the hand before effects: a double tap can never apply an effect twice.
  const p=g.p,effects=g.commandEffects,enemies=radius=>g.enemies.filter(enemy=>nearPlayer(enemy,radius));
  const clearHostile=radius=>{g.hostile=g.hostile.filter(bullet=>!nearPlayer(bullet,radius));};
- let color='#d7c391',radius=65;
+ let color='#d7c391',radius=65,teamNote='';
  castingCommand=true;try{
  if(id==='rize_pulse'||id==='rize_cut'){
   const combo=effects.guardWindow>0?1.5:1;if(combo>1)effects.guardWindow=0;
@@ -261,8 +301,32 @@ G.castCommand=function(id,token){
   if(action==='flame'){radius=95;g.flames.push({x:p.x,y:p.y,r:95,life:3});}
  }
  effects.title=info.card.name;ring(p.x,p.y,radius,color);spark(p.x,p.y,color,8);
+ const t=g.teamwork,owner=info.card.owner;
+ if(t&&t.window>0&&t.cooldown<=0&&t.owner!==owner){
+  const pair=[t.owner,owner],names={rize:'리제',mare:'마레',aster:'아스터',noa:'노아',vela:'벨라',shared:'공용',iris:'이리스',crow:'크로우'};
+  t.count++;t.lastPair=pair.map(x=>names[x]||x).join(' × ');t.cooldown=5.5;t.window=0;t.owner=null;
+  const reach=210;
+  for(const e of enemies(reach))G.hitEnemy(e,p.attack*1.3);
+  clearHostile(reach);
+  g.commands.energy=Math.min(3,g.commands.energy+1);
+  if(pair.includes('mare'))p.shield=Math.min(3,p.shield+1);
+  if(pair.includes('vela')){
+   p.hp=Math.min(p.maxHp,p.hp+10);
+   if(g.patient&&len(p.x-g.patient.x,p.y-g.patient.y)<155&&g.patient.phase!=='boarded')
+    g.patient.hp=Math.min(g.patient.maxHp,g.patient.hp+10);
+  }
+  if(pair.includes('noa'))g.dash.cooldown=Math.max(0,g.dash.cooldown-1.5);
+  if(pair.includes('aster')){
+   const mark=enemies(320).sort((a,b)=>len(a.x-p.x,a.y-p.y)-len(b.x-p.x,b.y-p.y))[0];
+   if(mark){G.hitEnemy(mark,p.attack*1.6);ring(mark.x,mark.y,37,'#e5c788');}
+  }
+  ring(p.x,p.y,210,'#f2d597');spark(p.x,p.y,'#ffe0a0',14);
+  teamNote='합동 지휘! '+t.lastPair+' · 광역 공격 · 지휘력 +1';
+ }else if(t){t.owner=owner;t.window=6;}
  }finally{castingCommand=false;}
- g.status='playing';G.input.x=G.input.y=0;G.notify(info.card.name+' · 지휘력 −'+info.card.cost);G.onSound('card');G.onChange('playing');G.checkLevel();return true;
+ g.status='playing';G.input.x=G.input.y=0;
+ G.notify(teamNote||info.card.name+' · 지휘력 −'+info.card.cost);
+ G.onSound('card');G.onChange('playing');G.checkLevel();return true;
 };
 // Every early offer has a usable offensive choice; a nearly completed
 // synergy is not hidden behind pure randomness. The other slots stay random.
@@ -501,7 +565,17 @@ function mareTick(dt){
  m.moving=distance>2&&dt>0;if(m.moving){m.face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?0:2);m.x=advance(m.x,dx*step);m.y=advance(m.y,dy*step);}
 }
 G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt=clamp(delta,0,.04),p=g.p;g.overcharge=Math.max(0,g.overcharge-dt);g.chainTime=Math.max(0,g.chainTime-dt);if(g.chainTime===0)g.chain=0;g.time+=dt;g.totalTime+=dt;g.flash=Math.max(0,g.flash-dt);g.shake=Math.max(0,g.shake-25*dt);if(g.toast)g.toast.life-=dt;
- if(g.mode==='story'&&g.commands){TG.commandDeck.tick(g.commands,dt);g.commandEffects.guardWindow=Math.max(0,g.commandEffects.guardWindow-dt);g.commandEffects.ward=Math.max(0,g.commandEffects.ward-dt);}
+ if(g.mode==='story'&&g.commands){
+  TG.commandDeck.tick(g.commands,dt*(g.storyTraining?1:1.5));
+  g.commandEffects.guardWindow=Math.max(0,g.commandEffects.guardWindow-dt);
+  g.commandEffects.ward=Math.max(0,g.commandEffects.ward-dt);
+  if(g.teamwork){
+   g.teamwork.window=Math.max(0,g.teamwork.window-dt);
+   g.teamwork.cooldown=Math.max(0,g.teamwork.cooldown-dt);
+   g.teamwork.evadeCooldown=Math.max(0,g.teamwork.evadeCooldown-dt);
+   if(g.teamwork.window===0)g.teamwork.owner=null;
+  }
+ }
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
  mareTick(dt);allyTick(dt);recordTick(dt);storyGateTick(dt);if(g.status!=='playing')return;snowTargetTick(dt);if(g.status!=='playing')return;patientTick(dt);if(g.status!=='playing')return;storyPressureTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
