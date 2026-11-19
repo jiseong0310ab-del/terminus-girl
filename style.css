@@ -343,3 +343,10 @@
 @media(max-width:380px){.commandCard{padding:9px 8px;min-height:144px;gap:6px}.commandCard .commandCost{height:27px;width:27px;font-size:14px}.commandCard .cardtitle{font-size:12px}.commandCard .commandArt{width:48px;height:54px}.patientCabin{gap:10px;padding:10px}}
 @media(max-height:650px){.commandCard{min-height:125px}.commandCard .carddesc{-webkit-line-clamp:1}}
 @media(prefers-reduced-motion:reduce){.storyPatientStart,.commandCard.patientTarget{transition:none}}
+
+/* v0.25 — tactile owner-chain feedback without covering the card text */
+.commandCard.teamComboReady{border-color:#f3d59b;box-shadow:0 0 0 1px #dfc38199,0 6px 18px #e3b95d1c}
+.commandCard .teamComboBadge{display:inline-block;max-width:100%;padding:4px 7px;margin-top:6px;border:1px solid #eacb92af;background:#493e2dcf;color:#ffe7b6;font-size:10px;font-weight:700;border-radius:7px;line-height:1.35}
+#commandCombo{line-height:1.65;color:#f1dbb2}
+@media(max-width:375px){.commandCard .teamComboBadge{font-size:9px;padding:3px 5px}}
+@media(prefers-reduced-motion:reduce){.commandCard.teamComboReady{transition:none}}
