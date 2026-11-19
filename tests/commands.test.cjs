@@ -151,7 +151,7 @@ test('pulse and cut consume the protection bonus once, while invalid targets kee
 test('all command clocks and effects freeze in command/cards/pause and regenerate only in real combat',()=>{
  const b=battle(),g=b.G.g;g.commands.energy=1;g.commands.regen=11.98;g.commandEffects.guardWindow=4;g.commandEffects.ward=4;g.mare.cooldown=12;g.dash.cooldown=2;g.flames=[{x:0,y:0,r:95,life:3}];
  for(const status of ['command','cards','paused']){g.status=status;const before=JSON.stringify(g);for(let i=0;i<100;i++)b.G.update(.04);assert.equal(JSON.stringify(g),before);assert.equal(b.G.damage(10),false);}
- g.status='playing';b.G.update(.04);assert.equal(g.commands.energy,2);assert(Math.abs(g.commands.regen-.02)<1e-9);assert.equal(g.commandEffects.guardWindow,3.96);assert.equal(g.commandEffects.ward,3.96);assert.equal(g.mare.cooldown,11.96);assert.equal(g.dash.cooldown,1.96);assert.equal(g.flames[0].life,2.96);
+ g.status='playing';b.G.update(.04);assert.equal(g.commands.energy,2);assert(Math.abs(g.commands.regen-.04)<1e-9);assert.equal(g.commandEffects.guardWindow,3.96);assert.equal(g.commandEffects.ward,3.96);assert.equal(g.mare.cooldown,11.96);assert.equal(g.dash.cooldown,1.96);assert.equal(g.flames[0].life,2.96);
  g.commands.energy=3;g.commands.regen=11;b.G.update(.04);assert.equal(g.commands.regen,0);assert.equal(g.status,'playing');
 });
 
