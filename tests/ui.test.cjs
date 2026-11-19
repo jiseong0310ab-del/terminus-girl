@@ -476,3 +476,21 @@ test('Vela patient sidequest shows target cards, actual party results and passen
  assert.equal($('storyPatientCabin').hidden,false);
  assert.match($('storyPatientText').textContent,/벨라 처치 1회/);
 });
+
+test('tactical command UI visibly marks eligible cross-owner combo cards without consuming an action',()=>{
+ const {TG,$}=bootUI();joinedStoryUI(TG,$);$('storyAction').onclick();
+ const g=TG.engine.g;assert.equal(g.mode,'story');
+ g.commands.hand=['rize_flame','mare_guard','shared_heal'];
+ g.commands.energy=2;g.commands.regen=3;
+ g.teamwork.owner='rize';g.teamwork.window=5;g.teamwork.cooldown=0;
+ const before=JSON.stringify(g);
+ $('commandBtn').onclick();assert.equal(TG.ui.screen,'commands');
+ assert.match($('commandCombo').textContent,/다른 캐릭터 카드/);
+ assert.match($('commandPower').textContent,/6초 후/);
+ const cards=$('commandList').children;
+ const mare=cards.find(c=>c.attrs['aria-label']?.includes('마레의 방패'));
+ assert(mare);assert(mare.children[1].children.some(x=>x.className==='teamComboBadge'));
+ const rize=cards.find(c=>c.attrs['aria-label']?.includes('남겨진 등불'));
+ assert(rize);assert(!rize.children[1].children.some(x=>x.className==='teamComboBadge'));
+ $('commandsClose').onclick();assert.equal(JSON.stringify(g),before);
+});
