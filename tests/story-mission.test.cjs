@@ -12,7 +12,12 @@ function quiet(g){g.spawn=-10000;g.nextWave=Infinity;g.hazards=[];g.hostile=[];g
 function advance(A){const node=A.state().node;let count=0;while(A.state().node===node){const s=A.state();assert(++count<15);assert.equal(A.advance(s.node,s.line),true);}}
 function fakeBattle(A){const spec=A.prepareBattle();assert(spec);return{id:spec.id,mode:'story',storyBattle:spec.battleId,won:true,p:{hp:95},levels:{},level:1,xp:0,kills:0,totalTime:0,relics:[]};}
 function approach(b){assert(b.A.begin());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'approach');return b.G.startStory();}
-function escort(b){approach(b);const g=b.G.g;quiet(g);for(const id of [...g.storyGate.guardIds])b.G.hitEnemy(g.enemies.find(e=>e.id===id),10000);g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;for(let n=0;n<35&&g.status==='playing';n++)b.G.update(.04);assert.equal(g.won,true);
+// One engine step that also resolves level-up card offers (first offered card).
+function tick(b){const g=b.G.g;if(g.status==='cards'){assert(b.G.choose(g.offered[0],g.offerToken));return;}b.G.update(.04);}
+// Play the scripted opening honestly: defeat packs, then the guardian, then hold the switch.
+function toPhase(b,phase){const g=b.G.g;let n=0;while(g.script.phase!==phase&&g.status!=='ended'){for(const e of g.enemies.filter(e=>e.script))b.G.hitEnemy(e,9999);g.p.hp=g.p.maxHp;tick(b);assert(++n<3000,'stuck before '+phase);}}
+function holdSwitch(b){const g=b.G.g;let n=0;while(g.status!=='ended'){g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;g.p.hp=g.p.maxHp;tick(b);assert(++n<400,'switch hold did not finish');}}
+function escort(b){approach(b);const g=b.G.g;quiet(g);toPhase(b,'switch');holdSwitch(b);assert.equal(g.won,true);
  advance(b.A);assert.equal(b.A.state().node,'escort');b.G.g=null;return b.G.startStory();}
 function archive(b){assert(b.A.begin());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'approach');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);assert.equal(b.A.state().node,'escort');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);
  assert.equal(b.A.state().node,'rest');assert(b.A.beginR3());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'archive');return b.G.startStory();}
@@ -21,13 +26,13 @@ function forSnow(b,route){
  recruited:['aster','noa'],companions:['mare','aster','noa'],snowParty:['mare','aster','noa'],commandDeck:b.TG.commandDeck.preset('protect',['mare','aster','noa'])});
  assert(b.S.save());return b.G.startStory();
 }
-test('stationary solo battle cannot win, even when all guardians were eliminated',()=>{
- const b=boot(),g=approach(b);quiet(g);const gate=g.storyGate;
- assert.equal(b.G.objective().kind,'mission');assert.equal(gate.guardIds.length,2);
+test('stationary solo battle cannot win, even when the guardian was eliminated',()=>{
+ const b=boot(),g=approach(b);quiet(g);const gate=g.storyGate,x=g.p.x,y=g.p.y;
+ assert.equal(b.G.objective().kind,'mission');assert.equal(gate.guardIds.length,0);
  assert(Math.hypot(gate.x-g.p.x,gate.y-g.p.y)>gate.r);
- for(const id of [...gate.guardIds]){const e=g.enemies.find(e=>e.id===id);assert(e);b.G.hitEnemy(e,99999);}
- assert.equal(gate.defeated.length,2);g.enemies=[];
- for(let i=0;i<100;i++)b.G.update(.04);
+ toPhase(b,'switch');g.p.x=x;g.p.y=y;
+ assert.equal(gate.guardIds.length,1);assert.equal(gate.defeated.length,1);g.enemies=[];
+ for(let i=0;i<100;i++){g.p.hp=g.p.maxHp;tick(b);}
  assert.equal(g.status,'playing');assert.equal(gate.charge,0);
  assert.equal(b.G.objective().cleared,0);
  assert.equal(b.G.finish(true,'story'),true);assert.equal(g.won,false);
@@ -35,15 +40,48 @@ test('stationary solo battle cannot win, even when all guardians were eliminated
 });
 test('approach requires guardian elimination before physically activating switch and saves early victory',()=>{
  const b=boot(),g=approach(b);quiet(g);const gate=g.storyGate;
- g.spawn=-1000;g.p.x=gate.x;g.p.y=gate.y;
- for(let i=0;i<30;i++)b.G.update(.04);
- assert.equal(gate.charge,0);assert.equal(g.status,'playing');
- for(const id of [...gate.guardIds])b.G.hitEnemy(g.enemies.find(e=>e.id===id),99999);
- g.enemies=[];
- for(let i=0;i<31&&g.status==='playing';i++)b.G.update(.04);
+ g.p.x=gate.x;g.p.y=gate.y;
+ for(let i=0;i<30;i++){g.p.hp=g.p.maxHp;tick(b);}
+ assert.equal(gate.charge,0);assert.equal(g.status,'playing');assert.equal(g.script.phase,'swarm');
+ toPhase(b,'switch');assert.equal(g.status,'playing');assert(gate.charge<gate.needed);
+ holdSwitch(b);
  assert.equal(g.status,'ended');assert.equal(g.won,true);assert.equal(g.reason,'objective');
  assert(g.time<g.duration);assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'meeting');
  assert.equal(b.S.data.wallet,0);assert.equal(b.S.data.stats.runs,0);
+});
+test('opening arc: telegraphed packs in view, a first card, a telegraphed guardian at the switch and a siege on stepping in',()=>{
+ const b=boot(),g=approach(b),s=g.script,{G}=b;
+ assert.equal(g.duration,60);assert.equal(g.enemies.length,0);assert.equal(s.phase,'swarm');
+ // Packs are announced by a visible marker before anything appears, inside the play area.
+ for(let i=0;i<10;i++)tick(b);
+ assert(s.pending.length>=3);for(const p of s.pending){assert(p.t>0);assert(Math.abs(p.x-g.p.x)<=220&&Math.abs(p.y-g.p.y)<=240);}
+ for(let i=0;i<25;i++)tick(b);
+ assert(g.enemies.length>=3);assert(g.enemies.every(e=>e.script==='swarm'));
+ // A first level-up arrives during the swarm, well before the guardian.
+ let offered=false,n=0;
+ while(s.phase==='swarm'){if(g.status==='cards')offered=true;for(const e of g.enemies.filter(e=>e.script))G.hitEnemy(e,9999);
+  for(const d of g.drops){d.x=g.p.x;d.y=g.p.y;}g.p.hp=g.p.maxHp;tick(b);assert(++n<2000);}
+ assert(offered,'first card choice during the swarm');assert(g.level>=2);
+ // The guardian is telegraphed on the switch, then joins the gate prerequisite.
+ const marker=s.pending.find(p=>p.role==='guardian');assert(marker);assert.equal(marker.x,g.storyGate.x);assert(marker.t>=1);
+ assert.match(G.objective().title,/회선 수호자/);
+ n=0;while(!s.guardianId){g.p.hp=g.p.maxHp;tick(b);assert(++n<200);}
+ const guardian=g.enemies.find(e=>e.id===s.guardianId);assert.equal(guardian.hp,210);assert.equal(guardian.windupTime,1);
+ assert.deepEqual([...g.storyGate.guardIds],[guardian.id]);
+ G.hitEnemy(guardian,9999);assert.equal(s.phase,'switch');assert.equal(g.storyGate.defeated.length,1);
+ assert.equal(g.status==='cards'||g.status==='playing',true);
+ // Stepping onto the switch begins a 3 second hold under an encirclement with one gap.
+ g.status='playing';g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;tick(b);
+ assert.equal(s.siege,true);assert.equal(s.pending.filter(p=>p.role==='siege').length,7);
+ assert.match(G.objective().title,/스위치 작동/);
+ holdSwitch(b);assert.equal(g.won,true);assert.equal(g.reason,'objective');assert(g.time<g.duration);
+});
+test('holding the opening switch does not trigger the stationary erosion pulse',()=>{
+ const b=boot(),g=approach(b);quiet(g);toPhase(b,'switch');
+ const q=g.storyPressure;q.idle=0;q.warning=0;q.pulses=0;q.cooldown=0;
+ g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;g.storyGate.needed=99;
+ for(let i=0;i<150;i++){g.p.hp=g.p.maxHp;g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;tick(b);}
+ assert.equal(g.storyPressure.warning,0);assert.equal(g.storyPressure.pulses,0);
 });
 test('Mare return corridor requires two fallen guardians and physically reaching carriage',()=>{
  const b=boot(),g=escort(b);quiet(g);

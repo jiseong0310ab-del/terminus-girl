@@ -1,5 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const {unlockStoryGate}=require('./helpers.cjs');
 const ROOT=path.resolve(__dirname,'..'),plain=value=>JSON.parse(JSON.stringify(value));
 function boot(shared){
  const values=shared||new Map(),storage={fail:false,getItem:key=>values.get(key)||null,setItem(key,value){if(this.fail)throw Error('quota');values.set(key,String(value));}};
@@ -11,10 +12,10 @@ function toBattle(b){assert(b.A.begin());let limit=30;while(b.TG.STORY.nodes[b.A
 function quiet(g){g.spawn=-1e6;g.nextWave=Infinity;g.hazardClock=-1e6;g.enemies=[];g.hostile=[];g.lastFire=g.time;}
 function completeStoryObjective(b){
  const g=b.G.g,gate=g.storyGate;assert(g&&gate&&g.status==='playing');
- gate.defeated=[...gate.guardIds]; // Combat test helper: the prerequisite was already resolved.
+ unlockStoryGate(g); // Combat test helper: the prerequisite was already resolved.
  g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-1e6;g.nextWave=Infinity;
  g.p.x=gate.x;g.p.y=gate.y;
- for(let n=0;n<45&&g.status==='playing';n++)b.G.update(.04);
+ for(let n=0;n<100&&g.status==='playing';n++)b.G.update(.04);
  assert.equal(g.status,'ended');assert.equal(g.won,true);
 }
 function battle(mare=true){const b=toBattle(boot());assert(b.G.startStory());if(mare){completeStoryObjective(b);toBattle(b);assert(b.G.startStory());}quiet(b.G.g);return b;}

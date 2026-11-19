@@ -12,6 +12,13 @@ G.objective=function(run=G.g){
  if(run.mode==='story'){
   const battle=TG.STORY?.battles?.[run.storyBattle],ended=run.status==='ended';
   if(run.storyTraining)return {kind:ended?'ended':'survive',stage,cleared:0,target:0,bossIn:0,remaining:Math.max(0,duration-time),title:ended?(run.won?'합동 훈련 완료':'열차에서 다시 준비'):'90초 합동 지휘 훈련',detail:ended?'이야기 진행과 보상은 변경되지 않습니다. 덱을 조정해 다시 연습할 수 있습니다.':'지휘를 열어 카드를 사용하세요. 마레가 피해를 막으면 파동·절단·반격을 연계할 수 있습니다.'};
+  if(run.storyBattle==='approach'&&run.script&&!ended){
+   const s=run.script,gate=run.storyGate,progress=Math.floor(100*clamp((gate?.charge||0)/(gate?.needed||1),0,1));
+   const base={kind:'mission',stage,cleared:0,target:1,bossIn:0,remaining:Math.max(0,duration-time)};
+   if(s.phase==='swarm')return {...base,title:'잔향 습격 · '+Math.min(s.kills,OPENING.swarmGoal)+'/'+OPENING.swarmGoal,detail:'붉은 원에서 잔향이 나타납니다. 공격은 자동이니 움직이며 푸른 기억을 모으세요. 돌진형은 붉은 예고선을 옆으로 피하세요.'};
+   if(s.phase==='guardian')return {...base,title:'회선 수호자 처치',detail:'돌진 직전 붉은 예고선이 나타납니다. 옆으로 피하거나 대시로 통과하면 지휘력 +1. 지휘 카드로 큰 피해를 주세요.'};
+   return {...base,title:s.siege?'안내 스위치 작동 · '+progress+'%':'금빛 안내 스위치로 이동',detail:'금빛 원 안에 '+OPENING.switchTime+'초 머물면 전원이 복구됩니다. 작동이 시작되면 잔향이 몰려오니 원 안에서 버티세요.'};
+  }
   if(['approach','escort','archive'].includes(run.storyBattle)&&!run.storyTraining){
     const gate=run.storyGate,done=gate?.done===true,guards=gate?.guardIds?.length||0,beaten=gate?.defeated?.length||0;
     const needed=gate?.needed||1,progress=Math.floor(100*Math.max(0,Math.min(1,(gate?.charge||0)/needed)));
@@ -138,17 +145,18 @@ function startStoryBattle(spec,training=false){
 g.party=[...spec.companions];
 g.allies=spec.companions.filter(id=>id!=='mare').map((id,i)=>({id,x:g.p.x+45+i*20,y:g.p.y+40+i*20,cooldown:3+i*2,pulse:0,moving:false,face:0}));
 g.recordTarget=!training&&spec.battleId==='archive'?{x:g.p.x+125,y:g.p.y-75,r:55,charge:0,needed:1.25,recovered:false}:null;
- g.storyGate=null;
+ g.storyGate=null;g.script=null;
  if(!training&&['approach','escort','archive'].includes(spec.battleId)){
   const mission=spec.battleId;
-  g.storyGate={x:g.p.x+(mission==='approach'?180:mission==='escort'?-175:-195),y:g.p.y+(mission==='approach'?-70:mission==='escort'?80:90),r:51,
-    needed:mission==='approach'?1.1:.7,charge:0,done:false,
+  g.storyGate={x:g.p.x+(mission==='approach'?180:mission==='escort'?-175:-195),y:g.p.y+(mission==='approach'?-70:mission==='escort'?80:90),r:mission==='approach'?OPENING.switchRadius:51,
+    needed:mission==='approach'?OPENING.switchTime:.7,charge:0,done:false,
     guardIds:[],defeated:[],kind:mission};
-  if(mission!=='archive'){
-   const guards=mission==='approach'?[['ghost',132,-20],['passenger',-92,-124]]:[['ghost',-136,64],['wolf',-182,126]];
-   for(const [type,dx,dy] of guards){
+  // The opening mission is an authored arc; its guardian arrives later.
+  if(mission==='approach'){g.script=openingScript();g.xpNeed=OPENING.firstXp;g.storyGate.decay=OPENING.switchDecay;}
+  else if(mission!=='archive'){
+   for(const [type,dx,dy] of [['ghost',-136,64],['wolf',-182,126]]){
     const enemy=G.enemy(type,g.p.x+dx,g.p.y+dy);
-    enemy.hp=Math.max(enemy.hp,mission==='approach'?(type==='passenger'?94:112):132);enemy.maxHp=enemy.hp;
+    enemy.hp=Math.max(enemy.hp,132);enemy.maxHp=enemy.hp;
     g.storyGate.guardIds.push(enemy.id);
    }
   }
@@ -365,8 +373,98 @@ function spawn(){
  if(mission){e.hp=Math.ceil(e.hp*1.12);e.maxHp=e.hp;}
  return e;
 }
+// ── Opening mission: swarm → guardian → hold the switch ─────────────────────
+// A short authored arc so the first 30–40 seconds teach the whole loop:
+// visible packs (kill, collect, first card) → a telegraphed elite (dodge, dash,
+// command card) → a siege while standing in the switch circle (climax).
+const OPENING={limit:60,swarmGoal:8,firstXp:6,guardianHp:210,switchTime:3.5,switchRadius:70,switchDecay:.3,telegraph:.9,guardianTelegraph:1.4,forceGuardianAt:18,
+ ghostSpeed:1.25,houndHp:52,siegeRadius:170,trickle:1.2};
+// Later packs split to opposite sides so the player has to pick a lane, not just walk away.
+const OPENING_PACKS=[{kinds:['ghost','ghost','ghost']},{kinds:['ghost','hound','ghost']},{kinds:['ghost','ghost','ghost','ghost'],pincer:true},{kinds:['hound','ghost','ghost','hound'],pincer:true}];
+function openingScript(){
+ return {phase:'swarm',packs:0,kills:0,pending:[],packClock:.8,escortClock:0,guardianId:null,siege:false,trickle:0,siegeSpawned:0};
+}
+function scriptReach(){
+ const W=TG.view?.width||390,H=TG.view?.height||844;
+ // Keep spawn points inside the visible play area (below the HUD, above the thumbs).
+ return {rx:clamp(W/2-40,130,220),ry:clamp(H/2-190,140,230)};
+}
+function queueScript(s,type,x,y,time=OPENING.telegraph,role='swarm'){
+ s.pending.push({type,x,y,t:time,max:time,role});
+}
+function queuePack(g,s){
+ const {rx,ry}=scriptReach(),pack=OPENING_PACKS[s.packs%OPENING_PACKS.length],kinds=pack.kinds,base=rand(0,TAU);
+ kinds.forEach((type,i)=>{
+  const a=pack.pincer?base+(i%2)*Math.PI+(i<2?-.25:.25):base+(i-(kinds.length-1)/2)*.5;
+  queueScript(s,type,g.p.x+Math.cos(a)*rx,g.p.y+Math.sin(a)*ry);
+ });
+ s.packs++;s.packClock=0;
+}
+function scriptSpawn(g,s,point){
+ // Never drop an enemy on top of the player: push the point outward instead.
+ let dx=point.x-g.p.x,dy=point.y-g.p.y,d=len(dx,dy);
+ if(d<90){const a=d>1?Math.atan2(dy,dx):rand(0,TAU);point.x=g.p.x+Math.cos(a)*90;point.y=g.p.y+Math.sin(a)*90;}
+ const e=G.enemy(point.type,point.x,point.y);e.script=point.role;
+ if(point.type==='ghost')e.speed*=OPENING.ghostSpeed;
+ // Hounds live long enough to show (and use) their telegraphed charge.
+ if(point.type==='hound'){e.hp=e.maxHp=OPENING.houndHp;e.windupTime=.95;e.wait=.4;}
+ if(point.role==='guardian'){
+  e.hp=e.maxHp=OPENING.guardianHp;e.windupTime=1;e.chargeTime=.7;e.recoverWait=1.1;e.lead=.55;e.chargeRange=200;e.label='회선 수호자';
+  s.guardianId=e.id;g.storyGate.guardIds.push(e.id);
+  ring(e.x,e.y,70,'#e7a2b6');G.onSound('boss');
+ }
+ spark(e.x,e.y,'#e7a2b6',6);
+ return e;
+}
+function scriptTick(dt){
+ const g=G.g,s=g.script;if(!s||g.status!=='playing')return;
+ for(const point of s.pending)point.t-=dt;
+ const ready=s.pending.filter(point=>point.t<=0);
+ if(ready.length){s.pending=s.pending.filter(point=>point.t>0);for(const point of ready)if(g.enemies.length<24||point.role==='guardian')scriptSpawn(g,s,point);}
+ const alive=role=>g.enemies.filter(e=>e.script===role).length+s.pending.filter(p=>p.role===role).length;
+ if(s.phase==='swarm'){
+  s.packClock+=dt;
+  if(s.kills>=OPENING.swarmGoal||g.time>=OPENING.forceGuardianAt){
+   s.phase='guardian';s.escortClock=0;
+   queueScript(s,'warden',g.storyGate.x,g.storyGate.y,OPENING.guardianTelegraph,'guardian');
+   G.notify('회선 수호자 출현 · 붉은 돌진선을 옆으로 피하거나 대시로 통과');
+  }else if(s.packClock>=4||(s.packClock>=.8&&alive('swarm')<=1))queuePack(g,s);
+ }else if(s.phase==='guardian'){
+  s.escortClock+=dt;
+  if(s.escortClock>=5&&alive('swarm')<4){
+   s.escortClock=0;const {rx,ry}=scriptReach(),a=rand(0,TAU);
+   for(const k of [-1,1])queueScript(s,'ghost',g.p.x+Math.cos(a+k*.4)*rx,g.p.y+Math.sin(a+k*.4)*ry);
+  }
+ }else if(s.phase==='switch'){
+  const gate=g.storyGate,near=len(g.p.x-gate.x,g.p.y-gate.y)<=gate.r;
+  if(near&&!s.siege){
+   // Stepping onto the switch starts the climax: an encirclement with one open gap.
+   s.siege=true;s.trickle=0;const gap=Math.floor(rand(0,8));
+   for(let k=0;k<8;k++){if(k===gap)continue;const a=k*TAU/8;queueScript(s,k===(gap+4)%8?'hound':'ghost',gate.x+Math.cos(a)*OPENING.siegeRadius,gate.y+Math.sin(a)*OPENING.siegeRadius,1,'siege');}
+   G.notify('스위치 작동 시작 · 잔향이 몰려옵니다 · 원 안에서 버티세요');
+  }
+  if(s.siege){
+   s.trickle+=dt;
+   if(s.trickle>=OPENING.trickle&&alive('siege')<9){
+    s.trickle=0;const a=rand(0,TAU);
+    queueScript(s,Math.random()<.15?'hound':'ghost',gate.x+Math.cos(a)*230,gate.y+Math.sin(a)*230,.8,'siege');
+   }
+  }
+ }
+}
+function scriptKill(g,e){
+ const s=g.script;if(!s||!e.script)return;
+ if(e.script==='swarm'&&s.phase==='swarm')s.kills++;
+ if(e.script==='guardian'){
+  s.phase='switch';
+  // A short breather: escorts scatter so the walk to the switch is a reward, not a slog.
+  for(const other of [...g.enemies])if(other.script==='swarm'&&len(other.x-e.x,other.y-e.y)<260){other.hp=0;kill(other);}
+  s.pending=s.pending.filter(p=>p.role!=='swarm');
+  ring(e.x,e.y,120,'#f0d49c');
+ }
+}
 function waveTick(dt){
- const g=G.g;if(g.bossSpawned||g.time>=(g.mode==='story'?g.duration-5:g.duration*.60)){g.wave=null;return;}
+ const g=G.g;if(g.script){g.wave=null;return;}if(g.bossSpawned||g.time>=(g.mode==='story'?g.duration-5:g.duration*.60)){g.wave=null;return;}
  if(g.wave){g.wave.remaining-=dt;if(g.wave.remaining>0)return;
   for(const point of g.wave.points)if(g.enemies.length<65&&len(point.x-g.p.x,point.y-g.p.y)>=80)G.enemy(point.type,point.x,point.y);
   g.wave=null;g.nextWave=g.time+(g.storyTraining?18:38);g.waveRestUntil=g.time+2;g.waveIndex++;return;
@@ -389,8 +487,9 @@ function refreshBossPhase(e){if(e.type==='boss'&&e.hp>0&&e.hp<=e.maxHp*.5&&e.bos
 function kill(e){const g=G.g;const i=g.enemies.indexOf(e);if(i<0)return;g.enemies.splice(i,1);g.kills++;
  if(g.mode==='story'&&g.storyGate?.guardIds.includes(e.id)&&!g.storyGate.defeated.includes(e.id)){
   g.storyGate.defeated.push(e.id);
-  if(g.storyGate.defeated.length===g.storyGate.guardIds.length)G.notify(g.storyGate.kind==='approach'?'회선 수호 잔향 제거 · 안내 스위치로 이동':'귀환로 확보 · 열차 문으로 이동');
- }if(e.elite&&g.eliteDrops.length<4)g.eliteDrops.push({id:e.id,x:e.x,y:e.y,life:18});
+  if(g.storyGate.defeated.length===g.storyGate.guardIds.length)G.notify(g.storyGate.kind==='approach'?'회선 수호자 격파 · 금빛 스위치로 이동':'귀환로 확보 · 열차 문으로 이동');
+ }
+ scriptKill(g,e);if(e.elite&&g.eliteDrops.length<4)g.eliteDrops.push({id:e.id,x:e.x,y:e.y,life:18});
  if(e.type!=='boss'&&(g.status==='playing'||castingCommand&&g.status==='command')&&g.overcharge<=0){g.chain=(g.chainTime>0?g.chain:0)+(e.elite?2:1);g.chainTime=3;if(g.chain>=8){g.chain=0;g.chainTime=0;g.overcharge=6;ring(g.p.x,g.p.y,105,'#f3d285');if(!castingCommand)G.notify('랜턴 과충전 · 6초 동안 공격 간격 25% 감소 · 수집 범위 50% 증가');G.onSound('card');}}
 if(e.type==='boss')g.bossDefeated=true;const n=e.type==='boss'?12:e.elite?5:1;if(g.mode!=='story')g.shards+=e.type==='boss'?20:e.elite?5:1;for(let j=0;j<n&&g.drops.length<180;j++)g.drops.push({x:e.x+rand(-20,20),y:e.y+rand(-20,20),value:e.type==='boss'?3:1});spark(e.x,e.y,e.type==='boss'?'#e5c68f':'#a7cfdf',e.type==='boss'?22:5);if(e.type==='boss')G.onSound('boss');}
 G.hitEnemy=function(e,amount,burn=false){const g=G.g;if(!g||!(g.status==='playing'||castingCommand&&g.status==='command')||!g.enemies.includes(e))return;e.hp-=amount;e.hit=.12;if(burn){e.burn=2;e.burnPower=3*(g.levels.ember||1);}if(e.hp<=0)kill(e);else refreshBossPhase(e);};
@@ -399,10 +498,10 @@ G.damage=function(amount){const g=G.g;if(!g||g.status!=='playing'||!Number.isFin
  g.shake=TG.store.data.settings.reduceFX?0:5;if(p.shield){p.shield--;if(g.mode==='story'&&g.mare&&g.commands&&g.commandEffects)g.commandEffects.guardWindow=4;spark(p.x,p.y,'#a5e2ed',12)}else{const reduction=1-(1-.07*(g.levels.ward||0))*(g.synergies.warmHeart?.9:1),ward=g.mode==='story'&&g.commands&&g.commandEffects?.ward>0?.5:1;p.hp=Math.max(0,p.hp-amount*(1-reduction)*ward);g.flash=TG.store.data.settings.reduceFX?0:.18;spark(p.x,p.y,'#db98ac',8)}G.onSound('hurt');if(p.hp<=0)G.finish(false,'death');return true;};
 function shot(e,a,speed=125){const g=G.g;if(g.hostile.length>=70)return;g.hostile.push({x:e.x,y:e.y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,life:4,r:5,damage:12})}
 function enemyTick(dt){const g=G.g,p=g.p;for(const e of [...g.enemies]){if(g.status!=='playing')return;e.hit=Math.max(0,e.hit-dt);e.slow=Math.max(0,e.slow-dt);e.wait-=dt;e.orbitHit-=dt;if(e.burn>0){e.burn-=dt;G.hitEnemy(e,e.burnPower*dt);if(!g.enemies.includes(e))continue;}e.freezeCooldown=Math.max(0,e.freezeCooldown-dt);if(e.frozen>0){e.frozen=Math.max(0,e.frozen-dt);continue;}refreshBossPhase(e);let dx=p.x-e.x,dy=p.y-e.y,d=len(dx,dy)||1,vx=dx/d,vy=dy/d,speed=e.speed;
- if(e.action==='windup'){speed=0;e.clock-=dt;if(e.clock<=0){if(e.behavior==='charge'){e.action='charge';e.clock=.52;}else if(e.behavior==='ranged'){shot(e,Math.atan2(e.aimY,e.aimX));if(e.elite){shot(e,Math.atan2(e.aimY,e.aimX)+.25);shot(e,Math.atan2(e.aimY,e.aimX)-.25)}e.action='recover';e.clock=.7;}else{if(g.stage===0){if(d<e.pulseRadius+15)G.damage(18);ring(e.x,e.y,e.pulseRadius,'#e1a0c2');if(e.attackPhase===2&&g.aftershocks.length<3)g.aftershocks.push({x:e.x,y:e.y,r:e.pulseRadius*.75,age:0,warning:1,life:1.25,damage:18,triggered:false})}else if(g.stage===1){const rx=e.attackVariant==='diagonal'?(dx+dy)/Math.SQRT2:dx,ry=e.attackVariant==='diagonal'?(dy-dx)/Math.SQRT2:dy;if((Math.abs(rx)<23&&Math.abs(ry)<220)||(Math.abs(ry)<23&&Math.abs(rx)<220))G.damage(21);ring(e.x,e.y,65,'#d6eaf1')}else{const aim=Math.atan2(e.aimY,e.aimX);const count=e.attackPhase===2?16:12;for(let k=0;k<count;k++)if(k!==0&&k!==1&&k!==count-1)shot(e,aim+k*TAU/count,e.attackPhase===2?150:135);ring(e.x,e.y,180,'#dcc28e')}e.action='recover';e.clock=1;}}}
+ if(e.action==='windup'){speed=0;e.clock-=dt;if(e.clock<=0){if(e.behavior==='charge'){e.action='charge';e.clock=e.chargeTime||.52;}else if(e.behavior==='ranged'){shot(e,Math.atan2(e.aimY,e.aimX));if(e.elite){shot(e,Math.atan2(e.aimY,e.aimX)+.25);shot(e,Math.atan2(e.aimY,e.aimX)-.25)}e.action='recover';e.clock=.7;}else{if(g.stage===0){if(d<e.pulseRadius+15)G.damage(18);ring(e.x,e.y,e.pulseRadius,'#e1a0c2');if(e.attackPhase===2&&g.aftershocks.length<3)g.aftershocks.push({x:e.x,y:e.y,r:e.pulseRadius*.75,age:0,warning:1,life:1.25,damage:18,triggered:false})}else if(g.stage===1){const rx=e.attackVariant==='diagonal'?(dx+dy)/Math.SQRT2:dx,ry=e.attackVariant==='diagonal'?(dy-dx)/Math.SQRT2:dy;if((Math.abs(rx)<23&&Math.abs(ry)<220)||(Math.abs(ry)<23&&Math.abs(rx)<220))G.damage(21);ring(e.x,e.y,65,'#d6eaf1')}else{const aim=Math.atan2(e.aimY,e.aimX);const count=e.attackPhase===2?16:12;for(let k=0;k<count;k++)if(k!==0&&k!==1&&k!==count-1)shot(e,aim+k*TAU/count,e.attackPhase===2?150:135);ring(e.x,e.y,180,'#dcc28e')}e.action='recover';e.clock=1;}}}
  else if(e.action==='charge'){vx=e.aimX;vy=e.aimY;speed=e.elite?270:330;e.clock-=dt;if(e.clock<=0){e.action='recover';e.clock=.9;speed=0}}
- else if(e.action==='recover'){speed=0;e.clock-=dt;if(e.clock<=0){e.action='approach';e.wait=e.behavior==='boss'?(e.bossPhase===2?2.2:2.8):1.7}}
- else{if(e.behavior==='ranged'&&d<200)speed=-15;if(e.wait<=0&&((e.behavior==='charge'&&d<260)||(e.behavior==='ranged'&&d<350)||(e.behavior==='boss'&&d<250))){e.action='windup';if(e.type==='boss'){e.attackPhase=e.bossPhase;e.attackCount++;e.attackVariant=g.stage===1&&e.attackPhase===2&&e.attackCount%2?'diagonal':'axis';}e.clock=e.behavior==='boss'?[1.35,1.6,1.7][g.stage]:e.behavior==='charge'?.75:1;e.aimX=vx;e.aimY=vy;speed=0;}}
+ else if(e.action==='recover'){speed=0;e.clock-=dt;if(e.clock<=0){e.action='approach';e.wait=e.behavior==='boss'?(e.bossPhase===2?2.2:2.8):(e.recoverWait||1.7)}}
+ else{if(e.behavior==='ranged'&&d<200)speed=-15;if(e.wait<=0&&((e.behavior==='charge'&&d<(e.chargeRange||260))||(e.behavior==='ranged'&&d<350)||(e.behavior==='boss'&&d<250))){e.action='windup';if(e.type==='boss'){e.attackPhase=e.bossPhase;e.attackCount++;e.attackVariant=g.stage===1&&e.attackPhase===2&&e.attackCount%2?'diagonal':'axis';}e.clock=e.behavior==='boss'?[1.35,1.6,1.7][g.stage]:e.behavior==='charge'?(e.windupTime||.75):1;e.aimX=vx;e.aimY=vy;speed=0;if(e.lead){const tx=dx+G.input.x*p.speed*e.lead,ty=dy+G.input.y*p.speed*e.lead,tl=len(tx,ty)||1;e.aimX=tx/tl;e.aimY=ty/tl;}}}
  const slow=e.slow>0?1-(p.slow||.35):1;e.x+=vx*speed*slow*dt;e.y+=vy*speed*slow*dt;if(len(p.x-e.x,p.y-e.y)<e.r+14)G.damage(e.type==='boss'?18:e.action==='charge'?14:g.mode==='story'&&!g.storyTraining&&g.storyBattle!=='velaEscort'?6:9);if(g.status!=='playing')return;
  if(p.orbit>0&&e.orbitHit<=0)for(let k=0;k<p.orbit;k++){const a=g.time*2.4+k*TAU/p.orbit;if(len(e.x-p.x-Math.cos(a)*65,e.y-p.y-Math.sin(a)*65)<e.r+14){G.hitEnemy(e,14*(g.synergies.frostOrbit&&e.slow>0?1.3:1));if(g.synergies.frostOrbit){e.slow=1.5;if(e.type!=='boss'&&e.freezeCooldown<=0){e.frozen=.45;e.freezeCooldown=3;ring(e.x,e.y,25,'#aee5fb');}}e.orbitHit=.4;break}}
  }}
@@ -448,7 +547,7 @@ function storyGateTick(dt){
   gate.guardIds.length>0&&gate.defeated.length===gate.guardIds.length;
  if(!ready){gate.charge=0;return;}
  const near=len(g.p.x-gate.x,g.p.y-gate.y)<=gate.r;
- gate.charge=clamp(gate.charge+(near?dt:-dt*.55),0,gate.needed);
+ gate.charge=clamp(gate.charge+(near?dt:-dt*(gate.decay||.55)),0,gate.needed);
  if(gate.charge>=gate.needed){
   gate.done=true;ring(gate.x,gate.y,75,'#f0d49c');
   G.notify(gate.kind==='approach'?'안내 회선 복구 완료':gate.kind==='escort'?'열차 통로 확보 완료':'기록과 함께 귀환 완료');
@@ -487,7 +586,9 @@ function storyPressureTick(dt){
   }
   return;
  }
- if(g.moving||q.cooldown>0){q.idle=0;return;}
+ // Holding the opening switch is deliberate standing, not idling.
+ const holding=g.script?.phase==='switch'&&len(g.p.x-g.storyGate.x,g.p.y-g.storyGate.y)<=g.storyGate.r;
+ if(g.moving||q.cooldown>0||holding){q.idle=0;return;}
  q.idle+=dt;
  if(q.idle>=3.5){
   q.x=g.p.x;q.y=g.p.y;q.idle=0;q.warning=1.4;
@@ -578,14 +679,13 @@ G.update=function(delta){const g=G.g;if(!g||g.status!=='playing')return;const dt
  }
  const d=g.dash,m=len(G.input.x,G.input.y);if(m>.1){d.lastX=G.input.x/m;d.lastY=G.input.y/m;g.face=Math.abs(G.input.x)>Math.abs(G.input.y)?(G.input.x>0?1:3):(G.input.y>0?0:2)}d.cooldown=Math.max(0,d.cooldown-dt);const active=d.active>0;d.invulnerable=active;d.active=Math.max(0,d.active-dt);g.moving=active||m>.1;if(g.moving&&dt>0)g.learned.moved=true;p.x=advance(p.x,(active?d.x:G.input.x)*p.speed*(active?3.4:1)*dt);p.y=advance(p.y,(active?d.y:G.input.y)*p.speed*(active?3.4:1)*dt);
  if(active&&d.active===0&&g.synergies.safeDash){for(const e of g.enemies){const dx=e.x-p.x,dy=e.y-p.y,l=len(dx,dy)||1;if(l<110){e.x+=dx/l*55;e.y+=dy/l*55}}g.hostile=g.hostile.filter(b=>len(b.x-p.x,b.y-p.y)>110);ring(p.x,p.y,110,'#a7d4f0')}
- mareTick(dt);allyTick(dt);recordTick(dt);storyGateTick(dt);if(g.status!=='playing')return;snowTargetTick(dt);if(g.status!=='playing')return;patientTick(dt);if(g.status!=='playing')return;storyPressureTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
+ mareTick(dt);allyTick(dt);scriptTick(dt);recordTick(dt);storyGateTick(dt);if(g.status!=='playing')return;snowTargetTick(dt);if(g.status!=='playing')return;patientTick(dt);if(g.status!=='playing')return;storyPressureTick(dt);if(g.status!=='playing')return;encounterTick(dt);if(g.status!=='playing')return;hazardTick(dt);if(g.status!=='playing')return;enemyTick(dt);if(g.status!=='playing')return;
  const bossBeforeFlames=g.bossDefeated;for(const flame of g.flames){const active=Math.min(dt,flame.life);flame.life-=dt;for(const e of [...g.enemies])if(len(e.x-flame.x,e.y-flame.y)<flame.r+e.r)G.hitEnemy(e,6*active);}g.flames=g.flames.filter(f=>f.life>0);if(g.mode!=='story'&&!bossBeforeFlames&&g.bossDefeated){G.stageClear();return;}
  waveTick(dt);g.spawn+=dt;
-  // Give new story players space to recognize guardian objectives before ambient packs converge.
-  // This applies only to the opening solo and Mare escort missions.
-  if(g.mode==='story'&&!g.storyTraining&&g.time<(g.storyBattle==='approach'?7:g.storyBattle==='escort'?10:0))g.spawn=Math.min(g.spawn,0);
+  // Give the Mare escort a short window to recognize its guardians before ambient packs converge.
+  if(g.mode==='story'&&!g.storyTraining&&g.storyBattle==='escort'&&g.time<10)g.spawn=Math.min(g.spawn,0);
   const baseInterval=g.storyTraining?Math.max(.35,.8-g.time/g.duration*.45):Math.max(.42,1.3-g.time/g.duration*.7-g.stage*.09);
- const interval=g.storyBattle==='snowMission'&&g.snowSignalHelp?baseInterval*1.13:baseInterval;while(g.spawn>=interval){g.spawn-=interval;if(g.enemies.length<(g.mode==='story'&&!g.storyTraining?20:65)&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
+ const interval=g.storyBattle==='snowMission'&&g.snowSignalHelp?baseInterval*1.13:baseInterval;while(g.spawn>=interval){g.spawn-=interval;if(!g.script&&g.enemies.length<(g.mode==='story'&&!g.storyTraining?20:65)&&!g.wave&&g.time>=g.waveRestUntil)spawn()}
  if(g.mode!=='story'&&g.time>75+g.eliteCount*100&&g.eliteCount<2){G.enemy(g.eliteCount%2?'witch':'warden',p.x+250,p.y-350);g.eliteCount++}
  if(g.mode!=='story'&&!g.bossSpawned&&g.time>=g.duration*.67){g.bossSpawned=true;G.enemy('boss',p.x,p.y-310);G.notify(TG.STAGES[g.stage].boss+' · 공격 예고를 피하세요');G.onSound('boss')}
  g.lastFire+=dt;if(g.lastFire>=p.interval*(g.overcharge>0?.75:1)){g.lastFire=0;fire()}

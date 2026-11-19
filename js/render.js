@@ -72,14 +72,17 @@ function enemy(e,g,t){
    ctx.fillText(hint,0,-e.pulseRadius-10);
    const maxWarning=[1.35,1.6,1.7][g.stage],progress=clamp(1-e.clock/maxWarning,0,1);
    ctx.strokeStyle='#ffdcaf';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,e.r+33,-Math.PI/2,-Math.PI/2+TAU*progress);ctx.stroke();
-  }else{ctx.rotate(Math.atan2(e.aimY,e.aimX));ctx.setLineDash([7,6]);ctx.fillRect(0,-14,e.behavior==='charge'?175:230,28);ctx.strokeRect(0,-14,e.behavior==='charge'?175:230,28);ctx.setLineDash([]);ctx.rotate(-Math.atan2(e.aimY,e.aimX))}
+  }else{const reach=e.behavior==='charge'?Math.max(175,(e.elite?270:330)*(e.chargeTime||.52)+e.r):230,progress=clamp(1-e.clock/(e.windupTime||(e.behavior==='charge'?.75:1)),0,1);ctx.rotate(Math.atan2(e.aimY,e.aimX));ctx.setLineDash([7,6]);ctx.fillRect(0,-14,reach,28);ctx.strokeRect(0,-14,reach,28);ctx.setLineDash([]);if(e.behavior==='charge'){ctx.fillStyle='#e8829c55';ctx.fillRect(0,-14,reach*progress,28);}ctx.rotate(-Math.atan2(e.aimY,e.aimX))}
  }
- ctx.fillStyle='#02050d77';ctx.beginPath();ctx.ellipse(0,15,e.r*1.1,7,0,0,TAU);ctx.fill();ctx.globalAlpha=e.hit>0?.65:1;
+ ctx.fillStyle='#02050d77';ctx.beginPath();ctx.ellipse(0,15,e.r*1.1,7,0,0,TAU);ctx.fill();
+ // A warm hostile ring under every foe keeps pale sprites readable on the night platform.
+ if(e.type!=='boss'){ctx.lineWidth=e.elite?2.5:1.75;ctx.strokeStyle=e.elite?'#f0a2b8dd':'#e0748fb0';ctx.beginPath();ctx.ellipse(0,15,e.r*1.25,e.r*.5,0,0,TAU);ctx.stroke();}
+ ctx.globalAlpha=e.hit>0?.65:1;
  const w=e.type==='boss'?118:e.elite?83:68,h=w,bob=Math.sin(t*3+e.phase)*1.6;
  if(!sprite(images.enemy,e.art,3,144,0,bob,w,h))circle(0,0,e.r,e.type==='boss'?'#80536f':'#66879b','#b1d2de');
  ctx.globalAlpha=1;if(e.frozen>0)circle(0,0,e.r+7,'#8acfe944','#daf4ff');if(e.slow>0)circle(0,0,e.r+3,null,'#abd9ed');
  if(e.burn>0){ctx.strokeStyle='#e9b36b';ctx.beginPath();ctx.arc(0,0,e.r+5,0,TAU*.7);ctx.stroke()}
- if(e.type==='boss'||e.elite){ctx.fillStyle='#21182b';ctx.fillRect(-34,-h*.75,68,5);ctx.fillStyle=e.type==='boss'?'#e3b4d2':'#d9c18f';ctx.fillRect(-34,-h*.75,68*clamp(e.hp/e.maxHp,0,1),5)}ctx.restore();
+ if(e.type==='boss'||e.elite){ctx.fillStyle='#21182b';ctx.fillRect(-34,-h*.75,68,5);ctx.fillStyle=e.type==='boss'?'#e3b4d2':'#d9c18f';ctx.fillRect(-34,-h*.75,68*clamp(e.hp/e.maxHp,0,1),5)}if(e.label){ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillStyle='#f6d9c9';ctx.shadowColor='#14091a';ctx.shadowBlur=4;ctx.fillText(e.label,0,-h*.75-6);ctx.shadowBlur=0;}ctx.restore();
 }
 // Keep an optional field goal findable without covering the HUD or touch controls.
 V.anchorMarker=function(anchor,p,width=V.width,height=V.height){
@@ -169,7 +172,8 @@ function storyGateMarker(g,t){
   if(ready){ctx.strokeStyle='#fcdea1';ctx.lineWidth=4;ctx.beginPath();ctx.arc(0,0,q.r,-Math.PI/2,-Math.PI/2+TAU*clamp(q.charge/q.needed,0,1));ctx.stroke();}
   ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillStyle=ready?'#f7e7be':'#c1cddd';
   ctx.fillText(q.kind==='approach'?'안내 스위치':q.kind==='escort'?'귀환로 · 열차 문':'기록 귀환 · 열차 문',0,-q.r-17);
-  ctx.font='10px sans-serif';ctx.fillText(ready?'원 안에 머물러 작동':q.kind==='archive'?'기록장치를 먼저 회수':'수호 잔향을 먼저 제거',0,q.r+16);
+  const lock=q.kind==='archive'?'기록장치를 먼저 회수':q.kind==='approach'?'잠김 · 회선 수호자 처치 후 작동':'수호 잔향을 먼저 제거';
+  ctx.font='10px sans-serif';ctx.fillText(ready?(q.charge>0?'작동 '+Math.floor(clamp(q.charge/q.needed,0,1)*100)+'% · 원 안에서 버티기':'원 안에 머물러 작동'):lock,0,q.r+16);
  }
  ctx.restore();
 }
@@ -317,6 +321,13 @@ V.draw=function(now){if(!ctx)return;const g=TG.engine.g,t=g?g.time:now/1000,cx=g
   ctx.fillStyle='#f6d4df';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText(warning?'잔진동 예고':'잔진동',x,y+3);
  }
  if(g.wave){ctx.setLineDash([5,5]);for(const point of g.wave.points){circle(sx(point.x),sy(point.y),22,'#b5759222','#edbdad');}ctx.setLineDash([]);}
+ // Scripted arrivals: a shrinking crimson marker shows exactly where and when a foe appears.
+ for(const point of g.script?.pending||[]){
+  const x=sx(point.x),y=sy(point.y),k=clamp(point.t/point.max,0,1),big=point.role==='guardian',r=big?46:22;
+  ctx.lineWidth=big?2.5:1.75;ctx.setLineDash([5,5]);circle(x,y,r,big?'#c0577a33':'#b5759226','#f0a4b8');ctx.setLineDash([]);
+  circle(x,y,r*(1-k)+3,'#e8829c55',null);
+  if(big){ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillStyle='#ffd9e2';ctx.fillText('회선 수호자 출현',x,y-r-10);}
+ }
  for(const flame of g.flames){circle(sx(flame.x),sy(flame.y),flame.r,'#e4a04722','#efba7799');}
  for(const drop of g.eliteDrops||[]){
   const x=sx(drop.x),y=sy(drop.y);if(x< -30||x>W+30||y< -35||y>H+35)continue;
