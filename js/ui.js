@@ -100,7 +100,7 @@ function renderStoryResult(g){
  text('endTitle',g.won?(g.storySaved?battle.successTitle:'전투 완료 · 진행 저장 대기'):g.reason==='retreat'?'열차에서 다시 준비':'다시 열어야 할 길');text('endStory',g.won?battle.successStory:g.reason==='timeout'?'제한시간 안에 목표를 달성하지 못했습니다. 이동과 조작이 필요하며 가만히 서 있어도 자동으로 성공하지 않습니다.':g.storyBattle==='velaEscort'?'환자를 객차까지 데려가지 못했습니다. 구조 직전 상황부터 다시 도전할 수 있습니다.':g.storyBattle==='snowMission'&&g.reason==='signal'?'설원역 목표 장치를 모두 회수하지 못했습니다. 동료를 다시 편성해 도전해 보세요.':g.storyBattle==='archive'&&g.reason==='record'?'시간이 끝날 때까지 기록장치를 회수하지 못했습니다. 임무 시작 지점에서 다시 도전하세요.':'리제는 전투 시작 지점으로 돌아갑니다. 이미 읽은 대화와 합류한 동료는 남습니다.');
  const currentParty='리제'+(g.party?.length?' + '+g.party.map(id=>commandOwner[id]||id).join(' · '):'');
  const impact=g.storyBattle==='velaEscort'&&g.patient?' · 벨라의 처치 '+g.patient.treatments+'회 · 환자 보호 '+g.patient.mareBlocks+'회 · 환자 HP '+Math.ceil(g.patient.hp):'';
- text('resultProgress','일행 · '+currentParty+' / 보호 '+(g.mare?.protected||0)+'회 · 지휘 '+(g.commands?.casts||0)+'회'+impact+(g.storyPressure?' · 침식 회피 '+g.storyPressure.dodges+'회':''));text('resultAdvice',g.won?(g.storySaved?'다음 대화에서 이번 만남을 이어가세요.':'설정에서 백업을 확인하거나 저장을 다시 시도하세요. 아직 다음 장면으로 진행하지 않았습니다.'):g.mare?'마레의 보호가 소모되면 12초의 준비 시간이 필요합니다. 공격 예고는 이동과 대시로 피하세요.':'공격은 자동입니다. 적이 남긴 경험치를 모으고 위험할 때 대시로 벗어나세요.');
+ text('resultProgress','일행 · '+currentParty+' / 보호 '+(g.mare?.protected||0)+'회 · 지휘 '+(g.commands?.casts||0)+'회'+impact+(g.teamwork?' · 합동기 '+g.teamwork.count+'회 · 위험 대시 '+g.teamwork.evades+'회':'')+(g.storyPressure?' · 침식 회피 '+g.storyPressure.dodges+'회':''));text('resultAdvice',g.won?(g.storySaved?'다음 대화에서 이번 만남을 이어가세요.':'설정에서 백업을 확인하거나 저장을 다시 시도하세요. 아직 다음 장면으로 진행하지 않았습니다.'):g.mare?'마레의 보호가 소모되면 12초의 준비 시간이 필요합니다. 공격 예고는 이동과 대시로 피하세요.':'공격은 자동입니다. 적이 남긴 경험치를 모으고 위험할 때 대시로 벗어나세요.');
  if(g.storyBattle==='velaEscort'){
   text('resultAdvice',g.won?'환자가 마지막 객차에 올라탔습니다. 출전 동료들이 어떤 역할을 했는지 기록으로 확인하세요.':'벨라의 치료와 마레의 보호를 환자 가까이에서 활용하세요. 경고가 뜨면 환자 곁을 지키세요.');
  }
@@ -152,12 +152,18 @@ function renderDeck(){
  }
 }
 function renderCommands(){
- const g=G.g;if(!g?.commands)return;const c=g.commands;const remaining=Math.max(0,Math.ceil(g.duration-g.time));text('commandPower','지휘력 '+c.energy+' / 3'+(c.energy<3?' · 전투 '+Math.ceil(12-c.regen)+'초 후 +1':''));text('commandCombo',[g.commandEffects.guardWindow>0?'보호 연계 준비 · 파동·절단 위력 50% 증가 또는 반격 사용':g.mare?'마레나 보호막이 피해를 막으면 4초 동안 보호 연계 가능':'마레 합류 후 보호 연계를 사용할 수 있습니다.',g.commandEffects.ward>0?'보호 장막 '+g.commandEffects.ward.toFixed(1)+'초':''].filter(Boolean).join(' · '));text('commandPiles','손패 '+c.hand.length+' · 뽑기 '+c.draw.length+' · 버림 '+c.discard.length);text('commandObjective',G.objective().title+' · 실패까지 '+fmt(remaining));text('commandStatus',status());
+ const g=G.g;if(!g?.commands)return;const c=g.commands;const remaining=Math.max(0,Math.ceil(g.duration-g.time));text('commandPower','지휘력 '+c.energy+' / 3'+(c.energy<3?' · 전투 '+Math.ceil(Math.max(0,12-c.regen)/(g.storyTraining?1:1.5))+'초 후 +1':''));
+  const partner=g.teamwork,teamText=!partner?'':partner.cooldown>0?'합동 지휘 재정비 '+partner.cooldown.toFixed(1)+'초':partner.window>0?'연계 준비 '+partner.window.toFixed(1)+'초 · 다른 캐릭터 카드 사용 시 합동기 + 지휘력 1 회복':'다른 캐릭터의 카드를 6초 안에 연속 사용하면 합동기 발동';text('commandCombo',[teamText,g.commandEffects.guardWindow>0?'보호 연계 준비 · 파동·절단 위력 50% 증가 또는 반격 사용':g.mare?'마레나 보호막이 피해를 막으면 4초 동안 보호 연계 가능':'마레 합류 후 보호 연계를 사용할 수 있습니다.',g.commandEffects.ward>0?'보호 장막 '+g.commandEffects.ward.toFixed(1)+'초':''].filter(Boolean).join(' · '));text('commandPiles','손패 '+c.hand.length+' · 뽑기 '+c.draw.length+' · 버림 '+c.discard.length);text('commandObjective',G.objective().title+' · 실패까지 '+fmt(remaining));text('commandStatus',status());
  const list=clear('commandList'),token=c.token,details=clear('commandDetailsList');
  for(const id of c.hand){const info=G.commandInfo(id),card=info.card;if(!card)continue;const b=button('',()=>{TG.audio.unlock();if(!G.castCommand(id,token))renderCommands();},'upgrade commandCard '+card.owner);b.disabled=!info.enabled;
   const cost=document.createElement('span'),body=document.createElement('span'),owner=document.createElement('small'),title=document.createElement('strong'),desc=document.createElement('span');cost.className='commandCost';cost.textContent=card.cost;owner.className='commandOwner';owner.textContent=commandOwner[card.owner];title.className='cardtitle';title.textContent=card.name;desc.className='carddesc';desc.textContent=card.desc;const art=document.createElement('span');art.className='commandArt character-'+card.owner;art.setAttribute('aria-hidden','true');body.append(art,owner,title,desc);
   const nearPatient=g.storyBattle==='velaEscort'&&g.patient&&g.patient.phase!=='boarded'&&Math.hypot(g.p.x-g.patient.x,g.p.y-g.patient.y)<155;
   if(nearPatient&&(['vela_heal','vela_guard','mare_guard'].includes(card.id))){const target=document.createElement('span');target.className='commandTarget';target.textContent='대상 · 환자';body.appendChild(target);b.classList.add('patientTarget');}
+  if(info.enabled&&partner?.window>0&&partner.cooldown<=0&&partner.owner!==card.owner){
+   b.classList.add('teamComboReady');
+   const comboBadge=document.createElement('span');comboBadge.className='teamComboBadge';
+   comboBadge.textContent='합동기 준비 · 기력 +1';body.appendChild(comboBadge);
+  }
   const more=document.createElement('p');more.textContent=commandOwner[card.owner]+' · 지휘력 '+card.cost+' · '+card.desc+(nearPatient&&['vela_heal','mare_guard'].includes(card.id)?' · 환자에게도 적용 가능':'');
   details.appendChild(more);
   if(!info.enabled){const reason=document.createElement('span');reason.className='commandReason';reason.textContent=info.reason;body.appendChild(reason);}b.append(cost,body);b.setAttribute('aria-label',card.name+' · 지휘력 '+card.cost+' · '+card.desc+(!info.enabled?' · '+info.reason:''));list.appendChild(b);
@@ -229,7 +235,7 @@ function guideMessage(g){
  if((g.aftershocks||[]).some(a=>a.age<a.warning))return '거울의 잔진동 · 충격파가 지난 자리에서 벗어나세요';
  if(g.memoryAnchor){const a=g.memoryAnchor,near=Math.hypot(a.x-g.p.x,a.y-g.p.y)<=a.r;return '선택 · 기억 등불 '+Math.ceil(a.remaining)+'초 — '+(near?'잠시 머물러 복원 '+Math.floor(a.charge/a.required*100)+'%':'등불 원 안에서 1.2초 머물기')+' · 경험치 '+a.xp+' / 소거 위험 최대 -10';}
  if((g.eliteDrops||[]).some(drop=>Math.hypot(drop.x-g.p.x,drop.y-g.p.y)<300))return '정예의 불씨 · 주우면 체력 최대 12 회복 · 과충전 최소 3초';
- if(g.mode==='story'){if(g.commandEffects?.guardWindow>0)return '보호 연계 준비 · 지휘를 열어 파동·절단을 강화하거나 반격하세요';if(g.commands?.casts===0&&g.time>=10&&g.time<24)return '오른쪽 지휘 버튼 · 시간이 멈추면 손패 '+g.commands.hand.length+'장 중 선택 · 지휘력은 전투 중 회복';if(g.time<10)return g.mare?'마레가 동행합니다 · 보호 후에는 재준비 12초 · 직접 회피도 잊지 마세요':'공격은 자동 · 이동과 대시로 버티며 경험치를 모으세요';return '';}
+ if(g.mode==='story'){if(g.teamwork?.window>0&&g.teamwork.cooldown<=0)return '합동기 기회 '+g.teamwork.window.toFixed(1)+'초 · 지휘를 열어 다른 캐릭터의 카드를 사용하세요';if(g.commandEffects?.guardWindow>0)return '보호 연계 준비 · 지휘를 열어 파동·절단을 강화하거나 반격하세요';if(g.commands?.casts===0&&g.time>=10&&g.time<24)return '오른쪽 지휘 버튼 · 시간이 멈추면 손패 '+g.commands.hand.length+'장 중 선택 · 지휘력은 전투 중 회복';if(g.time<10)return g.mare?'마레가 동행합니다 · 보호 후에는 재준비 12초 · 직접 회피도 잊지 마세요':'공격은 자동 · 이동과 대시로 버티며 경험치를 모으세요';return '';}
  if(g.mode!=='chapter'||g.stage!==0||g.bossSpawned||S.data.stats.runs>0)return '';
  const learned=g.learned||{};
  if(!learned.moved)return '왼쪽 조작판을 밀어 이동 · 공격은 자동으로 발사됩니다';
