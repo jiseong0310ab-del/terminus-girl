@@ -99,7 +99,7 @@ test('Vela and Noa chains have distinct practical effects',()=>{
  g.dash.cooldown=2.7;
  g.hostile.push({x:15,y:0,vx:0,vy:0,life:3,r:5,damage:10});
  cast(b,'noa_clear');assert.equal(g.teamwork.count,2);
- assert.equal(g.dash.cooldown,1.2);assert.equal(g.hostile.length,0);
+ assert(Math.abs(g.dash.cooldown-1.2)<1e-9);assert.equal(g.hostile.length,0);
 });
 test('a directed dash during genuine windup restores energy, but no arbitrary or repeat reward',()=>{
  const b=boot(),g=first(b);g.commands.energy=0;
