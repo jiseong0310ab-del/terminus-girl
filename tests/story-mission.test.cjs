@@ -83,17 +83,34 @@ test('holding the opening switch does not trigger the stationary erosion pulse',
  for(let i=0;i<150;i++){g.p.hp=g.p.maxHp;g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;tick(b);}
  assert.equal(g.storyPressure.warning,0);assert.equal(g.storyPressure.pulses,0);
 });
-test('Mare return corridor requires two fallen guardians and physically reaching carriage',()=>{
- const b=boot(),g=escort(b);quiet(g);
- assert.equal(g.storyGate.guardIds.length,2);assert.equal(g.storyGate.kind,'escort');
+test('Mare return corridor requires both volley guardians and physically reaching carriage',()=>{
+ const b=boot(),g=escort(b);quiet(g);const s=g.script;
+ assert.equal(s.mission,'escort');assert.equal(g.storyGate.kind,'escort');assert.equal(g.storyGate.guardIds.length,0);
  g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
- for(let i=0;i<23;i++)b.G.update(.04);
+ for(let i=0;i<23;i++){g.p.hp=g.p.maxHp;tick(b);}
  assert.equal(g.storyGate.charge,0);
- for(const id of [...g.storyGate.guardIds])b.G.hitEnemy(g.enemies.find(e=>e.id===id),99999);
- g.enemies=[];
- for(let i=0;i<24&&g.status==='playing';i++)b.G.update(.04);
+ toPhase(b,'guardian');let n=0;
+ while(s.guardians.length<2){g.p.hp=g.p.maxHp;tick(b);assert(++n<200);}
+ assert.equal(g.storyGate.guardIds.length,2);
+ const [a,c]=s.guardians.map(id=>g.enemies.find(e=>e.id===id));
+ assert.equal(a.volley,7);assert.equal(a.hp,160);assert.equal(a.label,'사격 잔향');
+ b.G.hitEnemy(a,9999);assert.equal(s.phase,'guardian');
+ b.G.hitEnemy(c,9999);assert.equal(s.phase,'switch');
+ holdSwitch(b);
  assert.equal(g.won,true);assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'debrief');
  assert(g.time<g.duration);
+});
+test('escort volley fires a seven-shot fan and Mare blocks one hit, opening the counter window',()=>{
+ const b=boot(),g=escort(b);quiet(g);const s=g.script;
+ toPhase(b,'guardian');let n=0;
+ while(s.guardians.length<2){g.p.hp=g.p.maxHp;tick(b);assert(++n<200);}
+ const w=g.enemies.find(e=>e.id===s.guardians[0]);
+ for(const e of [...g.enemies])if(e!==w)g.enemies.splice(g.enemies.indexOf(e),1);
+ g.hostile=[];g.script.pending=[];w.x=g.p.x+200;w.y=g.p.y;w.action='windup';w.clock=.01;w.aimX=-1;w.aimY=0;w.speed=0;
+ b.G.update(.04);assert.equal(g.hostile.length,7);
+ assert.equal(g.mare.cooldown,0);const hp=g.p.hp;
+ for(let i=0;i<60&&g.mare.protected===0;i++)b.G.update(.04);
+ assert.equal(g.mare.protected,1);assert.equal(g.p.hp,hp);assert(g.commandEffects.guardWindow>0);
 });
 test('archive requires obtaining record THEN returning to the train; timer cannot clear it',()=>{
  const b=boot(),g=archive(b);quiet(g);

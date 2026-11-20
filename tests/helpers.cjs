@@ -4,5 +4,5 @@ function boot(seed={},shared){const values=shared||new Map(Object.entries(seed))
 // Test shortcut: treat a story mission's guardian prerequisite as already resolved.
 // The opening mission spawns its guardian later through a script, so drop the script
 // (no further packs) and record a resolved stand-in guardian.
-function unlockStoryGate(g){const gate=g.storyGate;if(!gate)return;if(g.script){if(!gate.guardIds.length)gate.guardIds.push(-1);g.script=null;}gate.defeated=[...gate.guardIds];}
+function unlockStoryGate(g){const gate=g.storyGate;if(!gate)return;if(gate.kind!=='archive'&&!gate.guardIds.length)gate.guardIds.push(-1);g.script=null;gate.defeated=[...gate.guardIds];}
 module.exports={boot,ROOT,unlockStoryGate};

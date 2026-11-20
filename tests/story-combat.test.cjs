@@ -61,7 +61,8 @@ test('Mare follows without player collision, contact damage or collecting drops 
 });
 
 test('support cooldown and following freeze in pause/cards and recover only during active combat',()=>{
- const {G}=atBattle('escort'),g=G.g,m=g.mare;G.damage(10);G.input.x=1;G.update(.04);const state=JSON.stringify(m),time=g.time;
+ // Drop the escort script so only the hits this test makes can reach Mare.
+ const {G}=atBattle('escort'),g=G.g,m=g.mare;g.script=null;G.damage(10);G.input.x=1;G.update(.04);const state=JSON.stringify(m),time=g.time;
  G.pause();for(let i=0;i<20;i++)G.update(.04);assert.equal(JSON.stringify(m),state);assert.equal(g.time,time);G.resume();g.xp=g.xpNeed;assert(G.checkLevel());const cardsState=JSON.stringify(m);for(let i=0;i<20;i++)G.update(.04);assert.equal(JSON.stringify(m),cardsState);assert.equal(G.damage(10),false);
  assert(G.choose(g.offered[0],g.offerToken));for(let i=0;i<301;i++)G.update(.04);assert.equal(m.cooldown,0);assert.equal(m.pulse,0);assert(G.damage(10));assert.equal(m.protected,2);
 });
@@ -100,7 +101,7 @@ test('a paused or card-choice story cannot resume against a newer tab snapshot',
 });
 
 test('story survival retains the fixed wave warning and cancels it only near its own finish',()=>{
- // The opening mission is scripted; the Mare escort keeps the fixed station wave.
- const {G}=atBattle('escort'),g=G.g;quiet(g);g.nextWave=25;g.time=24.99;G.update(.04);assert(g.wave);assert.equal(g.wave.points.length,6);assert.match(g.wave.hint,/틈/);assert.equal(g.enemies.length,0);g.time=26.99;g.wave.remaining=.02;G.update(.04);assert.equal(g.wave,null);assert.equal(g.enemies.length,6);assert.equal(g.bossSpawned,false);
+ // Scripted missions (opening, Mare escort) skip station waves; unscripted story missions keep them.
+ const {G}=atBattle('escort'),g=G.g;g.nextWave=0;G.update(.04);assert.equal(g.wave,null);g.script=null;quiet(g);g.nextWave=25;g.time=24.99;G.update(.04);assert(g.wave);assert.equal(g.wave.points.length,6);assert.match(g.wave.hint,/틈/);assert.equal(g.enemies.length,0);g.time=26.99;g.wave.remaining=.02;G.update(.04);assert.equal(g.wave,null);assert.equal(g.enemies.length,6);assert.equal(g.bossSpawned,false);
  g.time=70;g.wave={points:[],remaining:2};G.update(.04);assert.equal(g.wave,null);assert.equal(g.status,'playing');
 });

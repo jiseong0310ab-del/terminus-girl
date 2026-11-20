@@ -757,7 +757,7 @@
           ? '원 안에 머물러 탑승'
           : q.kind === 'archive'
             ? '기록장치를 먼저 회수'
-            : '수호 잔향을 먼저 제거',
+            : '사격 잔향 처치 후 탑승',
         0,
         q.r + 16
       );
@@ -1199,7 +1199,7 @@
           ctx.font = 'bold 12px sans-serif';
           ctx.textAlign = 'center';
           ctx.fillStyle = '#ffd9e2';
-          ctx.fillText('회선 수호자 출현', x, y - r - 10);
+          ctx.fillText((point.label || '수호자') + ' 출현', x, y - r - 10);
         }
       }
       for (const flame of g.flames) {

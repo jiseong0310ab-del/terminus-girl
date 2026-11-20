@@ -58,8 +58,9 @@
             ? '이야기 진행과 보상은 변경되지 않습니다. 덱을 조정해 다시 연습할 수 있습니다.'
             : '지휘를 열어 카드를 사용하세요. 마레가 피해를 막으면 파동·절단·반격을 연계할 수 있습니다.'
         };
-      if (run.storyBattle === 'approach' && run.script && !ended) {
+      if (run.script && MISSIONS[run.storyBattle] && !ended) {
         const s = run.script,
+          cfg = MISSIONS[run.storyBattle],
           gate = run.storyGate,
           progress = Math.floor(100 * clamp((gate?.charge || 0) / (gate?.needed || 1), 0, 1));
         const base = {
@@ -70,27 +71,40 @@
           bossIn: 0,
           remaining: Math.max(0, duration - time)
         };
+        const escort = run.storyBattle === 'escort',
+          kills = Math.min(s.kills, cfg.swarm.goal) + '/' + cfg.swarm.goal;
         if (s.phase === 'swarm')
           return {
             ...base,
-            title: '잔향 습격 · ' + Math.min(s.kills, OPENING.swarmGoal) + '/' + OPENING.swarmGoal,
-            detail:
-              '붉은 원에서 잔향이 나타납니다. 공격은 자동이니 움직이며 푸른 기억을 모으세요. 돌진형은 붉은 예고선을 옆으로 피하세요.'
+            title: escort ? '마레와 귀환 · 길목 잔향 ' + kills : '잔향 습격 · ' + kills,
+            detail: escort
+              ? '마레가 곁을 지킵니다. 붉은 원에서 나타나는 잔향을 쓰러뜨리며 열차 쪽 길을 여세요.'
+              : '붉은 원에서 잔향이 나타납니다. 공격은 자동이니 움직이며 푸른 기억을 모으세요. 돌진형은 붉은 예고선을 옆으로 피하세요.'
           };
-        if (s.phase === 'guardian')
+        if (s.phase === 'guardian') {
+          const total = cfg.guardians.list.length,
+            beaten = gate?.defeated?.length || 0;
           return {
             ...base,
-            title: '회선 수호자 처치',
-            detail:
-              '돌진 직전 붉은 예고선이 나타납니다. 옆으로 피하거나 대시로 통과하면 지휘력 +1. 지휘 카드로 큰 피해를 주세요.'
+            title: escort ? '마레와 귀환 · 사격 잔향 ' + beaten + '/' + total : '회선 수호자 처치',
+            detail: escort
+              ? '부채꼴 사격은 다 피하기 어렵습니다. 마레가 한 번 막아 주며, 막은 직후 4초 동안 반격·파동·절단이 강해집니다.'
+              : '돌진 직전 붉은 예고선이 나타납니다. 옆으로 피하거나 대시로 통과하면 지휘력 +1. 지휘 카드로 큰 피해를 주세요.'
           };
+        }
         return {
           ...base,
-          title: s.siege ? '안내 스위치 작동 · ' + progress + '%' : '금빛 안내 스위치로 이동',
+          title: s.siege
+            ? (escort ? '열차 문 사수 · ' : '안내 스위치 작동 · ') + progress + '%'
+            : escort
+              ? '금빛 열차 문으로 이동'
+              : '금빛 안내 스위치로 이동',
           detail:
             '금빛 원 안에 ' +
-            OPENING.switchTime +
-            '초 머물면 전원이 복구됩니다. 작동이 시작되면 잔향이 몰려오니 원 안에서 버티세요.'
+            cfg.hold +
+            (escort
+              ? '초 머물면 열차에 오릅니다. 문이 열리는 동안 뒤쪽에서 추격 무리가 옵니다.'
+              : '초 머물면 전원이 복구됩니다. 작동이 시작되면 잔향이 몰려오니 원 안에서 버티세요.')
         };
       }
       if (['approach', 'escort', 'archive'].includes(run.storyBattle) && !run.storyTraining) {
@@ -567,32 +581,23 @@
     g.script = null;
     if (!training && ['approach', 'escort', 'archive'].includes(spec.battleId)) {
       const mission = spec.battleId;
+      const cfg = MISSIONS[mission] || null;
       g.storyGate = {
-        x: g.p.x + (mission === 'approach' ? 180 : mission === 'escort' ? -175 : -195),
-        y: g.p.y + (mission === 'approach' ? -70 : mission === 'escort' ? 80 : 90),
-        r: mission === 'approach' ? OPENING.switchRadius : 51,
-        needed: mission === 'approach' ? OPENING.switchTime : 0.7,
+        x: g.p.x + (cfg ? cfg.gate[0] : -195),
+        y: g.p.y + (cfg ? cfg.gate[1] : 90),
+        r: cfg ? cfg.radius : 51,
+        needed: cfg ? cfg.hold : 0.7,
         charge: 0,
         done: false,
         guardIds: [],
         defeated: [],
         kind: mission
       };
-      // The opening mission is an authored arc; its guardian arrives later.
-      if (mission === 'approach') {
-        g.script = openingScript();
-        g.xpNeed = OPENING.firstXp;
-        g.storyGate.decay = OPENING.switchDecay;
-      } else if (mission !== 'archive') {
-        for (const [type, dx, dy] of [
-          ['ghost', -136, 64],
-          ['wolf', -182, 126]
-        ]) {
-          const enemy = G.enemy(type, g.p.x + dx, g.p.y + dy);
-          enemy.hp = Math.max(enemy.hp, 132);
-          enemy.maxHp = enemy.hp;
-          g.storyGate.guardIds.push(enemy.id);
-        }
+      // Scripted missions are authored arcs; their guardians arrive later.
+      if (cfg) {
+        g.script = missionScript(mission);
+        g.storyGate.decay = cfg.decay;
+        if (cfg.firstXp) g.xpNeed = cfg.firstXp;
       }
     }
     g.route = spec.battleId === 'snowMission' ? (spec.route === 'rescue' ? 'rescue' : 'contain') : null;
@@ -1224,35 +1229,85 @@
     }
     return e;
   }
-  // ── Opening mission: swarm → guardian → hold the switch ─────────────────────
-  // A short authored arc so the first 30–40 seconds teach the whole loop:
-  // visible packs (kill, collect, first card) → a telegraphed elite (dodge, dash,
-  // command card) → a siege while standing in the switch circle (climax).
-  const OPENING = {
-    limit: 60,
-    swarmGoal: 8,
-    firstXp: 6,
-    guardianHp: 210,
-    switchTime: 3.5,
-    switchRadius: 70,
-    switchDecay: 0.3,
-    telegraph: 0.9,
-    guardianTelegraph: 1.4,
-    forceGuardianAt: 18,
-    ghostSpeed: 1.25,
-    houndHp: 52,
-    siegeRadius: 170,
-    trickle: 1.2
+  // ── Scripted story missions: swarm → guardians → hold the goal ──────────────
+  // A short authored arc per mission. Each teaches one idea on top of the shared loop:
+  //  · approach (첫 임무): dodge a leading charge, then hold a switch under encirclement.
+  //  · escort (마레 동행): fan volleys you cannot fully dodge, so Mare's block and the
+  //    4 s counter window after it become the answer; then hold the door against a chase.
+  const MISSIONS = {
+    approach: {
+      gate: [180, -70],
+      radius: 70,
+      hold: 3.5,
+      decay: 0.3,
+      firstXp: 6,
+      telegraph: 0.9,
+      ghostSpeed: 1.25,
+      houndHp: 52,
+      swarm: {
+        goal: 8,
+        forceAt: 18,
+        packs: [
+          { kinds: ['ghost', 'ghost', 'ghost'] },
+          { kinds: ['ghost', 'hound', 'ghost'] },
+          // Later packs split to opposite sides so the player has to pick a lane, not just walk away.
+          { kinds: ['ghost', 'ghost', 'ghost', 'ghost'], pincer: true },
+          { kinds: ['hound', 'ghost', 'ghost', 'hound'], pincer: true }
+        ]
+      },
+      guardians: {
+        telegraph: 1.4,
+        list: [
+          {
+            type: 'warden',
+            at: [0, 0],
+            hp: 210,
+            label: '회선 수호자',
+            tune: { windupTime: 1, chargeTime: 0.7, recoverWait: 1.1, lead: 0.55, chargeRange: 200 }
+          }
+        ],
+        escortEvery: 5,
+        notice: '회선 수호자 출현 · 붉은 돌진선을 옆으로 피하거나 대시로 통과'
+      },
+      siege: { kind: 'ring', radius: 170, trickle: 1.2, houndChance: 0.15 },
+      siegeNotice: '스위치 작동 시작 · 잔향이 몰려옵니다 · 원 안에서 버티세요'
+    },
+    escort: {
+      gate: [-175, 80],
+      radius: 70,
+      hold: 3,
+      decay: 0.3,
+      firstXp: null,
+      telegraph: 0.9,
+      ghostSpeed: 1.25,
+      houndHp: 52,
+      swarm: {
+        goal: 6,
+        forceAt: 14,
+        packs: [
+          { kinds: ['ghost', 'ghost', 'hound'] },
+          { kinds: ['ghost', 'ghost', 'ghost', 'ghost'], pincer: true },
+          { kinds: ['hound', 'ghost', 'ghost', 'hound'], pincer: true }
+        ]
+      },
+      guardians: {
+        telegraph: 1.4,
+        list: [
+          { type: 'witch', at: [-70, -55], hp: 160, label: '사격 잔향', tune: { volley: 7, spread: 0.15, shotSpeed: 175, holdRange: 120, recoverWait: 1.4 } },
+          { type: 'witch', at: [70, 55], hp: 160, label: '사격 잔향', tune: { volley: 7, spread: 0.15, shotSpeed: 175, holdRange: 120, recoverWait: 1.4 } }
+        ],
+        escortEvery: 4.5,
+        escortKinds: ['ghost', 'hound'],
+        notice: '사격 잔향 출현 · 부채꼴 사격은 마레가 한 번 막아 줍니다 · 막은 직후 반격하세요'
+      },
+      siege: { kind: 'chase', radius: 165, trickle: 1.1, houndChance: 0.25 },
+      siegeNotice: '열차 문 개방 중 · 뒤쪽에서 추격 무리가 옵니다 · 문 앞에서 버티세요'
+    }
   };
-  // Later packs split to opposite sides so the player has to pick a lane, not just walk away.
-  const OPENING_PACKS = [
-    { kinds: ['ghost', 'ghost', 'ghost'] },
-    { kinds: ['ghost', 'hound', 'ghost'] },
-    { kinds: ['ghost', 'ghost', 'ghost', 'ghost'], pincer: true },
-    { kinds: ['hound', 'ghost', 'ghost', 'hound'], pincer: true }
-  ];
-  function openingScript() {
+  G.MISSIONS = MISSIONS;
+  function missionScript(id) {
     return {
+      mission: id,
       phase: 'swarm',
       packs: 0,
       kills: 0,
@@ -1260,9 +1315,10 @@
       packClock: 0.8,
       escortClock: 0,
       guardianId: null,
+      guardians: [],
       siege: false,
-      trickle: 0,
-      siegeSpawned: 0
+      siegeAngle: 0,
+      trickle: 0
     };
   }
   function scriptReach() {
@@ -1271,24 +1327,25 @@
     // Keep spawn points inside the visible play area (below the HUD, above the thumbs).
     return { rx: clamp(W / 2 - 40, 130, 220), ry: clamp(H / 2 - 190, 140, 230) };
   }
-  function queueScript(s, type, x, y, time = OPENING.telegraph, role = 'swarm') {
-    s.pending.push({ type, x, y, t: time, max: time, role });
+  function queueScript(s, type, x, y, time = 0.9, role = 'swarm', extra = null) {
+    s.pending.push({ type, x, y, t: time, max: time, role, ...(extra || {}) });
   }
-  function queuePack(g, s) {
+  function queuePack(g, s, cfg) {
     const { rx, ry } = scriptReach(),
-      pack = OPENING_PACKS[s.packs % OPENING_PACKS.length],
+      pack = cfg.swarm.packs[s.packs % cfg.swarm.packs.length],
       kinds = pack.kinds,
       base = rand(0, TAU);
     kinds.forEach((type, i) => {
       const a = pack.pincer
         ? base + (i % 2) * Math.PI + (i < 2 ? -0.25 : 0.25)
         : base + (i - (kinds.length - 1) / 2) * 0.5;
-      queueScript(s, type, g.p.x + Math.cos(a) * rx, g.p.y + Math.sin(a) * ry);
+      queueScript(s, type, g.p.x + Math.cos(a) * rx, g.p.y + Math.sin(a) * ry, cfg.telegraph);
     });
     s.packs++;
     s.packClock = 0;
   }
   function scriptSpawn(g, s, point) {
+    const cfg = MISSIONS[s.mission];
     // Never drop an enemy on top of the player: push the point outward instead.
     let dx = point.x - g.p.x,
       dy = point.y - g.p.y,
@@ -1300,22 +1357,20 @@
     }
     const e = G.enemy(point.type, point.x, point.y);
     e.script = point.role;
-    if (point.type === 'ghost') e.speed *= OPENING.ghostSpeed;
+    if (point.type === 'ghost') e.speed *= cfg.ghostSpeed;
     // Hounds live long enough to show (and use) their telegraphed charge.
     if (point.type === 'hound') {
-      e.hp = e.maxHp = OPENING.houndHp;
+      e.hp = e.maxHp = cfg.houndHp;
       e.windupTime = 0.95;
       e.wait = 0.4;
     }
     if (point.role === 'guardian') {
-      e.hp = e.maxHp = OPENING.guardianHp;
-      e.windupTime = 1;
-      e.chargeTime = 0.7;
-      e.recoverWait = 1.1;
-      e.lead = 0.55;
-      e.chargeRange = 200;
-      e.label = '회선 수호자';
-      s.guardianId = e.id;
+      const def = cfg.guardians.list[point.index];
+      e.hp = e.maxHp = def.hp;
+      Object.assign(e, def.tune);
+      e.label = def.label;
+      if (s.guardianId === null) s.guardianId = e.id;
+      s.guardians.push(e.id);
       g.storyGate.guardIds.push(e.id);
       ring(e.x, e.y, 70, '#e7a2b6');
       G.onSound('boss');
@@ -1327,6 +1382,7 @@
     const g = G.g,
       s = g.script;
     if (!s || g.status !== 'playing') return;
+    const cfg = MISSIONS[s.mission];
     for (const point of s.pending) point.t -= dt;
     const ready = s.pending.filter(point => point.t <= 0);
     if (ready.length) {
@@ -1338,53 +1394,90 @@
       g.enemies.filter(e => e.script === role).length + s.pending.filter(p => p.role === role).length;
     if (s.phase === 'swarm') {
       s.packClock += dt;
-      if (s.kills >= OPENING.swarmGoal || g.time >= OPENING.forceGuardianAt) {
+      if (s.kills >= cfg.swarm.goal || g.time >= cfg.swarm.forceAt) {
         s.phase = 'guardian';
         s.escortClock = 0;
-        queueScript(s, 'warden', g.storyGate.x, g.storyGate.y, OPENING.guardianTelegraph, 'guardian');
-        G.notify('회선 수호자 출현 · 붉은 돌진선을 옆으로 피하거나 대시로 통과');
-      } else if (s.packClock >= 4 || (s.packClock >= 0.8 && alive('swarm') <= 1)) queuePack(g, s);
+        cfg.guardians.list.forEach((def, index) =>
+          queueScript(
+            s,
+            def.type,
+            g.storyGate.x + def.at[0],
+            g.storyGate.y + def.at[1],
+            cfg.guardians.telegraph,
+            'guardian',
+            { index, label: def.label }
+          )
+        );
+        G.notify(cfg.guardians.notice);
+      } else if (s.packClock >= 4 || (s.packClock >= 0.8 && alive('swarm') <= 1)) queuePack(g, s, cfg);
     } else if (s.phase === 'guardian') {
       s.escortClock += dt;
-      if (s.escortClock >= 5 && alive('swarm') < 4) {
+      if (s.escortClock >= cfg.guardians.escortEvery && alive('swarm') < 4) {
         s.escortClock = 0;
         const { rx, ry } = scriptReach(),
           a = rand(0, TAU);
-        for (const k of [-1, 1])
-          queueScript(s, 'ghost', g.p.x + Math.cos(a + k * 0.4) * rx, g.p.y + Math.sin(a + k * 0.4) * ry);
+        const kinds = cfg.guardians.escortKinds || ['ghost', 'ghost'];
+        kinds.forEach((type, i) =>
+          queueScript(
+            s,
+            type,
+            g.p.x + Math.cos(a + (i ? 0.4 : -0.4)) * rx,
+            g.p.y + Math.sin(a + (i ? 0.4 : -0.4)) * ry,
+            cfg.telegraph
+          )
+        );
       }
     } else if (s.phase === 'switch') {
       const gate = g.storyGate,
-        near = len(g.p.x - gate.x, g.p.y - gate.y) <= gate.r;
+        near = len(g.p.x - gate.x, g.p.y - gate.y) <= gate.r,
+        siege = cfg.siege;
       if (near && !s.siege) {
-        // Stepping onto the switch starts the climax: an encirclement with one open gap.
         s.siege = true;
         s.trickle = 0;
-        const gap = Math.floor(rand(0, 8));
-        for (let k = 0; k < 8; k++) {
-          if (k === gap) continue;
-          const a = (k * TAU) / 8;
-          queueScript(
-            s,
-            k === (gap + 4) % 8 ? 'hound' : 'ghost',
-            gate.x + Math.cos(a) * OPENING.siegeRadius,
-            gate.y + Math.sin(a) * OPENING.siegeRadius,
-            1,
-            'siege'
-          );
+        if (siege.kind === 'ring') {
+          // Stepping onto the goal starts the climax: an encirclement with one open gap.
+          const gap = Math.floor(rand(0, 8));
+          for (let k = 0; k < 8; k++) {
+            if (k === gap) continue;
+            const a = (k * TAU) / 8;
+            queueScript(
+              s,
+              k === (gap + 4) % 8 ? 'hound' : 'ghost',
+              gate.x + Math.cos(a) * siege.radius,
+              gate.y + Math.sin(a) * siege.radius,
+              1,
+              'siege'
+            );
+          }
+        } else {
+          // A chase: the pack comes up the corridor the player just walked, so they turn to face it.
+          s.siegeAngle = Math.atan2(g.p.y - gate.y, g.p.x - gate.x);
+          if (!Number.isFinite(s.siegeAngle)) s.siegeAngle = 0;
+          for (let k = 0; k < 6; k++) {
+            const a = s.siegeAngle + (k - 2.5) * 0.32;
+            queueScript(
+              s,
+              k === 2 || k === 3 ? 'hound' : 'ghost',
+              gate.x + Math.cos(a) * siege.radius,
+              gate.y + Math.sin(a) * siege.radius,
+              1,
+              'siege'
+            );
+          }
         }
-        G.notify('스위치 작동 시작 · 잔향이 몰려옵니다 · 원 안에서 버티세요');
+        G.notify(cfg.siegeNotice);
       }
       if (s.siege) {
         s.trickle += dt;
-        if (s.trickle >= OPENING.trickle && alive('siege') < 9) {
+        if (s.trickle >= siege.trickle && alive('siege') < 9) {
           s.trickle = 0;
-          const a = rand(0, TAU);
+          const a = siege.kind === 'ring' ? rand(0, TAU) : s.siegeAngle + rand(-0.9, 0.9),
+            reach = siege.kind === 'ring' ? 230 : siege.radius + 20;
           queueScript(
             s,
-            Math.random() < 0.15 ? 'hound' : 'ghost',
-            gate.x + Math.cos(a) * 230,
-            gate.y + Math.sin(a) * 230,
+            Math.random() < siege.houndChance ? 'hound' : 'ghost',
+            gate.x + Math.cos(a) * reach,
+            gate.y + Math.sin(a) * reach,
             0.8,
             'siege'
           );
@@ -1396,9 +1489,11 @@
     const s = g.script;
     if (!s || !e.script) return;
     if (e.script === 'swarm' && s.phase === 'swarm') s.kills++;
-    if (e.script === 'guardian') {
+    if (e.script === 'guardian' && s.phase === 'guardian') {
+      const remaining = g.enemies.some(other => other !== e && other.script === 'guardian');
+      if (remaining || s.pending.some(p => p.role === 'guardian')) return;
       s.phase = 'switch';
-      // A short breather: escorts scatter so the walk to the switch is a reward, not a slog.
+      // A short breather: escorts scatter so the walk to the goal is a reward, not a slog.
       for (const other of [...g.enemies])
         if (other.script === 'swarm' && len(other.x - e.x, other.y - e.y) < 260) {
           other.hp = 0;
@@ -1642,10 +1737,17 @@
             e.action = 'charge';
             e.clock = e.chargeTime || 0.52;
           } else if (e.behavior === 'ranged') {
-            shot(e, Math.atan2(e.aimY, e.aimX));
-            if (e.elite) {
-              shot(e, Math.atan2(e.aimY, e.aimX) + 0.25);
-              shot(e, Math.atan2(e.aimY, e.aimX) - 0.25);
+            const aim = Math.atan2(e.aimY, e.aimX);
+            if (e.volley) {
+              // Scripted fan volley: too wide to fully sidestep, so protection matters.
+              for (let k = 0; k < e.volley; k++)
+                shot(e, aim + (k - (e.volley - 1) / 2) * (e.spread || 0.2), e.shotSpeed || 125);
+            } else {
+              shot(e, aim);
+              if (e.elite) {
+                shot(e, aim + 0.25);
+                shot(e, aim - 0.25);
+              }
             }
             e.action = 'recover';
             e.clock = 0.7;
@@ -1700,7 +1802,7 @@
           e.wait = e.behavior === 'boss' ? (e.bossPhase === 2 ? 2.2 : 2.8) : e.recoverWait || 1.7;
         }
       } else {
-        if (e.behavior === 'ranged' && d < 200) speed = -15;
+        if (e.behavior === 'ranged' && d < (e.holdRange ?? 200)) speed = -15;
         if (
           e.wait <= 0 &&
           ((e.behavior === 'charge' && d < (e.chargeRange || 260)) ||
@@ -1991,7 +2093,7 @@
       }
       return;
     }
-    // Holding the opening switch is deliberate standing, not idling.
+    // Holding a scripted goal is deliberate standing, not idling.
     const holding =
       g.script?.phase === 'switch' && len(g.p.x - g.storyGate.x, g.p.y - g.storyGate.y) <= g.storyGate.r;
     if (g.moving || q.cooldown > 0 || holding) {
@@ -2245,9 +2347,6 @@
     }
     waveTick(dt);
     g.spawn += dt;
-    // Give the Mare escort a short window to recognize its guardians before ambient packs converge.
-    if (g.mode === 'story' && !g.storyTraining && g.storyBattle === 'escort' && g.time < 10)
-      g.spawn = Math.min(g.spawn, 0);
     const baseInterval = g.storyTraining
       ? Math.max(0.35, 0.8 - (g.time / g.duration) * 0.45)
       : Math.max(0.42, 1.3 - (g.time / g.duration) * 0.7 - g.stage * 0.09);
