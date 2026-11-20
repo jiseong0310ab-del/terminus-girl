@@ -833,16 +833,12 @@
             ? '연계 준비 ' +
               partner.window.toFixed(1) +
               '초 · 다른 캐릭터 카드 사용 시 합동기 + 지휘력 1 회복'
-            : '다른 캐릭터의 카드를 6초 안에 연속 사용하면 합동기 발동';
+            : '';
     text(
       'commandCombo',
       [
         teamText,
-        g.commandEffects.guardWindow > 0
-          ? '보호 연계 준비 · 파동·절단 위력 50% 증가 또는 반격 사용'
-          : g.mare
-            ? '마레나 보호막이 피해를 막으면 4초 동안 보호 연계 가능'
-            : '마레 합류 후 보호 연계를 사용할 수 있습니다.',
+        g.commandEffects.guardWindow > 0 ? '보호 연계 준비 · 파동·절단 위력 50% 증가 또는 반격 사용' : '',
         g.commandEffects.ward > 0 ? '보호 장막 ' + g.commandEffects.ward.toFixed(1) + '초' : ''
       ]
         .filter(Boolean)

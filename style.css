@@ -3512,3 +3512,73 @@ button {
     height: 34px;
   }
 }
+
+/* v0.26 — command screen as a readable detail view (the quick tray handles fast casts) */
+.commandPanel h2 {
+  margin: 4px 0 2px;
+  font-size: 20px;
+}
+.commandPanel .subtitle {
+  margin: 0 0 10px;
+  font-size: 12px;
+  letter-spacing: 0;
+}
+.commandSummary {
+  padding: 9px 12px;
+  margin-bottom: 10px;
+}
+.commandSummary strong {
+  font-size: 15px;
+}
+.commandSummary p {
+  margin: 3px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.commandSummary p:empty {
+  display: none;
+}
+.commandPanel #commandList {
+  grid-template-columns: 1fr;
+  gap: 8px;
+}
+.commandCard {
+  min-height: 0;
+  padding: 10px 70px 10px 10px;
+}
+.commandCard .commandOwner {
+  margin: 0 0 2px;
+}
+.commandCard .cardtitle {
+  min-height: 0;
+  font-size: 14px;
+}
+.commandCard .carddesc {
+  display: block;
+  -webkit-line-clamp: unset;
+  overflow: visible;
+  font-size: 12px;
+  margin-top: 4px;
+}
+/* The art sits in the card's right padding (it lives inside the text column's box). */
+.commandCard .commandArt {
+  top: 50%;
+  right: -64px;
+  transform: translateY(-50%);
+  width: 58px;
+  height: 64px;
+  mask-image: none;
+  border-radius: 10px;
+  opacity: 0.9;
+}
+.commandCard.rize::before,
+.commandCard.mare::before {
+  content: none;
+}
+.commandDetails {
+  display: none;
+}
+.commandPanel .note {
+  font-size: 11px;
+  line-height: 1.6;
+}
