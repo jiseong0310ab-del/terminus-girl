@@ -119,8 +119,10 @@ function drive(TG, requested) {
   // Only the destination is shared: each policy keeps its own way of moving, dodging and dashing.
   let goal = null,
     stop = 0;
-  const gate = g.storyGate;
-  if (gate) {
+  const gate = g.storyGate,
+    sealed = g.script?.phase === 'swarm';
+  // A sealed objective is not a destination yet: fight the swarm first.
+  if (gate && !sealed) {
     const ready =
       gate.kind === 'archive'
         ? g.recordTarget?.recovered === true
@@ -136,7 +138,7 @@ function drive(TG, requested) {
       stop = 108;
     }
   }
-  if (!goal && g.storyBattle === 'snowMission') {
+  if (!goal && !sealed && g.storyBattle === 'snowMission') {
     goal = g.signalTargets?.find(r => !r.recovered);
     stop = 15;
   }
@@ -148,6 +150,23 @@ function drive(TG, requested) {
     .sort((a, b) => H(a.x - p.x, a.y - p.y) - H(b.x - p.x, b.y - p.y));
   let x = 0,
     y = 0;
+  // Skilled policies stand where the station hazard is not: a quarter turn ahead of the
+  // archive beams, or in a relay quadrant that the coming bell strike does not cover.
+  const skilled = policy === 'kite' || policy === 'cautious';
+  if (skilled && goal && g.sweep && g.recordTarget && !g.recordTarget.recovered && goal === g.recordTarget) {
+    const a = g.sweep.angle + Math.PI / 2;
+    goal = { x: g.recordTarget.x + Math.cos(a) * 30, y: g.recordTarget.y + Math.sin(a) * 30, r: 20 };
+    stop = 4;
+  } else if (skilled && goal && g.bell && g.bell.warning > 0 && goal.recovered === false) {
+    const spots = g.bell.diagonal
+      ? [[34, 0], [-34, 0], [0, 34], [0, -34]]
+      : [[26, 26], [-26, 26], [26, -26], [-26, -26]];
+    const best = spots
+      .map(([ox, oy]) => ({ x: goal.x + ox, y: goal.y + oy }))
+      .sort((m, n) => H(m.x - p.x, m.y - p.y) - H(n.x - p.x, n.y - p.y))[0];
+    goal = { ...best, r: 20, recovered: false };
+    stop = 4;
+  }
   if (goal) {
     const dx = goal.x - p.x,
       dy = goal.y - p.y,

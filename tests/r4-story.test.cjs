@@ -1,4 +1,5 @@
 'use strict';
+const {openObjective,dormantBell}=require('./helpers.cjs');
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const ROOT=path.resolve(__dirname,'..'),clone=x=>JSON.parse(JSON.stringify(x));
 function boot(shared){
@@ -22,7 +23,7 @@ function prepare(b,route='rescue',members=['aster','noa']){
  return b.A.prepareBattle();
 }
 function clearRun(b,g){
- g.spawn=-1000;g.nextWave=Infinity;g.hazards=[];g.hostile=[];g.enemies=[];
+ openObjective(g);g.bell=dormantBell();g.spawn=-1000;g.nextWave=Infinity;g.hazards=[];g.hostile=[];g.enemies=[];
  for(const target of g.signalTargets){
   g.p.x=target.x;g.p.y=target.y;
   for(let n=0;n<Math.ceil(target.needed/.04)+2;n++)b.G.update(.04);
@@ -82,7 +83,8 @@ test('R3 release forces TWO rescue relays, active squad gives record and signal 
  const b=boot(),spec=prepare(b,'rescue',['aster','noa']),before=b.S.export();
  assert.equal(spec.route,'rescue');assert.deepEqual(clone(spec.snowParty),['mare','aster','noa']);
  const g=b.G.startStory();assert.equal(g.stage,1);assert.equal(g.duration,105);assert.equal(g.signalTargets.length,2);
- assert.equal(g.signalTargets[0].needed,1.0);assert.equal(g.snowSignalHelp,true);
+ assert.equal(g.signalTargets[0].needed,1.8);assert.equal(g.snowSignalHelp,true);
+ assert.match(b.G.objective().title,/습격/);openObjective(g);
  assert.match(b.G.objective().title,/구조 신호/);assert.equal(b.G.objective().target,2);
  g.spawn=-1000;g.nextWave=Infinity;g.hazards=[];g.hostile=[];g.enemies=[];
  g.time=g.duration-.01;b.G.update(.04);
@@ -99,9 +101,10 @@ test('R3 containment leads to ONE long record objective and Vela heals active pa
  const b=boot();const spec=prepare(b,'contain',['noa','vela']);
  assert.equal(spec.route,'contain');assert.deepEqual(clone(spec.snowParty),['mare','noa','vela']);
  const g=b.G.startStory();assert.equal(g.signalTargets.length,1);
- assert.equal(g.signalTargets[0].needed,2);
+ assert.equal(g.signalTargets[0].needed,3.5);
  assert.equal(g.duration,95);assert.equal(g.snowSignalHelp,true);
  assert.equal(g.p.hp,g.p.maxHp);
+ assert.match(b.G.objective().title,/습격/);openObjective(g);
  assert.match(b.G.objective().title,/격리 명부/);
  const invalid={id:spec.id,mode:'story',storyBattle:'snowMission',won:true,p:{hp:80},levels:{},level:2,xp:0,kills:0,totalTime:100,relics:[],signalTargets:[]};
  assert.equal(b.A.completeBattle(invalid),false);

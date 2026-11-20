@@ -665,16 +665,76 @@
     const m = V.anchorMarker(r, g.p);
     ctx.save();
     ctx.translate(m.x, m.y);
-    if (m.edge) edgeArrow(m.angle, true);
+    const live = g.script?.phase !== 'swarm';
+    if (m.edge) edgeArrow(m.angle, live);
     else
       objectiveProp(
         r.r,
-        true,
+        live,
         r.charge / r.needed,
-        '기록 장치 · 회수 ' + Math.floor(clamp(r.charge / r.needed, 0, 1) * 100) + '%',
-        '범위 안에서 1.25초 대기',
+        live ? '기록 장치 · 회수 ' + Math.floor(clamp(r.charge / r.needed, 0, 1) * 100) + '%' : '기록 장치',
+        live ? '원 안에서 광선을 피하며 3초' : '잠김 · 잔향을 먼저 물리치세요',
         t
       );
+    ctx.restore();
+  }
+  // Archive terminal defence: two rotating rose beams (dashed while warming up).
+  function sweepBeams(g, t) {
+    const s = g.sweep;
+    if (g.mode !== 'story' || !s || !Number.isFinite(s.warmup) || !g.recordTarget || g.recordTarget.recovered) return;
+    const x = s.x - g.p.x + V.width / 2,
+      y = s.y - g.p.y + V.height / 2,
+      half = (TG.engine.SWEEP?.width || 0.36) / 2,
+      live = s.warmup <= 0;
+    ctx.save();
+    ctx.translate(x, y);
+    for (const beam of [s.angle, s.angle + Math.PI]) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, s.reach, beam - half, beam + half);
+      ctx.closePath();
+      ctx.fillStyle = live ? '#e8789a55' : PAL.hostileFill;
+      ctx.fill();
+      ctx.setLineDash(live ? [] : [6, 5]);
+      ctx.strokeStyle = PAL.hostile;
+      ctx.lineWidth = live ? 2 : 1.5;
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.restore();
+  }
+  // Snow relay bell: a cross (or diagonal) strike telegraph centred on the active relay.
+  function bellCross(g, t) {
+    const b = g.bell;
+    if (g.mode !== 'story' || !b || !(b.warning > 0)) return;
+    const x = b.x - g.p.x + V.width / 2,
+      y = b.y - g.p.y + V.height / 2,
+      reach = TG.engine.BELL?.reach || 170,
+      half = TG.engine.BELL?.half || 24,
+      progress = clamp(1 - b.warning / (TG.engine.BELL?.warning || 1.2), 0, 1);
+    ctx.save();
+    ctx.translate(x, y);
+    if (b.diagonal) ctx.rotate(Math.PI / 4);
+    ctx.fillStyle = PAL.hostileFill;
+    ctx.strokeStyle = PAL.hostile;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([7, 6]);
+    for (const [w, h] of [
+      [reach * 2, half * 2],
+      [half * 2, reach * 2]
+    ]) {
+      ctx.fillRect(-w / 2, -h / 2, w, h);
+      ctx.strokeRect(-w / 2, -h / 2, w, h);
+    }
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#e8789a66';
+    ctx.fillRect(-reach * progress, -half, reach * 2 * progress, half * 2);
+    ctx.fillRect(-half, -reach * progress, half * 2, reach * 2 * progress);
+    if (b.diagonal) ctx.rotate(-Math.PI / 4);
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = PAL.hostileText;
+    ctx.fillText(b.diagonal ? '종소리 · 대각선 밖으로' : '종소리 · 십자선 밖으로', 0, -reach - 10);
     ctx.restore();
   }
   function storyPressureWarning(g, t) {
@@ -771,14 +831,15 @@
       const m = V.anchorMarker(r, g.p);
       ctx.save();
       ctx.translate(m.x, m.y);
-      if (m.edge) edgeArrow(m.angle, true);
+      const live = g.script?.phase !== 'swarm';
+      if (m.edge) edgeArrow(m.angle, live);
       else
         objectiveProp(
           r.r,
-          true,
+          live,
           r.charge / r.needed,
-          r.name + ' · ' + Math.floor(clamp(r.charge / r.needed, 0, 1) * 100) + '%',
-          '반경 안에서 회수',
+          live ? r.name + ' · ' + Math.floor(clamp(r.charge / r.needed, 0, 1) * 100) + '%' : r.name,
+          live ? '십자선을 피해 원 안에서 안정화' : '잠김 · 습격을 먼저 물리치세요',
           t
         );
       ctx.restore();
@@ -1129,6 +1190,8 @@
       recordBeacon(g, t);
       storyGateMarker(g, t);
       snowBeacons(g, t);
+      sweepBeams(g, t);
+      bellCross(g, t);
       patientScene(g, t);
       const sx = x => x - cx + W / 2,
         sy = y => y - cy + H / 2;

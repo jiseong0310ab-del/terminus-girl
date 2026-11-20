@@ -1,5 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const {openObjective,dormantBell}=require('./helpers.cjs');
 const ROOT=path.resolve(__dirname,'..'),clone=x=>JSON.parse(JSON.stringify(x));
 function boot(){
  const values=new Map(),storage={getItem:k=>values.get(k)||null,setItem(k,v){values.set(k,String(v))}};
@@ -20,11 +21,11 @@ function holdSwitch(b){const g=b.G.g;let n=0;while(g.status!=='ended'){g.p.x=g.s
 function escort(b){approach(b);const g=b.G.g;quiet(g);toPhase(b,'switch');holdSwitch(b);assert.equal(g.won,true);
  advance(b.A);assert.equal(b.A.state().node,'escort');b.G.g=null;return b.G.startStory();}
 function archive(b){assert(b.A.begin());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'approach');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);assert.equal(b.A.state().node,'escort');assert(b.A.completeBattle(fakeBattle(b.A)));advance(b.A);
- assert.equal(b.A.state().node,'rest');assert(b.A.beginR3());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'archive');return b.G.startStory();}
+ assert.equal(b.A.state().node,'rest');assert(b.A.beginR3());advance(b.A);advance(b.A);assert.equal(b.A.state().node,'archive');return openObjective(b.G.startStory());}
 function forSnow(b,route){
  const s=b.S.data.story;Object.assign(s,{started:true,node:'snowMission',line:0,encounterId:'story-snow-mission-test',decision:route,recordRecovered:true,
  recruited:['aster','noa'],companions:['mare','aster','noa'],snowParty:['mare','aster','noa'],commandDeck:b.TG.commandDeck.preset('protect',['mare','aster','noa'])});
- assert(b.S.save());return b.G.startStory();
+ assert(b.S.save());return openObjective(b.G.startStory());
 }
 test('stationary solo battle cannot win, even when the guardian was eliminated',()=>{
  const b=boot(),g=approach(b);quiet(g);const gate=g.storyGate,x=g.p.x,y=g.p.y;
@@ -118,12 +119,12 @@ test('archive requires obtaining record THEN returning to the train; timer canno
  g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;g.enemies=[];
  for(let i=0;i<25;i++)b.G.update(.04);
  assert.equal(g.storyGate.charge,0);
- g.p.x=g.recordTarget.x;g.p.y=g.recordTarget.y;
- for(let i=0;i<34;i++)b.G.update(.04);
+ g.p.x=g.recordTarget.x;g.p.y=g.recordTarget.y;g.sweep={angle:0,reach:0,warmup:Infinity,hits:0};
+ for(let i=0;i<80;i++)b.G.update(.04);
  assert.equal(g.recordTarget.recovered,true);assert.equal(g.status,'playing');
  assert.equal(b.G.objective().kind,'mission');
  g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
- for(let i=0;i<23&&g.status==='playing';i++)b.G.update(.04);
+ for(let i=0;i<70&&g.status==='playing';i++){g.p.hp=g.p.maxHp;b.G.update(.04);}
  assert.equal(g.status,'ended');assert.equal(g.won,true);assert(g.time<g.duration);
  assert.equal(b.A.state().node,'evidence');assert.equal(b.A.state().recordRecovered,true);
 });
@@ -131,11 +132,11 @@ test('snow rescue requires both relays, then ends immediately instead of waiting
  const b=boot(),g=forSnow(b,'rescue');quiet(g);g.enemies=[];
  assert.equal(g.signalTargets.length,2);assert.equal(g.duration,105);
  assert.equal(b.G.objective().target,2);assert.equal(g.status,'playing');
- g.p.x=g.signalTargets[0].x;g.p.y=g.signalTargets[0].y;
- for(let i=0;i<30;i++)b.G.update(.04);
+ g.bell=dormantBell();g.p.x=g.signalTargets[0].x;g.p.y=g.signalTargets[0].y;
+ for(let i=0;i<60;i++)b.G.update(.04);
  assert.equal(g.signalTargets[0].recovered,true);assert.equal(g.signalTargets[1].recovered,false);assert.equal(g.status,'playing');
  g.p.x=g.signalTargets[1].x;g.p.y=g.signalTargets[1].y;
- for(let i=0;i<30&&g.status==='playing';i++)b.G.update(.04);
+ for(let i=0;i<60&&g.status==='playing';i++)b.G.update(.04);
  assert.equal(g.status,'ended');assert.equal(g.won,true);assert(g.time<g.duration);
  assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'snowDebrief');
  assert.equal(b.S.data.stats.runs,0);
@@ -143,8 +144,8 @@ test('snow rescue requires both relays, then ends immediately instead of waiting
 test('snow containment requires one registry relay, with no time wait',()=>{
  const b=boot(),g=forSnow(b,'contain');quiet(g);g.enemies=[];
  assert.equal(g.signalTargets.length,1);assert.equal(g.duration,95);
- g.p.x=g.signalTargets[0].x;g.p.y=g.signalTargets[0].y;
- for(let i=0;i<55&&g.status==='playing';i++)b.G.update(.04);
+ g.bell=dormantBell();g.p.x=g.signalTargets[0].x;g.p.y=g.signalTargets[0].y;
+ for(let i=0;i<100&&g.status==='playing';i++)b.G.update(.04);
  assert.equal(g.won,true);assert(g.time<g.duration);assert.equal(b.A.state().node,'snowDebrief');
 });
 test('story timeout is failure without mission completion; legacy quick and command training stay independent',()=>{
@@ -159,4 +160,38 @@ test('story timeout is failure without mission completion; legacy quick and comm
  assert.equal(drill.status,'ended');assert.equal(drill.won,true);
  b.G.g=null;const quick=b.G.start('quick');quick.enemies=[];quick.hostile=[];quick.hazards=[];quick.spawn=-1000;quick.nextWave=Infinity;quick.time=quick.duration-.01;b.G.update(.04);
  assert.equal(quick.status,'ended');assert.equal(quick.won,false);
+});
+
+test('archive beams punish standing on the terminal but can be outrun by circling inside the ring',()=>{
+ const b=boot(),g=archive(b);quiet(g);g.enemies=[];g.storyPressure=null;const r=g.recordTarget;
+ // Standing still on the ring: the beams sweep over you, hurt and drain progress.
+ g.p.x=r.x+30;g.p.y=r.y;let hits=0;
+ for(let i=0;i<120;i++){g.p.hp=g.p.maxHp;r.charge=0;b.G.update(.04);hits=Math.max(hits,g.sweep?.hits||0);}
+ assert(hits>=1,'a stationary player is struck by a sweeping beam');
+ // Circling a quarter turn ahead of the beam never touches it and completes the recovery.
+ r.charge=0;g.sweep.hits=0;
+ for(let i=0;i<120&&!r.recovered;i++){const a=g.sweep.angle+Math.PI/2;g.p.x=r.x+Math.cos(a)*30;g.p.y=r.y+Math.sin(a)*30;g.p.hp=g.p.maxHp;b.G.update(.04);}
+ assert.equal(r.recovered,true);assert.equal(g.sweep,null);
+});
+test('snow relay bell strikes the cross then the diagonal, so the safe spot keeps moving',()=>{
+ const b=boot(),g=forSnow(b,'rescue');quiet(g);g.enemies=[];g.storyPressure=null;
+ const r=g.signalTargets[0];g.p.x=r.x+30;g.p.y=r.y+30;b.G.update(.04);
+ assert(g.bell);assert.equal(g.bell.diagonal,false);
+ let n=0;while(g.bell.hits+g.bell.dodged<1){g.p.x=r.x+30;g.p.y=r.y+30;r.charge=0;g.p.hp=g.p.maxHp;b.G.update(.04);assert(++n<200);}
+ assert.equal(g.bell.dodged,1,'a quadrant is safe from the cross');assert.equal(g.bell.diagonal,true);
+ n=0;while(g.bell.hits+g.bell.dodged<2){g.p.x=r.x+30;g.p.y=r.y+30;r.charge=0;g.p.hp=g.p.maxHp;b.G.update(.04);assert(++n<200);}
+ assert.equal(g.bell.hits,1,'the same spot is on the diagonal strike');
+});
+test('archive and snow objectives stay sealed until their swarm is cleared, then the hazard starts',()=>{
+ for(const which of ['archive','snow']){
+  const b=boot(),g=which==='archive'?archive(b):forSnow(b,'rescue');quiet(g);
+  g.script.phase='swarm';g.script.escortClock=0;g.storyPressure=null;
+  const target=which==='archive'?g.recordTarget:g.signalTargets[0];
+  for(let i=0;i<60;i++){g.p.x=target.x;g.p.y=target.y;g.p.hp=g.p.maxHp;tick(b);}
+  assert.equal(target.charge,0,which+' is sealed during the swarm');assert.equal(g.sweep??null,null);assert.equal(g.bell??null,null);
+  toPhase(b,'objective');
+  for(let i=0;i<10;i++){g.p.x=target.x+20;g.p.y=target.y+20;g.p.hp=g.p.maxHp;tick(b);}
+  assert(target.charge>0||target.recovered,which+' charges once unlocked');
+  assert(which==='archive'?g.sweep:g.bell,which+' hazard is active while working the objective');
+ }
 });

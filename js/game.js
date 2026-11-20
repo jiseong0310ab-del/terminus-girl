@@ -58,7 +58,8 @@
             ? '이야기 진행과 보상은 변경되지 않습니다. 덱을 조정해 다시 연습할 수 있습니다.'
             : '지휘를 열어 카드를 사용하세요. 마레가 피해를 막으면 파동·절단·반격을 연계할 수 있습니다.'
         };
-      if (run.script && MISSIONS[run.storyBattle] && !ended) {
+      const sealedObjective = run.script && MISSIONS[run.storyBattle]?.objective && run.script.phase !== 'swarm';
+      if (run.script && MISSIONS[run.storyBattle] && !ended && !sealedObjective) {
         const s = run.script,
           cfg = MISSIONS[run.storyBattle],
           gate = run.storyGate,
@@ -73,6 +74,16 @@
         };
         const escort = run.storyBattle === 'escort',
           kills = Math.min(s.kills, cfg.swarm.goal) + '/' + cfg.swarm.goal;
+        if (s.phase === 'swarm' && cfg.objective)
+          return {
+            ...base,
+            title:
+              (run.storyBattle === 'archive' ? '기록 보관실 잔향 ' : '설원 습격 · 늑대와 승객 ') + kills,
+            detail:
+              run.storyBattle === 'archive'
+                ? '기록장치가 잠겨 있습니다. 붉은 원에서 나타나는 잔향을 물리치면 장치가 열립니다.'
+                : '중계기가 얼어붙어 있습니다. 습격을 물리치면 중계기가 열립니다. 늑대는 돌진, 승객은 사격합니다.'
+          };
         if (s.phase === 'swarm')
           return {
             ...base,
@@ -243,7 +254,7 @@
               : '기록을 확보하지 못했습니다. 이 임무를 다시 시작할 수 있습니다.'
             : recovered
               ? '기록을 확보했습니다. 제한시간까지 살아남으세요.'
-              : '기록장치 신호기를 찾아 반경 55 안에서 1.25초 서 있으세요. 멀어지면 회수 진도가 감소합니다.'
+              : '기록장치 원 안에서 3초 회수하세요. 둘레를 도는 붉은 광선에 맞으면 피해를 입고 진도가 줄어듭니다.'
         };
       }
       return {
@@ -575,7 +586,7 @@
       }));
     g.recordTarget =
       !training && spec.battleId === 'archive'
-        ? { x: g.p.x + 125, y: g.p.y - 75, r: 55, charge: 0, needed: 1.25, recovered: false }
+        ? { x: g.p.x + 125, y: g.p.y - 75, r: 55, charge: 0, needed: RECORD_TIME, recovered: false }
         : null;
     g.storyGate = null;
     g.script = null;
@@ -609,14 +620,15 @@
       !training && spec.battleId === 'snowMission'
         ? (g.route === 'rescue'
             ? [
-                { x: g.p.x + 120, y: g.p.y - 90, r: 52, needed: aster ? 1.0 : 1.25, name: '구조 중계기 A' },
-                { x: g.p.x - 130, y: g.p.y + 75, r: 52, needed: aster ? 1.0 : 1.25, name: '구조 중계기 B' }
+                { x: g.p.x + 120, y: g.p.y - 90, r: 52, needed: aster ? 1.8 : 2.2, name: '구조 중계기 A' },
+                { x: g.p.x - 130, y: g.p.y + 75, r: 52, needed: aster ? 1.8 : 2.2, name: '구조 중계기 B' }
               ]
-            : [{ x: g.p.x + 125, y: g.p.y - 75, r: 52, needed: aster ? 1.65 : 2.0, name: '봉인된 명부' }]
+            : [{ x: g.p.x + 125, y: g.p.y - 75, r: 52, needed: aster ? 2.9 : 3.5, name: '봉인된 명부' }]
           ).map(a => ({ ...a, charge: 0, recovered: false }))
         : [];
     if (vela) g.p.hp = Math.min(g.p.maxHp, g.p.hp + 25);
     g.snowSignalHelp = noa;
+    if (!training && spec.battleId === 'snowMission') g.script = missionScript('snowMission');
     g.patient =
       !training && spec.battleId === 'velaEscort'
         ? {
@@ -1306,9 +1318,9 @@
             tune: { windupTime: 1, chargeTime: 0.7, recoverWait: 1.1, lead: 0.55, chargeRange: 200 }
           }
         ],
-        escortEvery: 5,
         notice: '회선 수호자 출현 · 붉은 돌진선을 옆으로 피하거나 대시로 통과'
       },
+      escort: { every: 5, kinds: ['ghost', 'ghost'] },
       siege: { kind: 'ring', radius: 170, trickle: 1.2, houndChance: 0.15 },
       siegeNotice: '스위치 작동 시작 · 잔향이 몰려옵니다 · 원 안에서 버티세요'
     },
@@ -1336,12 +1348,55 @@
           { type: 'witch', at: [-70, -55], hp: 160, label: '사격 잔향', tune: { volley: 7, spread: 0.15, shotSpeed: 175, holdRange: 120, recoverWait: 1.4 } },
           { type: 'witch', at: [70, 55], hp: 160, label: '사격 잔향', tune: { volley: 7, spread: 0.15, shotSpeed: 175, holdRange: 120, recoverWait: 1.4 } }
         ],
-        escortEvery: 4.5,
-        escortKinds: ['ghost', 'hound'],
         notice: '사격 잔향 출현 · 부채꼴 사격은 마레가 한 번 막아 줍니다 · 막은 직후 반격하세요'
       },
+      escort: { every: 4.5, kinds: ['ghost', 'hound'] },
       siege: { kind: 'chase', radius: 165, trickle: 1.1, houndChance: 0.25 },
       siegeNotice: '열차 문 개방 중 · 뒤쪽에서 추격 무리가 옵니다 · 문 앞에서 버티세요'
+    },
+    // Objective missions: the swarm guards a locked objective; clearing it unlocks the
+    // terminal / relays, which carry their own hazard (beams / bell) while you work them.
+    archive: {
+      gate: [-195, 90],
+      radius: 62,
+      hold: 2,
+      decay: 0.3,
+      firstXp: null,
+      telegraph: 0.9,
+      ghostSpeed: 1.25,
+      houndHp: 52,
+      swarm: {
+        goal: 7,
+        forceAt: 16,
+        packs: [
+          { kinds: ['ghost', 'ghost', 'hound'] },
+          { kinds: ['ghost', 'ghost', 'ghost', 'ghost'], pincer: true },
+          { kinds: ['hound', 'ghost', 'ghost', 'hound'], pincer: true }
+        ]
+      },
+      objective: 'record',
+      objectiveNotice: '기록장치 개방 · 원 안에서 회전 광선을 피하며 3초 회수',
+      escort: { every: 5, kinds: ['ghost', 'hound'] },
+      siege: { kind: 'chase', radius: 170, trickle: 1.2, houndChance: 0.25 },
+      siegeNotice: '기록을 노리는 추격 무리 · 열차 문 앞에서 버티세요'
+    },
+    snowMission: {
+      gate: null,
+      telegraph: 0.9,
+      ghostSpeed: 1.2,
+      houndHp: 60,
+      swarm: {
+        goal: 7,
+        forceAt: 16,
+        packs: [
+          { kinds: ['wolf', 'passenger', 'wolf'] },
+          { kinds: ['passenger', 'wolf', 'wolf', 'passenger'], pincer: true },
+          { kinds: ['wolf', 'wolf', 'wolf'], pincer: false }
+        ]
+      },
+      objective: 'relays',
+      objectiveNotice: '중계기 개방 · 종소리 십자선을 피해 사분면에서 안정화하세요',
+      escort: { every: 4.5, kinds: ['wolf', 'passenger'] }
     }
   };
   G.MISSIONS = MISSIONS;
@@ -1398,8 +1453,8 @@
     const e = G.enemy(point.type, point.x, point.y);
     e.script = point.role;
     if (point.type === 'ghost') e.speed *= cfg.ghostSpeed;
-    // Hounds live long enough to show (and use) their telegraphed charge.
-    if (point.type === 'hound') {
+    // Chargers live long enough to show (and use) their telegraphed charge.
+    if ((point.type === 'hound' || point.type === 'wolf') && point.role !== 'guardian') {
       e.hp = e.maxHp = cfg.houndHp;
       e.windupTime = 0.95;
       e.wait = 0.4;
@@ -1434,7 +1489,12 @@
       g.enemies.filter(e => e.script === role).length + s.pending.filter(p => p.role === role).length;
     if (s.phase === 'swarm') {
       s.packClock += dt;
-      if (s.kills >= cfg.swarm.goal || g.time >= cfg.swarm.forceAt) {
+      if ((s.kills >= cfg.swarm.goal || g.time >= cfg.swarm.forceAt) && !cfg.guardians) {
+        // Objective missions: the cleared swarm unlocks the terminal / relays.
+        s.phase = 'objective';
+        s.escortClock = 0;
+        G.notify(cfg.objectiveNotice);
+      } else if (s.kills >= cfg.swarm.goal || g.time >= cfg.swarm.forceAt) {
         s.phase = 'guardian';
         s.escortClock = 0;
         cfg.guardians.list.forEach((def, index) =>
@@ -1450,13 +1510,15 @@
         );
         G.notify(cfg.guardians.notice);
       } else if (s.packClock >= 4 || (s.packClock >= 0.8 && alive('swarm') <= 1)) queuePack(g, s, cfg);
-    } else if (s.phase === 'guardian') {
+    } else if (s.phase === 'guardian' || s.phase === 'objective') {
       s.escortClock += dt;
-      if (s.escortClock >= cfg.guardians.escortEvery && alive('swarm') < 4) {
+      // Noa's signal work in the snow mission spaces out the pressure while relays charge.
+      const every = cfg.escort.every * (g.storyBattle === 'snowMission' && g.snowSignalHelp ? 1.25 : 1);
+      if (s.escortClock >= every && alive('swarm') < 4) {
         s.escortClock = 0;
         const { rx, ry } = scriptReach(),
           a = rand(0, TAU);
-        const kinds = cfg.guardians.escortKinds || ['ghost', 'ghost'];
+        const kinds = cfg.escort.kinds;
         kinds.forEach((type, i) =>
           queueScript(
             s,
@@ -2049,14 +2111,102 @@
     G.notify('기억 등불 회수 · 경험치 +' + anchor.xp + ' · 소거 위험 최대 10 감소');
     G.onSound('card');
   }
+  // ── Station hazards for the later story missions ───────────────────────────
+  // Each mission adds one readable, dodgeable threat tied to its objective:
+  //  · archive: two beams rotate around the record terminal while you recover it,
+  //    so you circle inside the ring instead of standing on the terminal.
+  //  · snow relays: a bell strikes in a cross (then a diagonal) centred on the relay,
+  //    so the safe place is a quadrant, never the middle.
+  const RECORD_TIME = 3;
+  const SWEEP = { speed: 1.35, width: 0.36, extra: 45, warmup: 1, damage: 12, drain: 0.6 };
+  const BELL = { idle: 2.6, warning: 1.2, reach: 170, half: 24, damage: 16, drain: 0.5 };
+  G.SWEEP = SWEEP;
+  G.BELL = BELL;
+  function sweepTick(dt) {
+    const g = G.g,
+      r = g.recordTarget;
+    if (g.mode !== 'story' || g.storyTraining || !r || r.recovered || sealed(g)) {
+      g.sweep = null;
+      return;
+    }
+    const d = len(g.p.x - r.x, g.p.y - r.y);
+    if (!g.sweep) {
+      if (d > 170) return;
+      g.sweep = { x: r.x, y: r.y, angle: rand(0, TAU), reach: r.r + SWEEP.extra, warmup: SWEEP.warmup, hits: 0 };
+      G.notify('기록장치 방어 광선 · 원 안에서 붉은 광선을 피해 도세요');
+    }
+    const s = g.sweep;
+    s.angle = (s.angle + SWEEP.speed * dt) % TAU;
+    if (s.warmup > 0) {
+      s.warmup -= dt;
+      return;
+    }
+    if (d > s.reach || g.dash.invulnerable) return;
+    const a = Math.atan2(g.p.y - s.y, g.p.x - s.x);
+    for (const beam of [s.angle, s.angle + Math.PI]) {
+      const diff = Math.abs((((a - beam) % TAU) + TAU * 1.5) % TAU - Math.PI);
+      if (diff >= SWEEP.width / 2) continue;
+      if (G.damage(SWEEP.damage)) {
+        s.hits++;
+        r.charge = Math.max(0, r.charge - SWEEP.drain);
+      }
+      break;
+    }
+  }
+  function bellTick(dt) {
+    const g = G.g;
+    if (g.mode !== 'story' || g.storyTraining || g.storyBattle !== 'snowMission') {
+      g.bell = null;
+      return;
+    }
+    const r = (g.signalTargets || []).find(x => !x.recovered);
+    if (!r || sealed(g)) {
+      g.bell = null;
+      return;
+    }
+    if (!g.bell) {
+      if (len(g.p.x - r.x, g.p.y - r.y) > 160) return;
+      g.bell = { x: r.x, y: r.y, clock: 1.2, warning: 0, diagonal: false, hits: 0, dodged: 0 };
+      G.notify('종소리 예고 · 중계기 십자선 밖 사분면으로 비켜서세요');
+    }
+    const b = g.bell;
+    b.x = r.x;
+    b.y = r.y;
+    if (b.warning > 0) {
+      b.warning = Math.max(0, b.warning - dt);
+      if (b.warning > 0) return;
+      let rx = g.p.x - b.x,
+        ry = g.p.y - b.y;
+      if (b.diagonal) [rx, ry] = [(rx + ry) / Math.SQRT2, (ry - rx) / Math.SQRT2];
+      const struck =
+        len(rx, ry) < BELL.reach && (Math.abs(rx) < BELL.half || Math.abs(ry) < BELL.half) && !g.dash.invulnerable;
+      if (struck && G.damage(BELL.damage)) {
+        b.hits++;
+        r.charge = Math.max(0, r.charge - BELL.drain);
+      } else if (!struck) b.dodged++;
+      ring(b.x, b.y, 70, '#e8789a');
+      b.diagonal = !b.diagonal;
+      b.clock = BELL.idle;
+      return;
+    }
+    b.clock -= dt;
+    if (b.clock <= 0) b.warning = BELL.warning;
+  }
+  // A scripted objective stays sealed while its swarm is still on the platform.
+  const sealed = g => g.script?.phase === 'swarm';
   function recordTick(dt) {
     const g = G.g,
       r = g.recordTarget;
     if (g.mode !== 'story' || g.storyTraining || !r || r.recovered) return;
+    if (sealed(g)) {
+      r.charge = 0;
+      return;
+    }
     const close = len(g.p.x - r.x, g.p.y - r.y) <= r.r;
     r.charge = clamp(r.charge + (close ? dt : -dt * 0.55), 0, r.needed);
     if (r.charge >= r.needed) {
       r.recovered = true;
+      if (g.script) g.script.phase = 'switch';
       ring(r.x, r.y, 76, '#9ae1f5');
       G.notify('기록 확보 · 금빛 열차 문으로 귀환하세요');
       G.onSound('card');
@@ -2094,6 +2244,10 @@
     if (g.mode !== 'story' || g.storyTraining || g.storyBattle !== 'snowMission') return;
     for (const r of g.signalTargets) {
       if (r.recovered) continue;
+      if (sealed(g)) {
+        r.charge = 0;
+        continue;
+      }
       const near = len(g.p.x - r.x, g.p.y - r.y) <= r.r;
       r.charge = clamp(r.charge + (near ? dt : -dt * 0.55), 0, r.needed);
       if (r.charge >= r.needed) {
@@ -2365,6 +2519,10 @@
     snowTargetTick(dt);
     if (g.status !== 'playing') return;
     patientTick(dt);
+    if (g.status !== 'playing') return;
+    sweepTick(dt);
+    if (g.status !== 'playing') return;
+    bellTick(dt);
     if (g.status !== 'playing') return;
     storyPressureTick(dt);
     if (g.status !== 'playing') return;
