@@ -41,8 +41,8 @@ test('visual feedback has mobile-safe boss layout and readable card hints',()=>{
  const css=fs.readFileSync(path.join(ROOT,'style.css'),'utf8');
  const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
  assert.match(css,/\.bossHud\.warning/);
- assert.match(css,/@media \(orientation:landscape\) and \(max-height:500px\)/);
- assert.match(css,/#levelScreen \.carddesc\{font-size:13px/);
+ assert.match(css,/@media \(orientation:\s*landscape\) and \(max-height:\s*500px\)/);
+ assert.match(css,/#levelScreen \.carddesc\s*\{\s*font-size:\s*13px/);
  assert.match(html,/id="bossTrack"[^>]*role="progressbar"/);
  assert.match(html,/class="cardLegend"/);
 });
