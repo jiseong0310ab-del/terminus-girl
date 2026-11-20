@@ -20,7 +20,7 @@ test('old saves add an untouched story while preserving legacy wallet, checkpoin
 });
 
 test('the R1 story reaches two battles, one companion and the train without legacy rewards',()=>{
- const b=boot(),before=legacy(b.S.data),first=approach(b);assert.equal(first.battleId,'approach');assert.deepEqual(plain(first.companions),[]);assert.equal(b.TG.STORY.battles.approach.duration,45);
+ const b=boot(),before=legacy(b.S.data),first=approach(b);assert.equal(first.battleId,'approach');assert.deepEqual(plain(first.companions),[]);assert.equal(b.TG.STORY.battles.approach.duration,60);
  assert(b.A.completeBattle(win(first)));assert.equal(b.A.state().node,'meeting');assert.deepEqual(plain(b.A.state().seen),['departure','arrival']);finishScene(b.A);
  const second=b.A.prepareBattle();assert.equal(second.battleId,'escort');assert.deepEqual(plain(second.companions),['mare']);assert.equal(second.loadout.hp,95);assert.equal(second.loadout.levels.blade,1);assert.equal(b.TG.STORY.battles.escort.duration,75);
  assert(b.A.completeBattle(win(second,{p:{hp:77},totalTime:120})));assert.equal(b.A.state().node,'debrief');finishScene(b.A);assert.equal(b.A.state().node,'rest');assert.equal(b.A.state().completed,true);assert.equal(b.A.prepareBattle(),null);assert.deepEqual(legacy(b.S.data),before);

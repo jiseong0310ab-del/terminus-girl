@@ -10,13 +10,15 @@ function boot(seed=17){
  return {G:c.TG.engine,A:c.TG.story,S:c.TG.store,TG:c.TG};
 }
 function first(b){assert(b.A.begin());let count=0;while(b.TG.STORY.nodes[b.A.state().node].kind==='dialogue'){const s=b.A.state();assert(b.A.advance(s.node,s.line));assert(++count<30);}assert.equal(b.A.state().node,'approach');return b.G.startStory();}
-function empty(g){g.spawn=-1000;g.nextWave=Infinity;g.wave=null;g.waveRestUntil=Infinity;g.enemies=[];g.hostile=[];g.hazards=[];g.aftershocks=[];}
+// Silence every arrival source, including the opening mission's scripted packs.
+function empty(g){g.script=null;g.spawn=-1000;g.nextWave=Infinity;g.wave=null;g.waveRestUntil=Infinity;g.enemies=[];g.hostile=[];g.hazards=[];g.aftershocks=[];}
 function step(G,n){for(let i=0;i<n;i++){if(G.g.status!=='playing')break;G.update(.04)}}
-test('first battle gives accessible shorter exit but still requires guardian defeat',()=>{
+test('first battle shows its locked switch nearby and starts with a telegraphed swarm, not pre-placed guards',()=>{
  const b=boot(),g=first(b),gate=g.storyGate;
  assert.equal(gate.kind,'approach');assert.equal(gate.x-g.p.x,180);assert.equal(gate.y-g.p.y,-70);
- assert.equal(gate.guardIds.length,2);
- assert(gate.guardIds.every(id=>g.enemies.some(e=>e.id===id&&e.hp>=94)));
+ assert.equal(gate.r,70);assert.equal(gate.needed,3.5);
+ assert.equal(gate.guardIds.length,0);assert.equal(g.enemies.length,0);
+ assert.equal(g.script.phase,'swarm');assert.equal(g.xpNeed,6);
  assert.equal(b.G.objective().kind,'mission');
  assert.equal(g.storyPressure.warning,0);
 });
@@ -38,7 +40,8 @@ test('walking out of the warned circle avoids damage, while pausing freezes its 
  assert.equal(g.storyPressure.pulses,1);assert.equal(g.storyPressure.hits,0);assert.equal(g.storyPressure.dodges,1);assert.equal(g.p.hp,hp);
 });
 test('story-only spawn radius is close enough to threaten before the final ten seconds and has a mobile enemy cap',()=>{
- const b=boot(55),g=first(b);empty(g);g.time=8;g.spawn=200;g.waveRestUntil=0;const x=g.p.x,y=g.p.y;
+ // The opening mission is scripted; this checks ambient spawning used by later story missions.
+ const b=boot(55),g=first(b);empty(g);g.script=null;g.time=8;g.spawn=200;g.waveRestUntil=0;const x=g.p.x,y=g.p.y;
  b.G.update(.04);
  assert(g.enemies.length>2);assert(g.enemies.length<=20);
  for(const e of g.enemies){

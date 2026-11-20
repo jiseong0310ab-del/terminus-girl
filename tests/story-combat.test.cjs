@@ -1,6 +1,6 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const ROOT=path.resolve(__dirname,'..');
+const ROOT=path.resolve(__dirname,'..');const {unlockStoryGate}=require('./helpers.cjs');
 function boot(seed={},shared){
  const values=shared||new Map(Object.entries(seed)),storage={fail:false,getItem:key=>values.get(key)||null,setItem(key,value){if(this.fail)throw Error('quota');values.set(key,String(value));}};
  const c={console,Math:Object.create(Math),Date,Set,Map,JSON,Number,String,Object,Array,Boolean,Error,localStorage:storage,addEventListener(){},TG:{}};c.window=c;vm.createContext(c);
@@ -13,7 +13,7 @@ function quiet(g){g.spawn=-1e6;g.nextWave=Infinity;g.eliteCount=2;g.hazardClock=
 function finishBattle(b){
  const g=b.G.g;quiet(g);
  if(g.storyGate){
-  g.storyGate.defeated=[...g.storyGate.guardIds];
+  unlockStoryGate(g);
   if(g.recordTarget)g.recordTarget.recovered=true;
   g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
  }
@@ -29,15 +29,15 @@ function legacy(S){const data=plain(S.data);delete data.story;return JSON.string
 
 test('story entry uses the stored battle contract and refuses bypass or replacing active combat',()=>{
  const b=boot(),{G,A,S}=b;assert.equal(G.startStory(),false);assert.throws(()=>G.start('story'),/지원하지/);
- advanceToBattle(b);const spec=A.prepareBattle(),before=S.export(),g=G.startStory();assert(g);assert.equal(g.id,spec.id);assert.equal(g.mode,'story');assert.equal(g.storyBattle,'approach');assert.equal(g.duration,45);assert.equal(g.mare,null);assert.equal(g.practice,false);assert.equal(S.export(),before);
+ advanceToBattle(b);const spec=A.prepareBattle(),before=S.export(),g=G.startStory();assert(g);assert.equal(g.id,spec.id);assert.equal(g.mode,'story');assert.equal(g.storyBattle,'approach');assert.equal(g.duration,60);assert.equal(g.mare,null);assert.equal(g.practice,false);assert.equal(S.export(),before);
  for(const status of ['playing','paused','cards','camp']){g.status=status;assert.equal(G.startStory(),false);assert.equal(G.g,g);}
 });
 
 test('the first and companion encounters finish upon reaching their objectives, with no manager spawn or legacy clear',()=>{
  const b=atBattle(),{G,S}=b;let g=G.g;const before=legacy(S);
  G.stageClear();assert.equal(g.status,'playing');assert.equal(g.clearedStages,0);
- let goal=G.objective();assert.equal(goal.kind,'mission');assert.match(goal.title,/전원 복구/);assert.doesNotMatch(goal.title,/관리자/);assert.equal(goal.remaining,45);assert.equal(goal.bossIn,0);assert.equal(goal.target,1);
- finishBattle(b);assert(g.time<45);assert.equal(g.bossSpawned,false);assert(!g.enemies.some(e=>e.type==='boss'));assert.equal(g.storySaved,true);assert.equal(g.reason,'objective');assert.equal(g.practice,false);assert.equal(g.reward,0);assert.equal(G.objective().kind,'ended');assert.equal(legacy(S),before);assert.equal(b.A.state().node,'meeting');
+ let goal=G.objective();assert.equal(goal.kind,'mission');assert.match(goal.title,/잔향 습격/);assert.doesNotMatch(goal.title,/관리자/);assert.equal(goal.remaining,60);assert.equal(goal.bossIn,0);assert.equal(goal.target,1);
+ finishBattle(b);assert(g.time<60);assert.equal(g.bossSpawned,false);assert(!g.enemies.some(e=>e.type==='boss'));assert.equal(g.storySaved,true);assert.equal(g.reason,'objective');assert.equal(g.practice,false);assert.equal(g.reward,0);assert.equal(G.objective().kind,'ended');assert.equal(legacy(S),before);assert.equal(b.A.state().node,'meeting');
  assert.equal(advanceToBattle(b),'escort');G.g=null;g=G.startStory();quiet(g);assert(g.mare);assert.equal(g.duration,75);goal=G.objective();assert.match(goal.title,/마레와 귀환/);finishBattle(b);assert(g.time<75);assert.equal(g.bossSpawned,false);assert.equal(g.storySaved,true);assert.equal(b.A.state().node,'debrief');assert.equal(legacy(S),before);
 });
 
@@ -83,7 +83,7 @@ test('death on the completion frame wins over survival and preserves the retry b
 });
 
 test('a failed success save stays on its boundary and can be saved once storage recovers',()=>{
- const b=atBattle(),{G,S,A,storage}=b,g=G.g,before=JSON.stringify(A.state()),old=legacy(S);storage.fail=true;g.storyGate.defeated=[...g.storyGate.guardIds];g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;for(let n=0;n<32;n++)G.update(.04);
+ const b=atBattle(),{G,S,A,storage}=b,g=G.g,before=JSON.stringify(A.state()),old=legacy(S);storage.fail=true;unlockStoryGate(g);g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;for(let n=0;n<90;n++)G.update(.04);
  assert.equal(g.status,'ended');assert.equal(g.won,true);assert.equal(g.storySaved,false);assert.equal(S.status,'memory');assert.equal(JSON.stringify(A.state()),before);assert.equal(legacy(S),old);assert.equal(G.saveStoryResult(),false);storage.fail=false;
  assert(G.saveStoryResult());assert.equal(g.storySaved,true);assert.equal(A.state().node,'meeting');const after=S.export();assert(G.saveStoryResult());assert.equal(S.export(),after);assert.equal(G.finish(true,'again'),false);assert.equal(S.export(),after);
 });
@@ -100,6 +100,7 @@ test('a paused or card-choice story cannot resume against a newer tab snapshot',
 });
 
 test('story survival retains the fixed wave warning and cancels it only near its own finish',()=>{
- const {G}=atBattle(),g=G.g;g.nextWave=25;g.time=24.99;G.update(.04);assert(g.wave);assert.equal(g.wave.points.length,6);assert.match(g.wave.hint,/틈/);assert.equal(g.enemies.length,0);g.time=26.99;g.wave.remaining=.02;G.update(.04);assert.equal(g.wave,null);assert.equal(g.enemies.length,6);assert.equal(g.bossSpawned,false);
- g.time=40;g.wave={points:[],remaining:2};G.update(.04);assert.equal(g.wave,null);assert.equal(g.status,'playing');
+ // The opening mission is scripted; the Mare escort keeps the fixed station wave.
+ const {G}=atBattle('escort'),g=G.g;quiet(g);g.nextWave=25;g.time=24.99;G.update(.04);assert(g.wave);assert.equal(g.wave.points.length,6);assert.match(g.wave.hint,/틈/);assert.equal(g.enemies.length,0);g.time=26.99;g.wave.remaining=.02;G.update(.04);assert.equal(g.wave,null);assert.equal(g.enemies.length,6);assert.equal(g.bossSpawned,false);
+ g.time=70;g.wave={points:[],remaining:2};G.update(.04);assert.equal(g.wave,null);assert.equal(g.status,'playing');
 });

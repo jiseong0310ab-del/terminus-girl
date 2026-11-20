@@ -7,29 +7,24 @@ function choose(g){const priority={blade:100,echo:90,orbit:85,vital:g.p.hp<g.p.m
 function drive(TG,policy){const G=TG.engine,g=G.g,p=g.p,t=g.time;
  if(policy==='idle'){G.input.x=0;G.input.y=0;return;}
  // Story QA must attempt the actual world objective; do not assume surviving the timer is success.
- const gate=g.storyGate;
+ // Only the destination is shared: each policy keeps its own way of moving, dodging and dashing.
+ let goal=null,stop=0;const gate=g.storyGate;
  if(gate){
   const ready=gate.kind==='archive'?g.recordTarget?.recovered===true:gate.guardIds.length>0&&gate.defeated.length===gate.guardIds.length;
-  const target=ready?gate:gate.kind==='archive'?g.recordTarget:g.enemies.find(e=>gate.guardIds.includes(e.id));
-  if(target){
-   const dx=target.x-p.x,dy=target.y-p.y,d=H(dx,dy)||1;
-   const stopping=ready?Math.min(14,gate.r*.22):gate.kind==='archive'?Math.min(17,target.r*.3):108;
-   if(d>stopping){G.input.x=dx/d;G.input.y=dy/d;}else{G.input.x=0;G.input.y=0;}
-   return;
-  }
+  if(ready){goal=gate;stop=Math.min(14,gate.r*.22);}
+  else if(gate.kind==='archive'){goal=g.recordTarget;stop=Math.min(17,goal.r*.3);}
+  else if(policy==='straight'){goal=g.enemies.find(e=>gate.guardIds.includes(e.id));stop=108;}
  }
- if(g.storyBattle==='snowMission'&&g.signalTargets?.length){
-  const target=g.signalTargets.find(r=>!r.recovered);
-  if(target){const d=H(target.x-p.x,target.y-p.y)||1;if(d>15){G.input.x=(target.x-p.x)/d;G.input.y=(target.y-p.y)/d;}else{G.input.x=0;G.input.y=0;}return;}
- }
- if(policy==='straight'){const length=Math.hypot(1,.2);G.input.x=1/length;G.input.y=.2/length;return;}
+ if(!goal&&g.storyBattle==='snowMission'){goal=g.signalTargets?.find(r=>!r.recovered);stop=15;}
  const visible=g.enemies.filter(e=>Math.abs(e.x-p.x)<245&&Math.abs(e.y-p.y)<470),nearest=visible.slice().sort((a,b)=>H(a.x-p.x,a.y-p.y)-H(b.x-p.x,b.y-p.y))[0];
- let x=0,y=0;const nd=nearest?H(nearest.x-p.x,nearest.y-p.y):Infinity;
+ const nd=nearest?H(nearest.x-p.x,nearest.y-p.y):Infinity;
  const drops=g.drops.filter(d=>Math.abs(d.x-p.x)<235&&Math.abs(d.y-p.y)<455).sort((a,b)=>H(a.x-p.x,a.y-p.y)-H(b.x-p.x,b.y-p.y));
- if(policy==='kite'){
+ let x=0,y=0;
+ if(goal){const dx=goal.x-p.x,dy=goal.y-p.y,d=H(dx,dy)||1;if(d>stop){x=dx/d;y=dy/d;}}
+ else if(policy==='straight'){const length=Math.hypot(1,.2);x=1/length;y=.2/length;}
+ else if(policy==='kite'){
   if(drops[0]&&nd>65){const d=drops[0],dist=H(d.x-p.x,d.y-p.y)||1;x=(d.x-p.x)/dist;y=(d.y-p.y)/dist;}
   else {const a=t*.45;x=Math.cos(a)*.65;y=Math.sin(a)*.65;}
-  for(const e of visible){const dx=p.x-e.x,dy=p.y-e.y,d=H(dx,dy)||1;if(d<135){const force=(135-d)/65;x+=dx/d*force;y+=dy/d*force;}}
  }else if(policy==='cautious'){
   if(nd<130){x=(p.x-nearest.x)/(nd||1);y=(p.y-nearest.y)/(nd||1);}
   else if(drops[0]){const d=drops[0],dist=H(d.x-p.x,d.y-p.y)||1;x=(d.x-p.x)/dist;y=(d.y-p.y)/dist;}
@@ -37,10 +32,18 @@ function drive(TG,policy){const G=TG.engine,g=G.g,p=g.p,t=g.time;
   // A simple player changes direction every two seconds and only dashes when crowded.
   const a=Math.floor(t/2)*1.3;x=Math.cos(a)*.65;y=Math.sin(a)*.65;
  }
- let threat=false;for(const b of g.hostile){const dx=p.x-b.x,dy=p.y-b.y,d=H(dx,dy)||1;if(d<85){x+=dx/d*1.5;y+=dy/d*1.5;if(d<50)threat=true;}}
+ // Skilled policies step away from close enemies (inside a goal circle only weakly, to keep holding it).
+ const holding=goal&&H(goal.x-p.x,goal.y-p.y)<(goal.r||40)*.7;
+ if(policy==='kite'||policy==='cautious'){for(const e of visible){const dx=p.x-e.x,dy=p.y-e.y,d=H(dx,dy)||1,reach=goal?60:135;if(d<reach){const force=(reach-d)/65;x+=dx/d*force;y+=dy/d*force;}}}
+ let threat=false;if(policy!=='straight')for(const b of g.hostile){const dx=p.x-b.x,dy=p.y-b.y,d=H(dx,dy)||1;if(d<85){const w=holding?.5:1.5;x+=dx/d*w;y+=dy/d*w;if(d<50)threat=true;}}
+ // Charge telegraphs: skilled policies sidestep the warned line.
+ if(policy==='kite'||policy==='cautious')for(const e of visible)if(e.action==='windup'&&e.behavior==='charge'){const ax=e.aimX,ay=e.aimY,rx=p.x-e.x,ry=p.y-e.y,along=rx*ax+ry*ay,side=rx*-ay+ry*ax;if(along>0&&along<200&&Math.abs(side)<30){const s=side>=0?1:-1;x+=-ay*s*1.6;y+=ax*s*1.6;}}
  const length=H(x,y);G.input.x=length>1?x/length:x;G.input.y=length>1?y/length:y;
- if(policy!=='novice'&&(nd<65||threat||visible.some(e=>e.action==='charge'&&H(e.x-p.x,e.y-p.y)<130)))G.dash();
- else if(policy==='novice'&&nd<35)G.dash();
+ const charging=visible.some(e=>(e.action==='charge'||e.action==='windup'&&e.behavior==='charge')&&H(e.x-p.x,e.y-p.y)<150);
+ if(policy==='novice'){if(nd<35)G.dash();}
+ else if(policy==='straight'){if(nd<40)G.dash();}
+ // While holding an objective circle, skilled policies only dash away from a charge.
+ else if(holding?charging:(nd<65||threat||charging))G.dash();
 }
 function run(seed,policy){const TG=boot(seed),G=TG.engine;dialogues(TG);const results=[];let totalHits=0,healthDamage=0,dashes=0;
  const damage=G.damage;G.damage=amount=>{const hp=G.g.p.hp,result=damage(amount);if(result){totalHits++;healthDamage+=Math.max(0,hp-G.g.p.hp);}return result;};
