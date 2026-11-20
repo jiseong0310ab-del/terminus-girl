@@ -1,4 +1,4 @@
-const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');const {ROOT,unlockStoryGate}=require('./helpers.cjs');
+const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');const {ROOT,unlockStoryGate,openObjective}=require('./helpers.cjs');
 function bootUI(options={}){const els=new Map();const windowEvents={},documentEvents={};const on=(map,type,fn)=>(map[type]??=[]).push(fn);let document;const ctx=new Proxy({createRadialGradient:()=>({addColorStop(){}})},{get:(o,k)=>o[k]||(()=>{})});function el(id){const classes=new Set(),e={id,style:{},dataset:{},attrs:{},children:[],hidden:false,value:'',checked:false,textContent:'',classList:{toggle(n,v){if(v)classes.add(n);else classes.delete(n)},add(n){classes.add(n)},remove(n){classes.delete(n)}},append(...nodes){this.children.push(...nodes)},appendChild(n){this.children.push(n)},replaceChildren(...nodes){this.children=nodes},setAttribute(k,v){this.attrs[k]=v},addEventListener(){},focus(){document.activeElement=this},getContext:()=>ctx,getBoundingClientRect:()=>({left:20,top:600,width:136,height:136}),hasPointerCapture:()=>false,remove(){}};els.set(id,e);return e}for(const m of fs.readFileSync(path.join(ROOT,'index.html'),'utf8').matchAll(/id="([^"]+)"/g))el(m[1]);document={activeElement:null,body:el('body'),hidden:false,getElementById:id=>els.get(id),createElement:tag=>el(Math.random()+tag),createTextNode:s=>({textContent:s}),addEventListener:(t,f)=>on(documentEvents,t,f)};const values=new Map(),c={console,Math,Date,Set,Map,JSON,document,localStorage:{getItem:k=>values.get(k)||null,setItem:(k,v)=>values.set(k,v)},Image:class{constructor(){this.complete=false;this.naturalWidth=0}},navigator:options.navigator||{},isSecureContext:!!options.navigator?.serviceWorker,Date:options.Date||Date,innerWidth:390,innerHeight:844,devicePixelRatio:1,requestAnimationFrame:()=>1,setInterval:()=>1,setTimeout:()=>1,addEventListener:(t,f)=>on(windowEvents,t,f),performance:{now:()=>0}};c.window=c;c.TG={};vm.createContext(c);for(const file of ['data','commands','story','store','audio','game','render','input','ui'])vm.runInContext(fs.readFileSync(path.join(ROOT,'js',file+'.js'),'utf8'),c,{filename:file+'.js'});return{c,TG:c.TG,$:id=>els.get(id),fireWindow:(type,event={})=>(windowEvents[type]||[]).forEach(fn=>fn(event)),fireDocument:type=>(documentEvents[type]||[]).forEach(fn=>fn({}))}}
 test('real UI module initializes and routes every gameplay screen without missing bindings',()=>{const{TG,$}=bootUI();assert.equal(TG.ui.screen,'menu');$('enterHub').onclick();assert.equal(TG.ui.screen,'hub');$('chapterStart').onclick();assert.equal(TG.ui.screen,'playing');assert.equal($('hud').style.display,'block');$('pauseBtn').onclick();assert.equal(TG.ui.screen,'paused');$('pauseSettings').onclick();assert.equal(TG.ui.screen,'settings');$('settingsBack').onclick();assert.equal(TG.ui.screen,'paused');$('resumeBtn').onclick();TG.engine.g.xp=99;TG.engine.checkLevel();assert.equal(TG.ui.screen,'cards');assert($('cardList').children.length>0);while(TG.engine.g.status==='cards')$('cardList').children[0].onclick();TG.engine.stageClear();assert.equal(TG.ui.screen,'camp');$('eventChoices').children[0].onclick();assert.equal($('nextStage').disabled,true);$('bossRewardList').children[2].onclick();assert.equal($('nextStage').disabled,false);$('campHub').onclick();assert.equal(TG.ui.screen,'hub');$('continueRun').onclick();assert.equal(TG.ui.screen,'camp');$('nextStage').onclick();assert.equal(TG.engine.g.stage,1);while(TG.engine.g.status==='cards')$('cardList').children[0].onclick();TG.engine.finish(false,'retreat');assert.equal(TG.ui.screen,'ended');assert($('endTitle').textContent);$('backBtn').onclick();$('openArchive').onclick();assert.equal($('memoryList').children.length,6);$('archiveBack').onclick();$('hubSettings').onclick();$('bgmVolume').value=0;$('bgmVolume').oninput();assert.equal(TG.store.data.settings.bgm,0);TG.ui.show('menu');$('menuAbout').onclick();assert.equal(TG.ui.screen,'about')});
 module.exports={bootUI};
@@ -41,8 +41,8 @@ test('visual feedback has mobile-safe boss layout and readable card hints',()=>{
  const css=fs.readFileSync(path.join(ROOT,'style.css'),'utf8');
  const html=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
  assert.match(css,/\.bossHud\.warning/);
- assert.match(css,/@media \(orientation:landscape\) and \(max-height:500px\)/);
- assert.match(css,/#levelScreen \.carddesc\{font-size:13px/);
+ assert.match(css,/@media \(orientation:\s*landscape\) and \(max-height:\s*500px\)/);
+ assert.match(css,/#levelScreen \.carddesc\s*\{\s*font-size:\s*13px/);
  assert.match(html,/id="bossTrack"[^>]*role="progressbar"/);
  assert.match(html,/class="cardLegend"/);
 });
@@ -255,7 +255,7 @@ test('story UI plays prologue, solo encounter, Mare recruitment, protection and 
  storyToBattle(TG,$);assert.equal($('timerCaption').textContent,'임무 제한시간');assert.match($('goalLabel').textContent,/잔향 습격/);assert.doesNotMatch($('phaseLabel').textContent,/연습/);assert.equal($('partyHud').hidden,true);
  storyWin(TG);assert.equal($('resultJournal').hidden,true);assert.equal($('retryBtn').hidden,true);assert.match($('backBtn').textContent,/이야기 계속/);$('backBtn').onclick();assert.equal(TG.story.state().node,'meeting');
  const g=storyToBattle(TG,$);assert(g.mare);assert.equal($('partyHud').hidden,false);assert.match($('partyStatus').textContent,/보호 준비/);TG.engine.damage(20);TG.ui.refreshHud();assert.match($('partyStatus').textContent,/12.0초/);$('pauseBtn').onclick();assert.match($('pauseParty').textContent,/마레/);assert.match($('quitBtn').textContent,/이야기 중단/);assert.match($('pauseBoundaryNote').textContent,/현재 전투 시작/);assert.match($('pauseObjective').textContent,/임무 완료/);$('resumeBtn').onclick();
- storyWin(TG);assert.match($('resultProgress').textContent,/보호 1회/);$('backBtn').onclick();while(TG.story.state().node!=='rest')$('storyAction').onclick();assert.equal(TG.story.state().completed,true);assert.match($('storyPosition').textContent,/지휘 덱/);assert($('storyLog').children.length>10);$('storyAction').onclick();assert.equal(TG.ui.screen,'hub');assert.match($('hubStory').textContent,/후일담/);assert.equal(TG.store.data.stats.runs,0);assert.equal(TG.store.data.wallet,0);
+ storyWin(TG);assert.match($('resultProgress').textContent,/보호 1회/);$('backBtn').onclick();while(TG.story.state().node!=='rest')$('storyAction').onclick();assert.equal(TG.story.state().completed,true);assert.match($('storyPosition').textContent,/지휘 덱/);assert($('storyLog').children.length>10);$('storyAction').onclick();assert.equal(TG.ui.screen,'hub');assert.match($('hubStory').attrs['aria-label'],/후일담/);assert.equal(TG.store.data.stats.runs,0);assert.equal(TG.store.data.wallet,0);
 });
 test('story defeat retries its battle and leaves a coexisting legacy checkpoint alone',()=>{
  const {TG,$}=bootUI();$('enterHub').onclick();$('chapterStart').onclick();TG.store.snapshot(TG.engine.g);const cp=JSON.stringify(TG.store.data.checkpoint);TG.engine.g=null;TG.ui.show('hub');$('hubStory').onclick();const g=storyToBattle(TG,$),id=g.id;
@@ -374,13 +374,13 @@ test('R3 choice UI follows a recovered archive mission and shows persistent cons
  while(TG.story.state().node!=='rest')$('storyAction').onclick();
  assert.equal($('storyNextMission').hidden,false);
  $('storyNextMission').onclick();assert.equal(TG.story.state().node,'briefing');
- const g=storyToBattle(TG,$);assert.equal(g.storyBattle,'archive');assert(g.recordTarget);
+ const g=storyToBattle(TG,$);assert.equal(g.storyBattle,'archive');assert(g.recordTarget);openObjective(g);
  g.enemies=[];g.hostile=[];g.hazards=[];g.spawn=-100;g.nextWave=Infinity;
- g.p.x=g.recordTarget.x;g.p.y=g.recordTarget.y;
- for(let k=0;k<32;k++)TG.engine.update(.04);
+ g.p.x=g.recordTarget.x;g.p.y=g.recordTarget.y;g.sweep={angle:0,reach:0,warmup:Infinity,hits:0};
+ for(let k=0;k<80;k++)TG.engine.update(.04);
  assert.equal(g.recordTarget.recovered,true);
  g.p.x=g.storyGate.x;g.p.y=g.storyGate.y;
- for(let k=0;k<21&&g.status==='playing';k++)TG.engine.update(.04);
+ for(let k=0;k<70&&g.status==='playing';k++){g.p.hp=g.p.maxHp;TG.engine.update(.04);}
  assert.equal(g.won,true);assert.equal(g.storySaved,true);
  $('backBtn').onclick();
  while(TG.story.state().node!=='decision')$('storyAction').onclick();
@@ -493,4 +493,16 @@ test('tactical command UI visibly marks eligible cross-owner combo cards without
  const rize=cards.find(c=>c.attrs['aria-label']?.includes('남겨진 등불'));
  assert(rize);assert(!rize.children[1].children.some(x=>x.className==='teamComboBadge'));
  $('commandsClose').onclick();assert.equal(JSON.stringify(g),before);
+});
+
+test('combat card tray mirrors the hand and casts on tap without leaving the battle screen',()=>{
+ const {TG,$}=bootUI();$('menuStory').onclick();const g=storyToBattle(TG,$);
+ TG.ui.refreshHud();const tray=$('quickHand');assert.equal(tray.hidden,false);
+ assert.equal(tray.children.length,g.commands.hand.length);
+ // Fix the hand so the test never depends on the shuffled deck or nearby enemies.
+ const c=g.commands,keep=['shared_heal','rize_pulse','rize_flame'];c.draw=c.deck.filter(id=>!keep.includes(id));c.discard=[];c.hand=keep;c.energy=3;
+ g.p.hp=40;const slot=g.commands.hand.findIndex(id=>TG.engine.commandInfo(id).enabled);
+ assert(slot>=0);const energy=g.commands.energy,cost=TG.COMMANDS.find(c=>c.id===g.commands.hand[slot]).cost;
+ tray.dataset.key='';TG.ui.refreshHud();tray.children[slot].onclick();
+ assert.equal(TG.ui.screen,'playing');assert.equal(g.status,'playing');assert.equal(g.commands.energy,energy-cost);
 });

@@ -1,4 +1,5 @@
 'use strict';
+const {openObjective}=require('./helpers.cjs');
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const ROOT=path.resolve(__dirname,'..'),plain=x=>JSON.parse(JSON.stringify(x)),KEY='terminusSaveV1';
 function boot(existing){
@@ -31,24 +32,25 @@ test('v3 R3 chain starts after R1 rest and preserves companion selection and voi
  dialog(b.A);dialog(b.A);assert.equal(b.A.state().node,'archive');assert.equal(b.A.prepareBattle().commandDeck.length,10);
  assert.deepEqual((()=>{const v=plain(b.S.data);delete v.story;return v;})(),legacy);
 });
-test('archive objective requires in-world 1.25s retrieval and does not reward idle survival',()=>{
+test('archive objective requires in-world 3s retrieval and does not reward idle survival',()=>{
  const b=boot(),spec=archiveBoundary(b),initial=b.S.export(),g=b.G.startStory();
- assert(g.recordTarget);assert.equal(g.recordTarget.needed,1.25);assert.equal(g.duration,95);
+ assert(g.recordTarget);assert.equal(g.recordTarget.needed,3);assert.equal(g.duration,95);
+ assert.match(b.G.objective().title,/잔향/);assert.equal(g.recordTarget.charge,0);openObjective(g);
  assert.match(b.G.objective().title,/회수/);
- const checkpoint=plain(g.recordTarget);
+ openObjective(g);const checkpoint=plain(g.recordTarget);g.sweep={angle:0,reach:0,warmup:Infinity,hits:0};
  g.spawn=-1000;g.nextWave=Infinity;g.hazardClock=-1000;g.lastFire=-1000;
  g.time=g.duration-.01;b.G.update(.04);
  assert.equal(g.status,'ended');assert.equal(g.won,false);assert.equal(g.reason,'timeout');
  assert.equal(b.A.state().node,'archive');assert.equal(b.A.state().recordRecovered,false);assert.equal(b.S.export(),initial);
- b.G.g=null;const retry=b.G.startStory();
+ b.G.g=null;const retry=openObjective(b.G.startStory());
  assert.equal(retry.id,spec.id);assert.deepEqual(plain(retry.recordTarget),checkpoint);
  retry.spawn=-1000;retry.nextWave=Infinity;retry.hazardClock=-1000;retry.lastFire=-1000;
- retry.p.x=retry.recordTarget.x;retry.p.y=retry.recordTarget.y;
- for(let n=0;n<32;n++)b.G.update(.04);
+ retry.p.x=retry.recordTarget.x;retry.p.y=retry.recordTarget.y;retry.sweep={angle:0,reach:0,warmup:Infinity,hits:0};
+ for(let n=0;n<80;n++)b.G.update(.04);
  assert.equal(retry.recordTarget.recovered,true);
  assert.equal(b.G.objective().cleared,0);assert.match(b.G.objective().title,/열차 문/);
  retry.p.x=retry.storyGate.x;retry.p.y=retry.storyGate.y;
- for(let n=0;n<21;n++)b.G.update(.04);
+ for(let n=0;n<70&&retry.status==='playing';n++){retry.p.hp=retry.p.maxHp;b.G.update(.04);}
  assert(retry.time<retry.duration);
  assert.equal(retry.storyGate.done,true);
  assert.equal(retry.status,'ended');assert.equal(retry.won,true);assert.equal(retry.storySaved,true);
