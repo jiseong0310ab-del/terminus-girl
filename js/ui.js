@@ -1927,7 +1927,7 @@
   addEventListener('resize', TG.view.resize);
   window.visualViewport?.addEventListener?.('resize', TG.view.resize);
   TG.audio.scene('hub');
-  text('buildVersion', TG.VERSION + ' · 파티 지휘 덱 / 생존 탐험');
+  text('buildVersion', 'v' + TG.VERSION);
   U.show('menu');
   function loop(now) {
     const delta = last ? Math.min(0.04, (now - last) / 1000) : 0;

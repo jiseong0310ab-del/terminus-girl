@@ -1,5 +1,5 @@
 'use strict';
-const CACHE = 'terminus-v0260-opening1';
+const CACHE = 'terminus-v0270-arcs1';
 const ROOT = new URL('./', self.location.href);
 const FILES = [
   'index.html',
