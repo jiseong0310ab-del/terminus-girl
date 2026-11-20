@@ -499,6 +499,8 @@ test('combat card tray mirrors the hand and casts on tap without leaving the bat
  const {TG,$}=bootUI();$('menuStory').onclick();const g=storyToBattle(TG,$);
  TG.ui.refreshHud();const tray=$('quickHand');assert.equal(tray.hidden,false);
  assert.equal(tray.children.length,g.commands.hand.length);
+ // Fix the hand so the test never depends on the shuffled deck or nearby enemies.
+ const c=g.commands,keep=['shared_heal','rize_pulse','rize_flame'];c.draw=c.deck.filter(id=>!keep.includes(id));c.discard=[];c.hand=keep;c.energy=3;
  g.p.hp=40;const slot=g.commands.hand.findIndex(id=>TG.engine.commandInfo(id).enabled);
  assert(slot>=0);const energy=g.commands.energy,cost=TG.COMMANDS.find(c=>c.id===g.commands.hand[slot]).cost;
  tray.dataset.key='';TG.ui.refreshHud();tray.children[slot].onclick();
