@@ -182,3 +182,31 @@ test('training drills telegraph varied threats, freeze in commands, skip occupie
  g.enemies=[];g.waveRestUntil=0;g.time=g.nextWave;b.G.update(0);assert.match(g.wave.name,/사격과 추격/);assert.equal(g.wave.points.filter(p=>p.type==='lost').length,3);g.wave.remaining=0;b.G.update(0);g.enemies=[];g.time=g.nextWave;b.G.update(0);assert.match(g.wave.name,/방패 뒤/);assert(g.wave.points.some(p=>p.type==='warden'));
  while(g.enemies.length<64)b.G.enemy('ghost',-1000,-1000);g.wave.remaining=0;b.G.update(0);assert.equal(g.enemies.length,65);g.enemies=[];g.time=g.duration-5;g.nextWave=g.time;b.G.update(0);assert.equal(g.wave,null);
 });
+
+test('quick cast from the combat tray spends one card without stopping time or releasing the joystick',()=>{
+ const b=battle();const g=b.G.g;g.script=null;quiet(g);
+ const ids=b.D.preset('protect',['mare']);g.commands=b.D.create(ids,77);g.commands.hand=['shared_heal','rize_pulse','mare_guard'];
+ g.commands.draw=ids.filter(id=>!g.commands.hand.includes(id));g.commands.discard=[];g.commands.energy=3;g.p.hp=50;
+ const seen=[],route=b.G.onChange;b.G.onChange=state=>seen.push(state);
+ assert.equal(b.G.quickCast('shared_heal'),true);
+ assert.equal(g.status,'playing');assert.equal(g.p.hp,68);assert.equal(g.commands.energy,2);assert.equal(g.commands.quick,1);
+ assert(!g.commands.hand.includes('shared_heal'));partition(g.commands);
+ assert(!seen.includes('playing'),'quick cast must not route back to the playing screen (that resets input)');
+ // Unusable or out-of-state casts are refused without spending anything.
+ assert.equal(b.G.quickCast('rize_pulse'),false);assert.equal(g.commands.energy,2);
+ g.status='paused';assert.equal(b.G.quickCast('mare_guard'),false);g.status='playing';
+ b.G.onChange=route;
+});
+
+test('a card that stays unusable for six seconds is swapped, while energy waits and the counter card never cycle',()=>{
+ const b=battle();const g=b.G.g;g.script=null;quiet(g);g.storyPressure=null;
+ const ids=b.D.preset('protect',['mare']);g.commands=b.D.create(ids,91);g.commands.hand=['shared_heal','mare_counter','rize_pulse'];
+ g.commands.draw=ids.filter(id=>!g.commands.hand.includes(id));g.commands.discard=[];g.commands.energy=3;g.p.hp=g.p.maxHp;
+ for(let i=0;i<170;i++){g.p.hp=g.p.maxHp;g.enemies=[];b.G.update(.04);}
+ assert(!g.commands.hand.includes('shared_heal'),'full-HP heal was swapped');assert.equal(g.commands.hand[1],'mare_counter');
+ assert(g.commands.cycled>=1);assert.equal(g.commands.casts,0);partition(g.commands);
+ // With no energy, nothing is "dead": the hand waits for regeneration.
+ const before=[...g.commands.hand];g.commands.energy=0;g.commands.regen=-1000;
+ for(let i=0;i<200;i++){g.p.hp=g.p.maxHp;g.enemies=[];b.G.update(.04);}
+ assert.deepEqual([...g.commands.hand],before);
+});

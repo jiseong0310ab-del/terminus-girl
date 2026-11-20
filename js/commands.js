@@ -216,6 +216,22 @@
     runtime.token++;
     return true;
   };
+  // Swap one hand slot for the next draw without spending energy or counting a cast.
+  D.cycle = function (runtime, slot) {
+    if (!runtime?.hand || !Number.isInteger(slot) || slot < 0 || slot >= runtime.hand.length) return false;
+    const old = runtime.hand[slot];
+    if (!runtime.draw.length) {
+      if (!runtime.discard.length) return false;
+      runtime.draw = shuffle(runtime.discard, runtime);
+      runtime.discard = [];
+    }
+    // Draw first, then discard, so the swapped card is never redrawn immediately.
+    runtime.hand[slot] = runtime.draw.pop();
+    runtime.discard.push(old);
+    runtime.cycled = (runtime.cycled || 0) + 1;
+    runtime.token++;
+    return true;
+  };
   D.tick = function (runtime, dt) {
     if (!runtime || !Number.isFinite(dt) || dt <= 0) return;
     if (runtime.energy >= 3) {

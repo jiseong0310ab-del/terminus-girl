@@ -77,6 +77,8 @@
     $('bossHud').hidden = !playing;
     $('partyHud').hidden = !playing || !(G.g?.mare || G.g?.allies?.length);
     $('commandBtn').hidden = !playing || !G.g?.commands;
+    $('quickHand').hidden = !playing || !G.g?.commands;
+    $('quickHand').dataset.key = '';
     $('guide').classList.toggle('commandGuide', !!G.g?.commands);
     $('pauseBtn').style.display = playing ? 'block' : 'none';
     $('controls').style.display = playing ? 'block' : 'none';
@@ -753,6 +755,61 @@
       list.appendChild(b);
     }
   }
+  // In-combat card tray: one tap casts without stopping time. Rebuilt only when the hand,
+  // energy, usability or combo highlight changes, never every frame.
+  const quickOwnerColor = {
+    rize: '#d9c08a',
+    shared: '#a9b4c4',
+    mare: '#9ccedb',
+    aster: '#d6b77d',
+    noa: '#8bc4b6',
+    vela: '#d6a8c5',
+    iris: '#abc8ee',
+    crow: '#c9a0b3'
+  };
+  function renderQuickHand(g) {
+    const box = $('quickHand');
+    if (!g?.commands || box.hidden) return;
+    const c = g.commands,
+      infos = c.hand.map(id => G.commandInfo(id)),
+      team = g.teamwork,
+      comboOwner = team && team.window > 0 && team.cooldown <= 0 ? team.owner : '';
+    const key =
+      c.token + '|' + c.energy + '|' + infos.map(info => (info.enabled ? 1 : 0)).join('') + '|' + comboOwner;
+    if (box.dataset.key === key) return;
+    box.dataset.key = key;
+    box.replaceChildren();
+    c.hand.forEach((id, slot) => {
+      const info = infos[slot],
+        card = info.card;
+      if (!card) return;
+      const b = document.createElement('button'),
+        cost = document.createElement('span'),
+        name = document.createElement('span');
+      b.type = 'button';
+      b.className =
+        'quickCard' +
+        (info.enabled ? '' : ' off') +
+        (info.enabled && comboOwner && comboOwner !== card.owner ? ' combo' : '');
+      b.style.borderLeftColor = quickOwnerColor[card.owner] || '#a9b4c4';
+      b.setAttribute('aria-disabled', info.enabled ? 'false' : 'true');
+      b.setAttribute(
+        'aria-label',
+        card.name + ' · 지휘력 ' + card.cost + (info.enabled ? ' · 탭하면 즉시 사용' : ' · ' + info.reason)
+      );
+      cost.className = 'qcCost';
+      cost.textContent = card.cost;
+      name.className = 'qcName';
+      name.textContent = card.name;
+      b.append(cost, name);
+      b.onclick = () => {
+        TG.audio.unlock();
+        if (!G.quickCast(id)) G.notify(G.commandInfo(id).reason || '지금은 사용할 수 없습니다.');
+        box.dataset.key = '';
+      };
+      box.appendChild(b);
+    });
+  }
   function renderCommands() {
     const g = G.g;
     if (!g?.commands) return;
@@ -1258,15 +1315,13 @@
     if (g.mode === 'story') {
       if (g.teamwork?.window > 0 && g.teamwork.cooldown <= 0)
         return (
-          '합동기 기회 ' + g.teamwork.window.toFixed(1) + '초 · 지휘를 열어 다른 캐릭터의 카드를 사용하세요'
+          '합동기 기회 ' + g.teamwork.window.toFixed(1) + '초 · 다른 캐릭터의 카드(금빛 테두리)를 바로 사용하세요'
         );
       if (g.commandEffects?.guardWindow > 0)
-        return '보호 연계 준비 · 지휘를 열어 파동·절단을 강화하거나 반격하세요';
+        return '보호 연계 준비 · 지금 반격·파동·절단 카드를 쓰면 더 강합니다';
       if (g.commands?.casts === 0 && g.time >= 10 && g.time < 24)
         return (
-          '오른쪽 지휘 버튼 · 시간이 멈추면 손패 ' +
-          g.commands.hand.length +
-          '장 중 선택 · 지휘력은 전투 중 회복'
+          '오른쪽 카드를 탭하면 바로 사용 · 지휘 버튼은 시간을 멈추고 설명 보기 · 지휘력은 전투 중 회복'
         );
       if (g.time < 10)
         return g.mare
@@ -1703,6 +1758,7 @@
       );
     }
     if (g.commands) {
+      renderQuickHand(g);
       text('commandEnergy', g.commands.energy + ' / 3');
       $('commandBtn').setAttribute('aria-label', '전술 지휘 · 지휘력 ' + g.commands.energy + ' / 3');
     }

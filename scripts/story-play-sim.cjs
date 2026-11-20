@@ -73,7 +73,39 @@ function choose(g) {
   };
   return [...g.offered].sort((a, b) => (priority[b] || 0) - (priority[a] || 0))[0];
 }
-function drive(TG, policy) {
+// Card use for the 'tactician' policy: kite movement plus the in-combat quick tray.
+// Priorities mirror what a careful player reaches for; nothing here edits the deck.
+function useCards(TG) {
+  const G = TG.engine,
+    g = G.g,
+    p = g.p;
+  if (!g.commands || g.status !== 'playing' || typeof G.quickCast !== 'function') return;
+  const near = r => g.enemies.filter(e => H(e.x - p.x, e.y - p.y) <= r).length,
+    strong = g.enemies.some(e => (e.elite || e.label) && H(e.x - p.x, e.y - p.y) <= 450),
+    combo = g.commandEffects?.guardWindow > 0,
+    drops = g.drops.filter(d => H(d.x - p.x, d.y - p.y) <= 300).length;
+  const priority = {
+    mare_counter: combo ? 120 : 0,
+    rize_pulse: combo ? 115 : near(155) > 1 ? 90 : 0,
+    rize_cut: combo || strong ? 110 : 0,
+    shared_heal: p.hp < p.maxHp * 0.7 ? 100 : 0,
+    mare_rally: p.hp < p.maxHp * 0.75 ? 95 : 0,
+    shared_push: near(70) > 0 ? 100 : 0,
+    shared_magnet: drops >= 4 ? 85 : 0,
+    mare_guard: near(160) > 1 && p.shield < 1 ? 75 : 0,
+    rize_frost: near(110) > 1 ? 70 : 0,
+    mare_shelter: near(140) > 2 ? 65 : 0,
+    rize_flame: near(120) > 1 ? 60 : 0,
+    shared_dash: g.dash.cooldown > 1 && near(100) ? 55 : 0
+  };
+  const id = g.commands.hand
+    .filter(id => priority[id] > 0 && G.commandInfo(id).enabled)
+    .sort((a, b) => priority[b] - priority[a])[0];
+  if (id) G.quickCast(id);
+}
+function drive(TG, requested) {
+  if (requested === 'tactician') useCards(TG);
+  const policy = requested === 'tactician' ? 'kite' : requested;
   const G = TG.engine,
     g = G.g,
     p = g.p,
@@ -274,6 +306,8 @@ function run(seed, policy) {
       hpDamage: healthDamage - initialDamage,
       protected: g.mare?.protected || 0,
       dashes: dashes - initialDashes,
+      casts: g.commands?.casts || 0,
+      cycled: g.commands?.cycled || 0,
       levels: g.levels
     });
     if (!g.won) break;
@@ -291,11 +325,11 @@ function run(seed, policy) {
 }
 if (require.main === module) {
   const rows = [];
-  for (const policy of ['straight', 'cautious', 'kite', 'novice', 'idle'])
+  for (const policy of ['straight', 'cautious', 'kite', 'tactician', 'novice', 'idle'])
     for (let seed = 1; seed <= 30; seed++) rows.push(run(seed, policy));
   fs.mkdirSync(path.join(ROOT, 'output'), { recursive: true });
   fs.writeFileSync(path.join(ROOT, 'output', 'story-play-sim-results.json'), JSON.stringify(rows, null, 2));
-  for (const policy of ['straight', 'cautious', 'kite', 'novice', 'idle']) {
+  for (const policy of ['straight', 'cautious', 'kite', 'tactician', 'novice', 'idle']) {
     const list = rows.filter(r => r.policy === policy),
       summary = { policy, complete: list.filter(r => r.complete).length, total: list.length };
     for (const id of ['approach', 'escort']) {
@@ -311,7 +345,9 @@ if (require.main === module) {
         avgHits: avg('hits'),
         avgHPDamage: avg('hpDamage'),
         avgProtected: avg('protected'),
-        avgDashes: avg('dashes')
+        avgDashes: avg('dashes'),
+        avgCasts: avg('casts'),
+        avgCycled: avg('cycled')
       };
     }
     console.log(JSON.stringify(summary));

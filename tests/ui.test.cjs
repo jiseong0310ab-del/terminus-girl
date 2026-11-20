@@ -494,3 +494,13 @@ test('tactical command UI visibly marks eligible cross-owner combo cards without
  assert(rize);assert(!rize.children[1].children.some(x=>x.className==='teamComboBadge'));
  $('commandsClose').onclick();assert.equal(JSON.stringify(g),before);
 });
+
+test('combat card tray mirrors the hand and casts on tap without leaving the battle screen',()=>{
+ const {TG,$}=bootUI();$('menuStory').onclick();const g=storyToBattle(TG,$);
+ TG.ui.refreshHud();const tray=$('quickHand');assert.equal(tray.hidden,false);
+ assert.equal(tray.children.length,g.commands.hand.length);
+ g.p.hp=40;const slot=g.commands.hand.findIndex(id=>TG.engine.commandInfo(id).enabled);
+ assert(slot>=0);const energy=g.commands.energy,cost=TG.COMMANDS.find(c=>c.id===g.commands.hand[slot]).cost;
+ tray.dataset.key='';TG.ui.refreshHud();tray.children[slot].onclick();
+ assert.equal(TG.ui.screen,'playing');assert.equal(g.status,'playing');assert.equal(g.commands.energy,energy-cost);
+});

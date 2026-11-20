@@ -821,6 +821,46 @@
       return no('등불은 최대 3개입니다.');
     return { card, enabled: true, reason: '' };
   };
+  // A card that the situation makes unusable for a while (full-HP heal, nothing to collect)
+  // is swapped for the next draw, so a hand never stays dead. Waiting on energy or on a
+  // protection window (반격) is a timing choice, not a dead card, and never cycles.
+  const STALE_CARD_SECONDS = 6;
+  function cycleStaleCards(g, dt) {
+    const c = g.commands;
+    if (!c || dt <= 0) return;
+    if (!Array.isArray(c.stale) || c.stale.length !== c.hand.length) c.stale = c.hand.map(() => 0);
+    for (let slot = 0; slot < c.hand.length; slot++) {
+      const id = c.hand[slot],
+        card = TG.COMMANDS.find(item => item.id === id);
+      const waiting = !card || c.energy < card.cost || id === 'mare_counter' || G.commandInfo(id).enabled;
+      c.stale[slot] = waiting ? 0 : c.stale[slot] + dt;
+      if (c.stale[slot] >= STALE_CARD_SECONDS && TG.commandDeck.cycle(c, slot)) {
+        c.stale[slot] = 0;
+        G.notify((card?.name || '지휘') + ' 교체 · 지금 쓸 수 없는 카드를 다음 카드로 바꿨습니다');
+      }
+    }
+  }
+  // Quick cast from the in-combat card tray: same rules and costs as the command screen,
+  // but combat keeps running and the joystick is not released.
+  G.quickCast = function (id) {
+    const g = G.g;
+    if (!g || g.mode !== 'story' || !g.commands || g.status !== 'playing' || g.p.hp <= 0) return false;
+    if (!G.commandInfo(id).enabled || !TG.store.canWrite()) return false;
+    const route = G.onChange;
+    G.onChange = state => {
+      if (state !== 'playing') route(state);
+    };
+    let ok = false;
+    try {
+      g.status = 'command';
+      ok = G.castCommand(id, g.commands.token);
+    } finally {
+      G.onChange = route;
+      if (!ok && g.status === 'command') g.status = 'playing';
+    }
+    if (ok) g.commands.quick = (g.commands.quick || 0) + 1;
+    return ok;
+  };
   G.castCommand = function (id, token) {
     const g = G.g;
     if (
@@ -2278,6 +2318,7 @@
     if (g.toast) g.toast.life -= dt;
     if (g.mode === 'story' && g.commands) {
       TG.commandDeck.tick(g.commands, dt * (g.storyTraining ? 1 : 1.5));
+      cycleStaleCards(g, dt);
       g.commandEffects.guardWindow = Math.max(0, g.commandEffects.guardWindow - dt);
       g.commandEffects.ward = Math.max(0, g.commandEffects.ward - dt);
       if (g.teamwork) {

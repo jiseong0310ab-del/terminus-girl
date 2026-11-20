@@ -3422,3 +3422,93 @@ button {
     bottom: calc(env(safe-area-inset-bottom, 0px) + 150px);
   }
 }
+
+/* v0.26 — in-combat quick card tray (tap to cast without stopping time) */
+.quickHand {
+  position: absolute;
+  z-index: 3;
+  right: 14px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 214px);
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 6px;
+  width: 104px;
+  pointer-events: none;
+}
+.quickHand[hidden] {
+  display: none;
+}
+.quickCard {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 38px;
+  padding: 0 8px 0 6px;
+  border: 1px solid #c9b58655;
+  border-left: 4px solid #a9b4c4;
+  border-radius: 10px;
+  background: #121c2ee8;
+  color: #f2e9d4;
+  font-size: 11px;
+  font-weight: 750;
+  text-align: left;
+  box-shadow: 0 3px 12px #0009;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.quickCard:active {
+  transform: scale(0.96);
+}
+.quickCard.off {
+  background: #0e1522f2;
+  color: #8f98a8;
+  border-color: #59627033;
+}
+.quickCard.off .qcCost {
+  background: #5d6372;
+  color: #1a1d27;
+}
+.quickCard.combo {
+  border-color: #f0d49c;
+  box-shadow: 0 0 0 1px #f0d49c, 0 0 14px #f0d49c66;
+}
+.qcCost {
+  flex: 0 0 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #d9bd7e;
+  color: #171624;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 18px;
+  text-align: center;
+}
+.qcName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+@media (min-width: 750px) {
+  .quickHand {
+    right: calc(50% - 351px);
+  }
+}
+@media (orientation: landscape) and (max-height: 500px) {
+  .quickHand {
+    bottom: 182px;
+    right: 18px;
+  }
+  .quickCard {
+    height: 32px;
+  }
+}
+@media (max-height: 620px) {
+  .quickHand {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 214px);
+    gap: 4px;
+  }
+  .quickCard {
+    height: 34px;
+  }
+}
