@@ -84,6 +84,7 @@
     $('controls').style.display = playing ? 'block' : 'none';
     $('guide').style.display = 'none';
     $('toast').classList.remove('active');
+    $('toast').classList.toggle('inCombat', playing);
     text('toast', '');
     if (!playing) {
       TG.audio.scene('hub');
@@ -135,7 +136,7 @@
     const r = S.data.stats;
     text('archiveText', `탐험 ${r.runs}회 · 1장 복원 ${r.wins}회 · 최고 격파 ${r.bestKills}`);
     text('saveStatus', status());
-    text('enterHub', S.data.checkpoint ? '생존 탐험 이어가기 · 열차로' : '생존 탐험 · 열차로');
+    text('enterHub', S.data.checkpoint ? '생존 탐험 이어하기' : '생존 탐험');
     $('quickStart').disabled = !!S.data.checkpoint;
   }
   function renderHub() {
@@ -259,8 +260,18 @@
               : state.started
                 ? '이야기 이어가기 · ' + TG.STORY.nodes[state.node].title
                 : '이야기 · 리제와 마레의 첫 동행';
-    text('menuStory', label);
-    text('hubStory', label);
+    // Two-line entry: a short verb on top, where the story stands underneath.
+    const main = state.started ? '이야기 이어하기' : '이야기 시작',
+      sub = state.started ? label.replace(/^이야기 이어가기 · /, '') : '리제와 마레의 첫 동행';
+    for (const id of ['menuStory', 'hubStory']) {
+      const top = document.createElement('span'),
+        small = document.createElement('small');
+      top.textContent = main;
+      small.textContent = sub;
+      small.className = 'entrySub';
+      $(id).replaceChildren(top, small);
+      $(id).setAttribute('aria-label', main + ' · ' + sub);
+    }
   }
   function openStory() {
     TG.audio.unlock();
@@ -535,19 +546,18 @@
           '회 · 환자 HP ' +
           Math.ceil(g.patient.hp)
         : '';
-    text(
-      'resultProgress',
-      '일행 · ' +
-        currentParty +
-        ' / 보호 ' +
-        (g.mare?.protected || 0) +
-        '회 · 지휘 ' +
-        (g.commands?.casts || 0) +
-        '회' +
-        impact +
-        (g.teamwork ? ' · 합동기 ' + g.teamwork.count + '회 · 위험 대시 ' + g.teamwork.evades + '회' : '') +
-        (g.storyPressure ? ' · 침식 회피 ' + g.storyPressure.dodges + '회' : '')
-    );
+    // Only what actually happened: zero counters are left out of the summary line.
+    const moments = [
+      ['보호', g.mare?.protected],
+      ['지휘', g.commands?.casts],
+      ['합동기', g.teamwork?.count],
+      ['위험 대시', g.teamwork?.evades],
+      ['침식 회피', g.storyPressure?.dodges]
+    ]
+      .filter(([, n]) => n > 0)
+      .map(([label, n]) => label + ' ' + n + '회');
+    $('endScreen').classList.add('storyResult');
+    text('resultProgress', currentParty + impact + (moments.length ? ' · ' + moments.join(' · ') : ''));
     text(
       'resultAdvice',
       g.won
@@ -573,10 +583,7 @@
     text('resultTime', fmt(g.totalTime));
     text('resultKills', g.kills);
     text('resultShards', '0');
-    text(
-      'resultNote',
-      '이야기 시범은 생존 조각·도전·첫 장 완주 기록을 정산하지 않습니다. 기존 생존 진행은 그대로 보관됩니다.'
-    );
+    text('resultNote', '이야기는 생존 탐험 기록과 따로 저장됩니다.');
   }
   const commandOwner = {
     rize: '리제',
@@ -1180,6 +1187,7 @@
   }
   function renderResult() {
     const g = G.g;
+    $('endScreen').classList.remove('storyResult');
     if (g.mode === 'story') {
       renderStoryResult(g);
       return;

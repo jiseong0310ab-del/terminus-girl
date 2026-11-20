@@ -1679,8 +1679,8 @@
       for (const offset of [-90, 0, 90]) add('lost', offset, -radius);
       add('conductor', 0, radius);
     }
+    // The HUD hint line shows the wave with its countdown; no duplicate pop-up.
     g.wave = { name, hint, points, remaining: 2 };
-    G.notify(name + ' · ' + hint);
   }
   function refreshBossPhase(e) {
     if (e.type === 'boss' && e.hp > 0 && e.hp <= e.maxHp * 0.5 && e.bossPhase !== 2) {
