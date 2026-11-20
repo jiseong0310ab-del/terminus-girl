@@ -225,7 +225,10 @@ TG.ENEMY_DEFS = {
   conductor: { hp: 58, speed: 70, r: 16, art: 6, behavior: 'chase' },
   lost: { hp: 42, speed: 64, r: 15, art: 7, behavior: 'ranged' },
   warden: { hp: 135, speed: 52, r: 21, art: 9, behavior: 'charge', elite: true },
-  witch: { hp: 110, speed: 58, r: 19, art: 10, behavior: 'ranged', elite: true }
+  witch: { hp: 110, speed: 58, r: 19, art: 10, behavior: 'ranged', elite: true },
+  // 가방 잔향: lies still like platform luggage, wakes when you come close, bursts after a
+  // ring telegraph (melee + six shots), then hunts like a ghost.
+  mimic: { hp: 60, speed: 0, r: 16, art: 11, behavior: 'mimic' }
 };
 
 TG.CHALLENGES = [

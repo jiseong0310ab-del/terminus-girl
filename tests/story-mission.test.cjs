@@ -52,12 +52,12 @@ test('approach requires guardian elimination before physically activating switch
 });
 test('opening arc: telegraphed packs in view, a first card, a telegraphed guardian at the switch and a siege on stepping in',()=>{
  const b=boot(),g=approach(b),s=g.script,{G}=b;
- assert.equal(g.duration,60);assert.equal(g.enemies.length,0);assert.equal(s.phase,'swarm');
+ assert.equal(g.duration,60);assert(g.enemies.every(e=>e.dormant));assert.equal(s.phase,'swarm');
  // Packs are announced by a visible marker before anything appears, inside the play area.
  for(let i=0;i<10;i++)tick(b);
  assert(s.pending.length>=3);for(const p of s.pending){assert(p.t>0);assert(Math.abs(p.x-g.p.x)<=220&&Math.abs(p.y-g.p.y)<=240);}
  for(let i=0;i<25;i++)tick(b);
- assert(g.enemies.length>=3);assert(g.enemies.every(e=>e.script==='swarm'));
+ assert(g.enemies.filter(e=>e.script==='swarm').length>=3);assert(g.enemies.every(e=>e.script==='swarm'||e.script==='ambush'));
  // A first level-up arrives during the swarm, well before the guardian.
  let offered=false,n=0;
  while(s.phase==='swarm'){if(g.status==='cards')offered=true;for(const e of g.enemies.filter(e=>e.script))G.hitEnemy(e,9999);
@@ -194,4 +194,17 @@ test('archive and snow objectives stay sealed until their swarm is cleared, then
   assert(target.charge>0||target.recovered,which+' charges once unlocked');
   assert(which==='archive'?g.sweep:g.bell,which+' hazard is active while working the objective');
  }
+});
+test('luggage mimic lies dormant, is ignored by auto-fire, then wakes with a ring telegraph and bursts',()=>{
+ const b=boot(),g=approach(b),{G}=b;quiet(g);g.script.pending=[];g.script.packClock=-1e9;g.storyPressure=null;
+ const m=g.enemies.find(e=>e.type==='mimic');assert(m);assert.equal(m.dormant,true);
+ for(const e of [...g.enemies])if(e!==m)g.enemies.splice(g.enemies.indexOf(e),1);
+ // Far away: no shots at it and it stays asleep.
+ g.p.x=m.x+300;g.p.y=m.y;for(let i=0;i<40;i++)G.update(.04);
+ assert.equal(m.dormant,true);assert.equal(m.hp,m.maxHp);assert.equal(g.bullets.length,0);
+ // Close: it wakes into a telegraphed windup, then bursts six shots and starts chasing.
+ g.p.x=m.x+120;g.p.y=m.y;G.update(.04);assert.equal(m.dormant,false);assert.equal(m.action,'windup');
+ g.p.x=m.x+300;let n=0;while(m.behavior==='mimic'){G.update(.04);assert(++n<60);}
+ assert.equal(m.behavior,'chase');assert(m.speed>0);assert(g.hostile.length>=6);
+ assert.equal(g.script.kills,0,'ambush luggage never counts toward the swarm goal');
 });

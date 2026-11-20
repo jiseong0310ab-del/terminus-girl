@@ -17,7 +17,7 @@ test('first battle shows its locked switch nearby and starts with a telegraphed 
  const b=boot(),g=first(b),gate=g.storyGate;
  assert.equal(gate.kind,'approach');assert.equal(gate.x-g.p.x,180);assert.equal(gate.y-g.p.y,-70);
  assert.equal(gate.r,70);assert.equal(gate.needed,3.5);
- assert.equal(gate.guardIds.length,0);assert.equal(g.enemies.length,0);
+ assert.equal(gate.guardIds.length,0);assert(g.enemies.length>0&&g.enemies.every(e=>e.type==='mimic'&&e.dormant),'only disguised luggage at the start');
  assert.equal(g.script.phase,'swarm');assert.equal(g.xpNeed,6);
  assert.equal(b.G.objective().kind,'mission');
  assert.equal(g.storyPressure.warning,0);

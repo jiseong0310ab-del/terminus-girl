@@ -455,7 +455,19 @@
       ctx.lineWidth = 1.5;
       ctx.strokeStyle = PAL.hostile;
       ctx.fillStyle = PAL.hostileFill;
-      if (e.type === 'boss') {
+      if (e.behavior === 'mimic') {
+        // Waking luggage: a burst ring that fills as the windup runs out.
+        const r = TG.engine.MIMIC?.burst || 90,
+          k = clamp(1 - e.clock / (TG.engine.MIMIC?.windup || 0.9), 0, 1);
+        ctx.setLineDash([6, 5]);
+        circle(0, 0, r, PAL.hostileFill, PAL.hostile);
+        ctx.setLineDash([]);
+        circle(0, 0, r * k, '#e8789a40', null);
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = PAL.hostileText;
+        ctx.fillText('가방 잔향 · 원 밖으로', 0, -r - 8);
+      } else if (e.type === 'boss') {
         const diagonal = g.stage === 1 && e.attackVariant === 'diagonal';
         if (g.stage === 1) {
           ctx.save();
@@ -524,7 +536,16 @@
     ctx.ellipse(0, 15, e.r * 1.1, 7, 0, 0, TAU);
     ctx.fill();
     // A warm hostile ring under every foe keeps pale sprites readable on the night platform.
-    if (e.type !== 'boss') {
+    if (e.dormant) {
+      // Disguised luggage: only a faint dashed hint, so a careful eye can tell it from scenery.
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = '#e0748f55';
+      ctx.beginPath();
+      ctx.ellipse(0, 15, e.r * 1.25, e.r * 0.5, 0, 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    } else if (e.type !== 'boss') {
       ctx.lineWidth = e.elite ? 2.5 : 1.75;
       ctx.strokeStyle = e.elite ? '#f0a2b8dd' : '#e0748fb0';
       ctx.beginPath();
@@ -534,7 +555,13 @@
     ctx.globalAlpha = e.hit > 0 ? 0.65 : 1;
     const w = e.type === 'boss' ? 118 : e.elite ? 83 : 68,
       h = w,
-      bob = Math.sin(t * 3 + e.phase) * 1.6;
+      // Luggage does not float: it rests, with a tiny twitch while dormant.
+      bob =
+        e.type === 'mimic'
+          ? e.dormant && !TG.store.data.settings.reduceFX && Math.sin(t * 1.7 + e.phase) > 0.93
+            ? Math.sin(t * 40) * 1.2
+            : 0
+          : Math.sin(t * 3 + e.phase) * 1.6;
     if (!sprite(images.enemy, e.art, 3, 144, 0, bob, w, h))
       circle(0, 0, e.r, e.type === 'boss' ? '#80536f' : '#66879b', '#b1d2de');
     ctx.globalAlpha = 1;

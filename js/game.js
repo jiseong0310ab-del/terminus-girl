@@ -609,6 +609,7 @@
         g.script = missionScript(mission);
         g.storyGate.decay = cfg.decay;
         if (cfg.firstXp) g.xpNeed = cfg.firstXp;
+        placeAmbush(g, cfg);
       }
     }
     g.route = spec.battleId === 'snowMission' ? (spec.route === 'rescue' ? 'rescue' : 'contain') : null;
@@ -1289,6 +1290,10 @@
   const MISSIONS = {
     approach: {
       gate: [180, -70],
+      ambush: [
+        [100, -150],
+        [255, 30]
+      ],
       radius: 70,
       hold: 3.5,
       decay: 0.3,
@@ -1326,6 +1331,7 @@
     },
     escort: {
       gate: [-175, 80],
+      ambush: [[-110, 175]],
       radius: 70,
       hold: 3,
       decay: 0.3,
@@ -1358,6 +1364,10 @@
     // terminal / relays, which carry their own hazard (beams / bell) while you work them.
     archive: {
       gate: [-195, 90],
+      ambush: [
+        [190, -40],
+        [60, -170]
+      ],
       radius: 62,
       hold: 2,
       decay: 0.3,
@@ -1400,6 +1410,16 @@
     }
   };
   G.MISSIONS = MISSIONS;
+  const MIMIC = { wake: 135, windup: 0.9, burst: 90, damage: 14, speed: 72 };
+  G.MIMIC = MIMIC;
+  // Place dormant luggage foes (relative to the mission start). They do not count toward the swarm.
+  function placeAmbush(g, cfg) {
+    for (const [dx, dy] of cfg.ambush || []) {
+      const e = G.enemy('mimic', g.p.x + dx, g.p.y + dy);
+      e.dormant = true;
+      e.script = 'ambush';
+    }
+  }
   function missionScript(id) {
     return {
       mission: id,
@@ -1825,6 +1845,16 @@
         continue;
       }
       refreshBossPhase(e);
+      if (e.behavior === 'mimic' && e.dormant) {
+        // Disguised luggage: wakes when the player comes near (or when it is struck).
+        if (len(p.x - e.x, p.y - e.y) < MIMIC.wake || e.hp < e.maxHp) {
+          e.dormant = false;
+          e.action = 'windup';
+          e.clock = MIMIC.windup;
+          ring(e.x, e.y, 40, '#e8789a');
+        }
+        continue;
+      }
       let dx = p.x - e.x,
         dy = p.y - e.y,
         d = len(dx, dy) || 1,
@@ -1838,6 +1868,15 @@
           if (e.behavior === 'charge') {
             e.action = 'charge';
             e.clock = e.chargeTime || 0.52;
+          } else if (e.behavior === 'mimic') {
+            // Burst: melee ring plus six slow shots, then it hunts like a ghost.
+            if (d < MIMIC.burst + 14) G.damage(MIMIC.damage);
+            for (let k = 0; k < 6; k++) shot(e, (k * TAU) / 6 + rand(0, 0.5), 115);
+            ring(e.x, e.y, MIMIC.burst, '#e8789a');
+            e.behavior = 'chase';
+            e.speed = MIMIC.speed;
+            e.action = 'recover';
+            e.clock = 0.6;
           } else if (e.behavior === 'ranged') {
             const aim = Math.atan2(e.aimY, e.aimX);
             if (e.volley) {
@@ -1974,6 +2013,7 @@
     let e = null,
       best = 650;
     for (const v of g.enemies) {
+      if (v.dormant) continue;
       const d = len(v.x - p.x, v.y - p.y);
       if (d < best) {
         best = d;
