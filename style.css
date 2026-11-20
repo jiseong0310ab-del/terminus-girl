@@ -350,3 +350,39 @@
 #commandCombo{line-height:1.65;color:#f1dbb2}
 @media(max-width:375px){.commandCard .teamComboBadge{font-size:9px;padding:3px 5px}}
 @media(prefers-reduced-motion:reduce){.commandCard.teamComboReady{transition:none}}
+
+/* v0.26 — compact combat HUD
+   One stacked block at the top (title · HP/LV · XP · objective · hints), pause in the corner,
+   empty readouts hidden, squad portraits above the joystick. Everything below the HUD is the field. */
+#hud{padding:calc(env(safe-area-inset-top,0px) + 10px) 12px 12px;background:linear-gradient(180deg,rgba(5,10,23,.9) 0%,rgba(6,13,26,.72) 70%,rgba(6,13,26,0) 100%)}
+#hud .hudTop{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+#hud .hudLeft{flex:1;min-width:0;max-width:260px}
+#hud .hudRight{text-align:right;margin-right:46px;flex:0 0 auto}
+#hud .eyebrow{font-size:9px;letter-spacing:1px;margin-bottom:1px}
+#hud .hudtitle{font-size:13px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hud .hpLine{display:flex;align-items:center;gap:6px;margin-top:6px}
+#hud .hpLine .bar{position:relative;flex:1;height:15px;border-radius:8px;background:#1a2438;overflow:hidden;margin:0}
+#hud .hpLine .bar>#hpFill{height:100%}
+#hud #healthLabel{position:absolute;inset:0;display:flex;align-items:center;padding-left:7px;font-size:10px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000c;white-space:nowrap}
+#hud .lvChip{flex:0 0 auto;font-size:10px;font-weight:800;color:#f1dcae;border:1px solid #c9ad7380;border-radius:6px;padding:1px 5px;background:#14182acc}
+#hud .exp{height:4px;margin:4px 46px 0 0;border-radius:3px;overflow:hidden;background:#1d2c3e}
+#hud .clock{font-size:22px;line-height:1.1}
+#hud #timerCaption{font-size:9px;letter-spacing:.5px}
+#hud #killed{font-size:10px}
+#hud .hud-sub{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:8px}
+#hud #goalLabel{order:-1;max-width:100%;flex:1;text-align:left;font-size:12px;font-weight:750;color:#f6e7c2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#hud #goalLabel::before{content:'◆ ';color:#e9c57d}
+#hud #eraseLabel{flex:0 0 auto;font-size:10px;color:#d9b8cf}
+#hud #synergyText{margin-top:4px;font-size:10px;color:#e2ca96}
+#hud #synergyText:empty{display:none}
+/* Contextual hints live inside the HUD instead of floating over the battlefield. */
+#hud #guide,#hud #guide.commandGuide{position:static;transform:none;left:auto;bottom:auto;max-width:none;width:auto;margin-top:5px;padding:0;border:0;background:none;text-align:left;font-size:11px;line-height:1.45;color:#c9d6e4}
+#hud.story #phaseLabel,#hud.story #killed{display:none}
+#hud.calm #eraseLabel,#hud.calm .erase{display:none}
+#pauseBtn{top:calc(env(safe-area-inset-top,0px) + 10px);right:10px;width:38px;height:38px;border-radius:12px;font-size:16px}
+.controlLabel,.auto{display:none}
+#partyHud{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 186px);left:14px;min-height:0;padding:4px 9px 4px 4px;background:#0d1a2bcc}
+#toast{top:calc(env(safe-area-inset-top,0px) + 150px);max-width:82%;padding:8px 12px;font-size:12px;line-height:1.45;background:#09172cd0}
+@media(min-width:750px){#pauseBtn{right:calc(50% - 365px)}}
+@media(orientation:landscape) and (max-height:500px){#hud .hudLeft{max-width:300px}#partyHud{top:auto;bottom:20px;left:150px}#toast{top:calc(env(safe-area-inset-top,0px) + 96px)}}
+@media(max-height:620px){#partyHud{top:auto;bottom:calc(env(safe-area-inset-bottom,0px) + 150px)}}

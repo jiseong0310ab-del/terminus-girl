@@ -87,7 +87,7 @@ function enemy(e,g,t){
 // Keep an optional field goal findable without covering the HUD or touch controls.
 V.anchorMarker=function(anchor,p,width=V.width,height=V.height){
  if(!anchor)return null;
- const worldX=anchor.x-p.x+width/2,worldY=anchor.y-p.y+height/2,top=Math.min(205,Math.max(160,height*.29)),bottom=Math.max(top+30,height-Math.min(205,height*.28));
+ const worldX=anchor.x-p.x+width/2,worldY=anchor.y-p.y+height/2,top=Math.min(175,Math.max(130,height*.2)),bottom=Math.max(top+30,height-Math.min(285,height*.4));
  const x=clamp(worldX,32,width-32),y=clamp(worldY,top,bottom);
  return {x,y,worldX,worldY,edge:x!==worldX||y!==worldY,angle:Math.atan2(worldY-y,worldX-x)};
 };
