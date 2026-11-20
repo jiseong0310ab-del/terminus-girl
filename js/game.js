@@ -24,7 +24,7 @@ G.objective=function(run=G.g){
     const needed=gate?.needed||1,progress=Math.floor(100*Math.max(0,Math.min(1,(gate?.charge||0)/needed)));
     const prep=run.storyBattle==='approach'?'전원 복구':run.storyBattle==='escort'?'마레와 귀환':'기록 회수 후 귀환';
     const ready=run.storyBattle==='archive'?run.recordTarget?.recovered===true:guards>0&&beaten===guards;
-    const title=ended?(run.won?prep+' 완료':'임무 실패'):!ready?(run.storyBattle==='archive'?'기록장치 회수 · 파란 원으로 이동':prep+' · 방해 잔향 '+beaten+'/'+guards):done?prep+' · 목표 달성':(run.storyBattle==='approach'?'안내 스위치':'열차 문')+'로 이동 · '+progress+'%';
+    const title=ended?(run.won?prep+' 완료':'임무 실패'):!ready?(run.storyBattle==='archive'?'기록장치 회수 · 금빛 원으로 이동':prep+' · 방해 잔향 '+beaten+'/'+guards):done?prep+' · 목표 달성':(run.storyBattle==='approach'?'안내 스위치':'열차 문')+'로 이동 · '+progress+'%';
     return {kind:ended?'ended':'mission',stage,cleared:done?1:0,target:1,bossIn:0,remaining:Math.max(0,duration-time),title,
       detail:ended?run.won?'목표를 직접 달성해 임무가 완료되었습니다.':'목표를 완료하기 전에 부상하거나 제한시간이 지나 임무가 실패했습니다.':!ready?(run.storyBattle==='archive'?'기록장치의 원 안에서 머물러 회수하세요. 회수 후 열차 문이 열립니다.':'표시된 수호 잔향을 쓰러뜨려 회선을 확보하세요. 가만히 서 있으면 임무가 완료되지 않습니다.'):'금빛 표식까지 직접 이동한 뒤 원 안에서 잠시 머무르세요. 시간 경과만으로는 성공하지 않습니다.'};
    }
@@ -45,8 +45,8 @@ G.objective=function(run=G.g){
    if(run.storyBattle==='archive'){
     const beacon=run.recordTarget,recovered=beacon?.recovered===true,progress=Math.floor(Math.max(0,Math.min(100,(beacon?.charge||0)/(beacon?.needed||1.25)*100)));
     return {kind:ended?'ended':'record',stage,cleared:recovered?1:0,target:1,bossIn:0,remaining:Math.max(0,duration-time),
-     title:ended?(run.won?'기록 회수 완료':'기록 회수 실패'):recovered?'기록 확보 · 귀환까지 생존':'기록장치 회수 '+progress+'% · 파란 원 안에 머무르기',
-     detail:ended?recovered?'기록 회수 경계에서 저장을 확인하세요.':'기록을 확보하지 못했습니다. 이 임무를 다시 시작할 수 있습니다.':recovered?'기록을 확보했습니다. 제한시간까지 살아남으세요.':'파란 기록장치를 찾아 반경 55 안에서 1.25초 서 있으세요. 멀어지면 회수 진도가 감소합니다.'};
+     title:ended?(run.won?'기록 회수 완료':'기록 회수 실패'):recovered?'기록 확보 · 귀환까지 생존':'기록장치 회수 '+progress+'% · 금빛 원 안에 머무르기',
+     detail:ended?recovered?'기록 회수 경계에서 저장을 확인하세요.':'기록을 확보하지 못했습니다. 이 임무를 다시 시작할 수 있습니다.':recovered?'기록을 확보했습니다. 제한시간까지 살아남으세요.':'기록장치 신호기를 찾아 반경 55 안에서 1.25초 서 있으세요. 멀어지면 회수 진도가 감소합니다.'};
    }
    return {kind:ended?'ended':'survive',stage,cleared:0,target:0,bossIn:0,remaining:Math.max(0,duration-time),title:ended?(run.won?(battle?.successTitle||'통로 확보'):run.reason==='retreat'?'열차에서 다시 준비':'전투를 다시 준비하세요'):(battle?.objective||'안내 방송이 돌아올 때까지 생존'),detail:ended?(run.won?(battle?.successStory||'다음 이야기로 이어집니다.'):'이 전투의 시작 지점에서 다시 도전할 수 있습니다. 확정한 이야기와 동료는 유지됩니다.'):(battle?.detail||'이동과 대시로 위험을 피하세요. 제한시간까지 살아남으면 이야기가 이어집니다.')};
  }
